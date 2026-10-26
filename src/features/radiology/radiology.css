@@ -1,0 +1,46 @@
+.rd-toolbar { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-4); }
+.rd-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr); gap: var(--s-4); align-items: start; }
+@media (max-width: 960px) { .rd-grid { grid-template-columns: 1fr; } }
+.rd-chips { display: flex; flex-wrap: wrap; gap: var(--s-2); margin: var(--s-2) 0 var(--s-3); }
+.rd-chipbtn { height: 32px; padding: 0 var(--s-3); border-radius: var(--r-capsule); border: var(--outline-w) solid var(--c-outline-variant); background: var(--c-surface-container); color: var(--c-on-surface); font: inherit; font-size: var(--fs-dense); cursor: pointer; }
+.rd-chipbtn:hover { background: var(--c-primary-container); }
+.rd-thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--s-2); margin-top: var(--s-3); }
+.rd-thumb { position: relative; }
+.rd-thumb img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--r-control); display: block; }
+.rd-thumb button { position: absolute; top: 4px; right: 4px; }
+.rd-field { display: grid; gap: var(--s-1); margin-bottom: var(--s-3); }
+.rd-field > label { font-size: var(--fs-dense); color: var(--c-on-surface-variant); font-weight: 600; }
+.rd-muted { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
+.rd-actions { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; }
+
+/* Print sheet: hidden on screen, the only thing shown when printing. Plain white. */
+.rr-print { display: none; }
+@media print {
+  body * { visibility: hidden !important; }
+  .rr-print, .rr-print * { visibility: visible !important; }
+  .rr-print { display: block; position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #111; font-family: Inter, Arial, sans-serif; font-size: 12px; box-sizing: border-box; }
+  .rr-print h2 { font-size: 15px; margin: 12px 0 4px; text-transform: uppercase; letter-spacing: .5px; }
+  .rr-print p { margin: 0; white-space: pre-wrap; }
+  .rr-print .hdr { text-align: center; border-bottom: 3px solid #0369A1; padding-bottom: 6px; margin-bottom: 8px; }
+  .rr-print .pat { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; margin-bottom: 8px; }
+  .rr-print .imgs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .rr-print .imgs img { height: 120px; }
+  .rr-print .sig { margin-top: 24px; text-align: right; }
+  .rr-print .sig img { max-height: 48px; }
+  .rr-print .ftr { border-top: 3px solid #0369A1; margin-top: 16px; padding-top: 4px; text-align: center; font-size: 10px; color: #555; }
+  @page { size: A4; margin: 0; }
+}
+
+/* Rich text editor + rendered radiology narrative */
+.rt-bar { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.rt-btn { height: 28px; min-width: 28px; padding: 0 var(--s-2); border-radius: var(--r-control); border: var(--outline-w) solid var(--c-outline-variant); background: var(--c-surface-container); color: var(--c-on-surface); font: inherit; font-size: var(--fs-dense); cursor: pointer; }
+.rt-btn:hover { background: var(--c-primary-container); }
+.rt-edit { padding: var(--s-2) var(--s-3); border: var(--outline-w) solid var(--c-outline-variant); border-radius: var(--r-control); background: var(--c-surface); color: var(--c-on-surface); overflow: auto; line-height: 1.5; }
+.rt-edit:focus { outline: 2px solid var(--c-primary); outline-offset: 1px; }
+.rt-edit--off { background: var(--c-surface-container); }
+.rt-edit ul, .rt-edit ol, .rr-print .rt ul, .rr-print .rt ol { margin: 4px 0; padding-left: 22px; }
+.rd-urgent-row > td { background: var(--c-urgent-wash) !important; }
+.rd-cap { margin-top: 4px; }
+.rr-print .rt { margin: 0; }
+.rr-print figure { margin: 0; }
+.rr-print figcaption { font-size: 10px; text-align: center; }

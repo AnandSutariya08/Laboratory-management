@@ -1,0 +1,639 @@
+rules_version = '2';
+
+// ACCESS CONTROL SPLIT
+// Rules enforce what they can check cheaply and reliably:
+//   - authentication and an active staff profile,
+//   - coarse built-in role gates (labAdmin / admin / manager / ...),
+//   - BRANCH ISOLATION: branch-scoped docs may only be read or written when their
+//     branchId (missing = 'main', legacy data) is in the caller's profile.branchIds,
+//     or the caller has profile.allBranches == true,
+//   - append-only collections (ledger, stock movements, result versions, deliveries).
+// roles, branches and users are writable by labAdmin/admin only (rules cannot read
+// the editable role matrix cheaply). The fine-grained permission matrix
+// (labs/{lab}/roles/*, per-user grants/denies) is enforced in the client via
+// can(profile, key); treat it as UI/UX gating, not as a security boundary.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Single-organisation deployment: every document lives under this one lab (VITE_LAB_ID, default 'main').
+    // Collection-group queries (ledger by payment date) cannot bind the lab from the path, so it is fixed here.
+    function lab() {
+      return 'main';
+    }
+    function profile(labId) {
+      return get(/databases/$(database)/documents/labs/$(labId)/users/$(request.auth.uid)).data;
+    }
+    // Staff = an active profile whose role is NOT one of the external partner portal roles.
+    // (Rules cap evaluation at 1000 expressions per request, so the profile is read once via let.)
+    function isStaff(labId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/labs/$(labId)/users/$(request.auth.uid))
+        && staffProfile(profile(labId));
+    }
+    function staffProfile(p) {
+      return p.active == true && !(p.role in ['b2b', 'collectionCentre', 'corporate', 'referrer']);
+    }
+
+    // ---- Partner portal (external roles) -----------------------------------------------
+    // A portal user's profile carries role b2b | collectionCentre | corporate | referrer and a
+    // partnerId (the partner document). They see only documents linked to that partner and can
+    // create bills only for their own partner (b2b / collectionCentre / corporate).
+    function partnerProfile(p) {
+      return p.active == true && p.role in ['b2b', 'collectionCentre', 'corporate', 'referrer']
+        && p.get('partnerId', '') != '';
+    }
+    function isPartner(labId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/labs/$(labId)/users/$(request.auth.uid))
+        && partnerProfile(profile(labId));
+    }
+    // Does this order / document link to the caller's partner? (data = resource.data or request.resource.data)
+    function partnerOwns(labId, data) {
+      return request.auth != null && partnerOwnsP(profile(labId), data);
+    }
+    function partnerOwnsP(p, data) {
+      return partnerProfile(p) && (
+        (p.role == 'b2b' && data.get('b2bCentreId', '') == p.partnerId)
+        || (p.role == 'collectionCentre' && data.get('collectionCentreId', '') == p.partnerId)
+        || (p.role == 'corporate' && data.get('corporateClientId', '') == p.partnerId)
+        || (p.role == 'referrer' && (data.get('referrerId', '') == p.partnerId
+              || data.get('hospitalId', '') == p.partnerId)));
+    }
+    function partnerOrderOk(labId, orderId) {
+      return partnerOwns(labId, get(/databases/$(database)/documents/labs/$(labId)/orders/$(orderId)).data);
+    }
+    function staffOrPartner(labId) {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/labs/$(labId)/users/$(request.auth.uid))
+        && (staffProfile(profile(labId)) || partnerProfile(profile(labId)));
+    }
+    // Which master collection holds the caller's own partner document.
+    function partnerCollectionOf(p) {
+      return p.role == 'b2b' ? 'b2bCentres'
+        : p.role == 'collectionCentre' ? 'collectionCentres'
+        : p.role == 'corporate' ? 'corporateClients' : 'referrers';
+    }
+    function partnerDocOf(labId, p) {
+      return get(/databases/$(database)/documents/labs/$(labId)/$(partnerCollectionOf(p))/$(p.partnerId)).data;
+    }
+    // May the caller's partner raise new bills? Active partner, and for B2B the booking lock is off.
+    function partnerMayBill(labId) {
+      return request.auth != null && partnerMayBillP(labId, profile(labId));
+    }
+    function partnerMayBillP(labId, p) {
+      return partnerProfile(p) && p.role in ['b2b', 'collectionCentre', 'corporate']
+        && partnerDocOf(labId, p).get('active', true) == true
+        && (p.role != 'b2b' || partnerDocOf(labId, p).get('settings', {}).get('bookingLock', false) != true);
+    }
+    // Rule-evaluation budget helpers: one profile read per decision.
+    function partnerBranchOk(p, data) {
+      return 'branchId' in data && (p.get('allBranches', false) == true || data.branchId in p.get('branchIds', ['main']));
+    }
+
+    function hasRole(labId, roles) {
+      return isStaff(labId) && profile(labId).role in roles;
+    }
+    function isAdmin(labId) {
+      return hasRole(labId, ['labAdmin', 'admin']);
+    }
+
+    // ---- Branch isolation -------------------------------------------------------
+    // Legacy profiles without branchIds are treated as ['main'].
+    function userBranches(labId) {
+      return profile(labId).get('branchIds', ['main']);
+    }
+    function canUseBranch(labId, branchId) {
+      return profile(labId).get('allBranches', false) == true || branchId in userBranches(labId);
+    }
+    // Branch of an existing document; docs created before branches existed are 'main'.
+    function docBranch(data) {
+      return data.get('branchId', 'main');
+    }
+    function readBranch(labId) {
+      return isStaff(labId) && canUseBranch(labId, docBranch(resource.data));
+    }
+    // Create: branchId must be present and permitted.
+    function createBranch(labId) {
+      return isStaff(labId) && 'branchId' in request.resource.data
+        && canUseBranch(labId, request.resource.data.branchId);
+    }
+    // Update: caller may use the existing branch and may not move the doc to another one
+    // (stamping legacy docs with 'main' is allowed: docBranch() already treats them as main).
+    function updateBranch(labId) {
+      return isStaff(labId) && canUseBranch(labId, docBranch(resource.data))
+        && docBranch(request.resource.data) == docBranch(resource.data);
+    }
+    // Branch of a parent order (for ledger / results / deliveries sub-collections).
+    function orderBranchOk(labId, orderId) {
+      return isStaff(labId)
+        && canUseBranch(labId, docBranch(get(/databases/$(database)/documents/labs/$(labId)/orders/$(orderId)).data));
+    }
+
+    // Collection-group reads of ledger entries (Collection wise finance by payment date).
+    // Entries carry branchId, so the same branch isolation applies.
+    match /{path=**}/ledger/{entryId} {
+      allow read: if isStaff(lab()) && canUseBranch(lab(), docBranch(resource.data));
+    }
+
+    // Collection-group read of entered results (guard against removing a parameter that already has values).
+    // Catalogue editors only; results carry no branch so this stays admin / manager.
+    match /{path=**}/results/{testId} {
+      allow read: if hasRole(lab(), ['labAdmin', 'admin', 'manager']);
+    }
+
+    // Public report share links: Cloud Functions only (Admin SDK bypasses rules).
+    match /reportShares/{token} {
+      allow read, write: if false;
+    }
+
+    // MCP connector token lookup (sha256(token) -> lab): Cloud Functions only.
+    match /mcpTokens/{hash} {
+      allow read, write: if false;
+    }
+
+    match /labs/{labId} {
+      allow read: if staffOrPartner(labId);
+      allow write: if isAdmin(labId);
+
+      // Staff profiles: everyone reads (names on reports), only admins manage.
+      match /users/{uid} {
+        allow read: if isStaff(labId) || request.auth.uid == uid;
+        allow write: if isAdmin(labId);
+        // Staff may edit their own profile basics and stamp their sign-in time,
+        // never their role, permissions or branches.
+        allow update: if request.auth.uid == uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['name', 'phone', 'signature', 'lastLoginAt']);
+
+        // Active login sessions (login-limit enforcement). A user manages their own
+        // session docs; admins may list and remove them (force logout).
+        match /sessions/{sid} {
+          allow read: if request.auth.uid == uid || isAdmin(labId);
+          allow create, update: if request.auth.uid == uid && isStaff(labId);
+          allow delete: if request.auth.uid == uid || isAdmin(labId);
+        }
+      }
+
+      // Round 3: lab-side requests and device codes.
+      // Delete-account requests: the user files one for themselves, admins approve or reject (never delete).
+      match /accountRequests/{id} {
+        allow read: if isAdmin(labId) || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow create: if isStaff(labId) && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+        allow update: if isAdmin(labId);
+        allow delete: if false;
+      }
+      // Browser (device) codes shown on the profile: the user registers their own, admins approve or revoke.
+      match /browserCodes/{id} {
+        allow read: if isAdmin(labId) || (request.auth != null && resource.data.uid == request.auth.uid);
+        allow create: if isStaff(labId) && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+        allow update: if isAdmin(labId) || (request.auth != null && resource.data.uid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeenAt', 'label']));
+        allow delete: if false;
+      }
+
+      // Round 3 shell: usage tracking, announcements, surveys, idea votes/comments.
+      // Page-view counters: a user writes only their own doc (id = YYYY-MM-DD_uid); admins read all.
+      match /usage/{usageId} {
+        allow read: if isAdmin(labId) || (request.auth != null && usageId.matches('.*_' + request.auth.uid));
+        allow create, update: if isStaff(labId) && usageId.matches('.*_' + request.auth.uid)
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if false;
+      }
+      match /announcements/{id} {
+        allow read: if isStaff(labId);
+        allow write: if isAdmin(labId);
+      }
+      match /surveys/{sid} {
+        allow read: if isStaff(labId);
+        allow write: if isAdmin(labId);
+        match /votes/{uid} {
+          allow read: if isStaff(labId);
+          allow create, update: if isStaff(labId) && request.auth.uid == uid
+            && get(/databases/$(database)/documents/labs/$(labId)/surveys/$(sid)).data.status == 'open';
+          allow delete: if isAdmin(labId);
+        }
+        match /comments/{cid} {
+          allow read: if isStaff(labId);
+          allow create: if isStaff(labId) && request.resource.data.by == request.auth.uid;
+          allow delete: if isAdmin(labId) || (isStaff(labId) && resource.data.by == request.auth.uid);
+        }
+      }
+      match /supportTickets/{tid}/votes/{uid} {
+        allow read: if isStaff(labId);
+        allow create, update: if isStaff(labId) && request.auth.uid == uid;
+        allow delete: if isStaff(labId) && request.auth.uid == uid;
+      }
+      match /supportTickets/{tid}/comments/{cid} {
+        allow read: if isStaff(labId);
+        allow create: if isStaff(labId) && request.resource.data.by == request.auth.uid;
+        allow delete: if isAdmin(labId) || (isStaff(labId) && resource.data.by == request.auth.uid);
+      }
+
+      // Editable permission matrix and branches: everyone reads, admins write.
+      match /roles/{roleId} {
+        allow read: if staffOrPartner(labId);
+        allow write: if isAdmin(labId);
+      }
+      match /branches/{branchId} {
+        allow read: if staffOrPartner(labId);
+        allow write: if isAdmin(labId);
+      }
+
+      // Catalogue: read by all staff, edited by admins and managers.
+      match /{catalogue}/{id} {
+        allow read: if staffOrPartner(labId)
+          && catalogue in ['departments', 'sampleTypes', 'tests', 'packages'];
+        allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && catalogue in ['departments', 'sampleTypes', 'tests', 'packages'];
+      }
+
+      match /counters/{name} {
+        allow read, write: if isStaff(labId);
+        // Portal billing takes the next patient / bill / barcode number.
+        allow read, write: if partnerMayBill(labId) && name.matches('(patient-.*|bill|barcode.*|uhid|receipt-.*)');
+      }
+
+      // Home-collection bookings: front desk and phlebotomists.
+      match /bookings/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'reception', 'phlebotomist']) && readBranch(labId);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'reception', 'phlebotomist']) && createBranch(labId);
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'reception', 'phlebotomist']) && updateBranch(labId);
+        allow delete: if false;
+
+        // Note attachments: small data-URL documents.
+        match /attachments/{attId} {
+          allow read, create, delete: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'reception', 'phlebotomist']);
+          allow update: if false;
+        }
+      }
+
+      // Written only by Cloud Functions (Admin SDK bypasses rules).
+      match /outbox/{id} {
+        allow read: if isAdmin(labId);
+        allow write: if false;
+      }
+
+      // AI: chats are private to their author; dashboards are shared with AI users.
+      // Writes go through Cloud Functions (Admin SDK), except renames/deletes below.
+      match /aiChats/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && resource.data.userId == request.auth.uid;
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && resource.data.userId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title']);
+        allow delete: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && resource.data.userId == request.auth.uid;
+        allow create: if false;
+        // Streamed answer of the turn in progress: only the server writes it; the chat owner reads it
+        // and may set the cancel flag (nothing else).
+        match /stream/{sid} {
+          // resource == null: listening before the server has created the doc (a brand-new chat).
+          allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+            && (resource == null || resource.data.userId == request.auth.uid);
+          allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+            && resource.data.userId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cancel']);
+          allow create, delete: if false;
+        }
+        match /{rest=**} {
+          allow read, write: if false; // full API transcripts stay server-side
+        }
+      }
+      // Dashboards: the owner and lab admins read and edit them here (sharing included). Everyone else
+      // lists and opens the ones shared with their role through the listAiDashboards callable.
+      match /aiDashboards/{id} {
+        allow read, update, delete: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && (isAdmin(labId) || resource.data.createdBy == request.auth.uid);
+        allow create: if false;
+      }
+      // Pinned AI tables (with their added columns): one doc per user, private to them.
+      match /aiTablePins/{uid} {
+        allow read, write: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && uid == request.auth.uid;
+      }
+      match /mcpConnections/{id} {
+        allow read: if isAdmin(labId);
+        allow write: if false;
+      }
+      match /mcpAudit/{id} {
+        allow read: if isAdmin(labId);
+        allow write: if false;
+      }
+
+      // Quality control and NABL records: technicians, doctors and managers.
+      // qcMaterials are shared by all branches; the rest are branch-scoped.
+      match /qcMaterials/{id} {
+        allow read: if isStaff(labId);
+        allow create, update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']);
+        allow delete: if isAdmin(labId);
+      }
+      // Collection-centre dispatch manifests (sample batches in transit): staff, branch-scoped, never deleted.
+      match /manifests/{id} {
+        allow read: if readBranch(labId);
+        // A collection-centre portal login sees the manifests of its own centre (created by the portalDispatchManifest function).
+        allow read: if isPartner(labId) && profile(labId).role == 'collectionCentre' && resource.data.get('centreId', '') == profile(labId).partnerId;
+        allow create: if createBranch(labId);
+        allow update: if updateBranch(labId);
+        allow delete: if false;
+      }
+      // Online payments (Razorpay orders and what they were posted as): written by Cloud Functions only.
+      match /payments/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow write: if false;
+      }
+      // Credit wallet and its ledger: written by Cloud Functions only (credit purchase through the gateway).
+      match /aiCredits/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow write: if false;
+      }
+      match /aiCreditLedger/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow write: if false;
+      }
+      // Bulk registration job: per-chunk row results written by the runBulkRegistration function.
+      match /bulkImports/{importId}/results/{chunk} {
+        allow read: if isStaff(labId);
+        allow write: if false;
+      }
+      // Short-lived "someone is editing this bill's results" marker, one doc per bill (expires by timestamp).
+      match /resultLocks/{orderId} {
+        allow read, write: if isStaff(labId);
+      }
+      // Analyser results that matched no bill or test (written by the analyserIngest function; staff may clear them).
+      match /analyserUnmatched/{id} {
+        allow read: if readBranch(labId);
+        allow update, delete: if updateBranch(labId);
+        allow create: if false;
+      }
+      // IQC sheet print log: append-only, branch-scoped.
+      match /iqcDownloads/{id} {
+        allow read: if readBranch(labId);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && createBranch(labId);
+        allow update, delete: if false;
+      }
+      // Mass statement jobs: staff request, the server (Cloud Function) builds and updates them;
+      // a failed job may be re-queued by the requester.
+      match /statementJobs/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && request.resource.data.status == 'queued' && request.resource.data.requestedBy == request.auth.uid;
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && resource.data.status == 'failed' && request.resource.data.status == 'queued'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'retryCount']);
+        allow delete: if false;
+        match /files/{fileId} {
+          allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+          allow write: if false;
+        }
+      }
+      // Append-only audit log: written by the mirrorActivityToAudit Cloud Function only, never edited or deleted.
+      match /auditLog/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']) && readBranch(labId);
+        allow write: if false;
+      }
+      // NABL register column choices, shared by the whole lab (one doc per register).
+      match /nablColumns/{id} {
+        allow read: if isStaff(labId);
+        allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']);
+      }
+      // AI metering written by Cloud Functions only; admins read the monthly counters.
+      match /aiUsage/{id} {
+        allow read: if isAdmin(labId);
+        allow write: if false;
+      }
+      match /{qc}/{id} {
+        allow read: if readBranch(labId)
+          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && createBranch(labId)
+          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && updateBranch(labId)
+          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
+        // QC runs and discard records are part of the audit trail.
+        allow delete: if isAdmin(labId) && canUseBranch(labId, docBranch(resource.data))
+          && qc in ['qcMachines', 'eqasRounds', 'ilcStudies', 'validationStudies'];
+      }
+
+      // Inventory: stock movements are append-only; batches change only via movements.
+      // invItems / invSuppliers / stockMappings are shared by all branches;
+      // invBatches, stockMovements and purchaseOrders are branch-scoped.
+      match /{inv}/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+          && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv == 'purchaseOrders' && readBranch(labId)));
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+          && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv in ['invBatches', 'purchaseOrders'] && createBranch(labId)));
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+          && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv in ['invBatches', 'purchaseOrders'] && updateBranch(labId)));
+        allow delete: if isAdmin(labId) && inv in ['invItems', 'invSuppliers', 'stockMappings'];
+      }
+      match /stockMovements/{id} {
+        // Reception may read auto-consumption / return rows so a refund or void can restore stock.
+        allow read: if readBranch(labId)
+          && (hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+              || (isStaff(labId) && resource.data.type in ['consume_auto', 'return']));
+        allow create: if createBranch(labId); // auto-consumption runs on sample receipt by any staff
+        // Append-only. One exception: an admin may stamp a legacy movement (no branchId) as 'main'.
+        allow update: if isAdmin(labId) && !('branchId' in resource.data)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['branchId'])
+          && request.resource.data.branchId == 'main';
+        allow delete: if false;
+      }
+      // Auto-consumption runs when any staff member (incl. reception) receives a
+      // sample, so all staff may read lots and test mappings and decrement lots.
+      match /invBatches/{id} {
+        allow read: if readBranch(labId);
+        allow update: if updateBranch(labId);
+      }
+      match /stockMappings/{id} {
+        allow read: if isStaff(labId);
+      }
+
+      // Shared master data (all branches): referrers, partners, rate lists,
+      // charges, payment modes, templates and reason lists.
+      // Reception may quick-add a TEMPORARY referring doctor/hospital at registration
+      // (create only, temporary == true); completing or editing it needs a manager.
+      match /referrers/{id} {
+        allow create: if hasRole(labId, ['reception', 'phlebotomist', 'technician'])
+          && request.resource.data.get('temporary', false) == true;
+      }
+
+      // Partner portal: a portal user reads only their own partner document, that partner's rate
+      // list, wallet rows, credit/debit notes and invoices.
+      match /{pmaster}/{id} {
+        allow read: if isPartner(labId) && pmaster == partnerCollectionOf(profile(labId)) && id == profile(labId).partnerId;
+        allow read: if isPartner(labId) && pmaster == 'rateLists' && id == partnerDocOf(labId, profile(labId)).get('rateListId', '');
+        allow read: if isPartner(labId) && pmaster in ['walletTxns', 'creditNotes']
+          && profile(labId).role == 'b2b' && resource.data.get('centreId', '') == profile(labId).partnerId;
+        allow read: if isPartner(labId) && pmaster == 'partnerInvoices'
+          && profile(labId).role in ['b2b', 'corporate'] && resource.data.get('partyId', '') == profile(labId).partnerId;
+        // A referrer portal user reads the commission payouts (and reversals) recorded for their own referrer record.
+        allow read: if isPartner(labId) && pmaster == 'commissionSettlements'
+          && profile(labId).role == 'referrer'
+          && resource.data.get('partnerKind', '') == 'referrer'
+          && resource.data.get('partnerId', '') == profile(labId).partnerId;
+        // B2B billing mirrors the bill into the centre's wallet statement.
+        allow create: if partnerMayBill(labId) && pmaster == 'walletTxns' && profile(labId).role == 'b2b'
+          && request.resource.data.centreId == profile(labId).partnerId
+          && request.resource.data.kind == 'debit' && request.resource.data.amount <= 0;
+        // A B2B portal user may ask for a top-up. It stays pending (not counted in the balance) until
+        // lab staff approve it from B2B Labs > Wallet history.
+        allow create: if isPartner(labId) && pmaster == 'walletTxns' && profile(labId).role == 'b2b'
+          && request.resource.data.centreId == profile(labId).partnerId
+          && request.resource.data.kind == 'topup' && request.resource.data.status == 'pending'
+          && request.resource.data.amount is int && request.resource.data.amount > 0
+          && request.resource.data.by == request.auth.uid
+          && request.resource.data.requestedByPartner == true;
+      }
+
+      match /{master}/{id} {
+        allow read: if isStaff(labId) && master in ['referrers', 'hospitals', 'tpas', 'govPanels',
+          'marketingTeam', 'processingLabs', 'b2bCentres', 'collectionCentres', 'corporateClients',
+          'rateLists', 'otherCharges', 'paymentModes', 'reportTemplates', 'worksheetTemplates', 'reasons', 'collectors', 'phlebotomists', 'priceBatches'];
+        allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && master in ['referrers', 'hospitals', 'tpas', 'govPanels',
+          'marketingTeam', 'processingLabs', 'b2bCentres', 'collectionCentres', 'corporateClients',
+          'rateLists', 'otherCharges', 'paymentModes', 'reportTemplates', 'worksheetTemplates', 'reasons', 'collectors', 'phlebotomists', 'priceBatches'];
+      }
+
+      // Round 3 analysis: background export jobs (the server builds the CSV into Storage), outsource vendor
+      // settlements, and finance custom tabs (own, or shared to roles).
+      match /exportJobs/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && request.resource.data.status == 'queued' && request.resource.data.requestedBy == request.auth.uid;
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && resource.data.status == 'failed' && request.resource.data.status == 'queued'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'retryCount']);
+        allow delete: if isAdmin(labId);
+      }
+      match /outsourceSettlements/{id} {
+        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager']) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paidAt', 'paidBy', 'paidByName', 'reference', 'notes']);
+        allow delete: if false;
+      }
+      match /financeTabs/{id} {
+        // Tab definitions hold no patient data; the app shows only own tabs and tabs shared to the viewer's role.
+        allow read: if isStaff(labId);
+        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager']) && request.resource.data.ownerId == request.auth.uid;
+        allow update, delete: if isStaff(labId) && (resource.data.ownerId == request.auth.uid || isAdmin(labId));
+      }
+
+      // Branch-scoped working records added with the parity work (quotations,
+      // partner wallets/invoices/notes, activity feed, support tickets).
+      match /{scoped}/{id} {
+        allow read: if readBranch(labId) && scoped in ['quotations', 'walletTxns', 'partnerInvoices',
+          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs'];
+        allow create: if createBranch(labId) && scoped in ['quotations', 'walletTxns', 'partnerInvoices',
+          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs'];
+        allow update: if updateBranch(labId) && scoped in ['quotations', 'partnerInvoices', 'supportTickets', 'bulkImports', 'outsourceJobs'];
+        allow delete: if false;
+        // A draft partner invoice can be deleted (its bills become invoiceable again); sent / paid ones cannot.
+        allow delete: if scoped == 'partnerInvoices' && readBranch(labId) && resource.data.status == 'draft';
+
+        // Quotation attachments: small data-URL documents (no Storage bucket).
+        match /attachments/{attId} {
+          allow read, create, delete: if isStaff(labId) && scoped == 'quotations';
+          allow update: if false;
+        }
+      }
+
+      match /patients/{id} {
+        allow read, create, update: if isStaff(labId);
+        allow delete: if false;
+        // Portal users register their own patients (stamped with partnerId) and read only those.
+        allow create: if partnerMayBill(labId) && request.resource.data.get('partnerId', '') == profile(labId).partnerId;
+        allow read: if isPartner(labId) && resource.data.get('partnerId', '') == profile(labId).partnerId;
+
+        // Uploaded documents: kept as-is; only admins may remove one.
+        match /documents/{docId} {
+          allow read, create: if isStaff(labId);
+          allow update: if false;
+          allow delete: if isAdmin(labId);
+        }
+      }
+
+      // Per-user radiology macros: each user reads and manages only their own.
+      match /userMacros/{id} {
+        allow read: if isStaff(labId) && resource.data.ownerUid == request.auth.uid;
+        allow create: if isStaff(labId) && request.resource.data.ownerUid == request.auth.uid;
+        allow update: if isStaff(labId) && resource.data.ownerUid == request.auth.uid && request.resource.data.ownerUid == request.auth.uid;
+        allow delete: if isStaff(labId) && resource.data.ownerUid == request.auth.uid;
+      }
+
+      // PCPNDT Form F (one per bill). The patient's e-signature arrives through a Cloud Function.
+      match /formF/{orderId} {
+        allow read, create, update: if isStaff(labId);
+        allow delete: if false;
+      }
+
+      // Saved smart report copy (per bill): staff write it, a Cloud Function checks it is current before sending.
+      match /smartReports/{orderId} {
+        allow read, write: if isStaff(labId);
+      }
+
+      // Bill PIN: staff may read it to the patient; only Cloud Functions create it.
+      match /orderSecrets/{orderId} {
+        allow read: if isStaff(labId);
+        allow write: if false;
+      }
+
+      match /orders/{orderId} {
+        allow read: if readBranch(labId);
+        allow create: if createBranch(labId);
+        allow update: if updateBranch(labId);
+        // Portal: own partner's bills only; new bills must carry the partner's own id and a branch they may use.
+        allow read: if partnerOwns(labId, resource.data);
+        allow create: if partnerMayBill(labId) && partnerOwns(labId, request.resource.data)
+          && partnerBranchOk(profile(labId), request.resource.data);
+        // Bills are voided (deleted flag), never removed.
+        allow delete: if false;
+
+        // Ledger is append-only: no edits, no deletes.
+        match /ledger/{entryId} {
+          allow read, create: if orderBranchOk(labId, orderId);
+          allow read: if partnerOrderOk(labId, orderId);
+          allow update, delete: if false;
+        }
+
+        // Delivery log: server writes provider sends; staff may log manual
+        // WhatsApp / hard-copy handovers. Entries are never edited.
+        match /deliveries/{id} {
+          allow read: if orderBranchOk(labId, orderId) || partnerOrderOk(labId, orderId);
+          allow create: if orderBranchOk(labId, orderId)
+            && request.resource.data.channel in ['manualWhatsapp', 'hardcopy'];
+          allow update, delete: if false;
+        }
+
+        // Report versions (signature snapshot, amendments): written by Cloud Functions only.
+        match /reportVersions/{versionId} {
+          allow read: if orderBranchOk(labId, orderId) || partnerOrderOk(labId, orderId);
+          allow write: if false;
+        }
+
+        // Stored report snapshots (HTML + sha256 per approved version): Cloud Functions only.
+        match /reportSnapshots/{snapId} {
+          allow read: if orderBranchOk(labId, orderId);
+          allow write: if false;
+        }
+
+        // Re-uploaded PDF replacing the generated report.
+        match /reportFiles/{fileId} {
+          allow read: if orderBranchOk(labId, orderId) || partnerOrderOk(labId, orderId);
+          allow write: if orderBranchOk(labId, orderId);
+        }
+
+        match /results/{testId} {
+          allow read: if orderBranchOk(labId, orderId) || partnerOrderOk(labId, orderId);
+          allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && orderBranchOk(labId, orderId);
+
+          match /versions/{versionId} {
+            allow read, create: if orderBranchOk(labId, orderId);
+            allow update, delete: if false;
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,43 @@
+.reg { display: grid; gap: var(--s-4); }
+.reg__card-title { margin: 0 0 var(--s-3); font-size: var(--fs-body); font-weight: 600; color: var(--c-on-surface); }
+/* Fields fill the width: about 3-4 columns on a 13-14" laptop, 5-6 on a large desktop. */
+.reg__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0 var(--s-4); }
+.reg__grid--2 { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+.reg__span2 { grid-column: span 2; }
+.reg__span3 { grid-column: 1 / -1; }
+@media (max-width: 860px) { .reg__grid, .reg__grid--2 { grid-template-columns: 1fr; } .reg__span2 { grid-column: auto; } }
+.reg__meta { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; margin-bottom: var(--s-3); color: var(--c-on-surface-variant); }
+.reg__match { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; justify-content: space-between; }
+.reg__hit { display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; }
+.reg__hint { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
+.reg__age { display: flex; gap: var(--s-2); }
+.reg__age .ant-input-number { flex: 1; min-width: 0; }
+.reg__phone { display: flex; gap: var(--s-2); }
+
+/* Patient details: header with the patient ID on the right; name reads as one line, then gender
+   and age side by side. Wide screens put everything on one row. */
+.reg-pd__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-4); }
+.reg-pd__title { margin: 0; }
+.reg-pd__ids { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); }
+.reg-pd__idlabel { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
+.reg-pd__grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: 'name name' 'gender age';
+  gap: 0 var(--s-5);
+  align-items: start;
+}
+.reg-pd__name { grid-area: name; display: grid; grid-template-columns: 120px minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--s-3); }
+.reg-pd__gender { grid-area: gender; }
+.reg-pd__age { grid-area: age; }
+.reg-pd__gender .ant-radio-button-wrapper { min-width: 84px; text-align: center; }
+.reg-pd__agerow { display: flex; align-items: center; gap: var(--s-3); }
+.reg-pd__agerow > :first-child { flex: 0 1 420px; min-width: 0; }
+@media (min-width: 1500px) {
+  .reg-pd__grid { grid-template-columns: minmax(0, 1.5fr) auto minmax(0, 1fr); grid-template-areas: 'name gender age'; }
+}
+@media (max-width: 860px) {
+  .reg-pd__grid { grid-template-columns: 1fr; grid-template-areas: 'name' 'gender' 'age'; }
+  .reg-pd__name { grid-template-columns: 96px minmax(0, 1fr); }
+  .reg-pd__name > :last-child { grid-column: 1 / -1; }
+}

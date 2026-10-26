@@ -1,0 +1,32 @@
+/* Catalogue and outsource screens. Tokens only. */
+.cat-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.cat-toolbar__grow { flex: 1 1 auto; }
+.cat-tabs { margin-bottom: var(--s-4); overflow-x: auto; }
+.cat-dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: var(--outline-w) solid var(--c-outline); flex: none; vertical-align: middle; }
+.cat-muted { color: var(--c-on-surface-variant); }
+.cat-stack { display: flex; flex-direction: column; gap: var(--s-4); }
+.cat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--s-4); }
+.cat-pkg { display: flex; flex-direction: column; gap: var(--s-3); height: 100%; }
+.cat-pkg__top { display: flex; justify-content: space-between; gap: var(--s-3); align-items: flex-start; }
+.cat-pkg__name { margin: 0; font-size: var(--fs-body); font-weight: 600; }
+.cat-pkg__price { font-size: var(--fs-title); font-weight: 600; font-variant-numeric: tabular-nums; }
+.cat-pkg__tests { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.cat-pkg__actions { margin-top: auto; display: flex; gap: var(--s-2); }
+.cat-code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-dense); background: var(--c-surface-container); border-radius: var(--r-control); padding: 1px var(--s-2); }
+.cat-seq { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-2); max-height: 50vh; overflow: auto; }
+.cat-seq__item { display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-3); background: var(--c-surface-container); border-radius: var(--r-control); cursor: grab; }
+.cat-seq__item--over { outline: 2px solid var(--c-primary); }
+.cat-seq__no { width: 28px; text-align: right; color: var(--c-on-surface-variant); font-variant-numeric: tabular-nums; }
+.cat-seq__name { flex: 1 1 auto; }
+.cat-section-title { margin: 0 0 var(--s-3); font-size: var(--fs-body); font-weight: 600; }
+.cat-preview { background: var(--c-surface); border: var(--outline-w) solid var(--c-outline-variant); border-radius: var(--r-section); padding: var(--s-5); }
+.cat-preview h3 { margin: 0 0 var(--s-2); }
+.cat-preview table { width: 100%; border-collapse: collapse; font-size: var(--fs-dense); }
+.cat-preview th, .cat-preview td { text-align: left; padding: var(--s-2); border-bottom: var(--outline-w) solid var(--c-outline-variant); }
+.cat-preview pre { white-space: pre-wrap; font: inherit; margin: var(--s-3) 0 0; }
+.cat-tat { display: inline-flex; align-items: center; gap: var(--s-1); }
+.cat-diff-up { color: var(--c-success); }
+.cat-diff-down { color: var(--c-urgent); }
+@media (max-width: 640px) { .cat-grid { grid-template-columns: 1fr; } }
+
+.cat-rich .re-rich { max-width: none; width: 100%; }

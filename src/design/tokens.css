@@ -1,0 +1,238 @@
+/* Health Care Labs design tokens (DESIGN.md §4, §9).
+   Roles are CSS custom properties on :root. They are redefined for
+   - dark:           prefers-color-scheme: dark, or <html data-theme="dark">
+   - high contrast:  prefers-contrast: more, or <html data-contrast="more">
+   DisplaySettings also sets data-scheme (resolved light|dark), data-motion,
+   data-transparency and data-contrast on <html>. src/design/palette.ts mirrors
+   the colour roles for Ant Design. */
+
+:root {
+  --c-primary: #0369A1;
+  --c-on-primary: #FFFFFF;
+  --c-primary-container: #E0F2FE;
+  --c-on-primary-container: #0C4A6E;
+  --c-surface: #F8FBFE;
+  --c-surface-container-low: #F1F6FB;
+  --c-surface-container: #EBF2F8;
+  --c-surface-container-high: #FFFFFF;
+  --c-surface-container-highest: #E3EDF6;
+  --c-on-surface: #0F1B26;
+  --c-on-surface-variant: #44525F;
+  --c-outline: #74828F;
+  --c-outline-variant: #D3DEE8;
+  --c-error: #B3261E;
+  --c-on-error: #FFFFFF;
+  --c-urgent: #B3261E;
+  --c-caution: #8A5300;
+  --c-success: #1B6E3A;
+  --c-info: #0369A1;
+
+  /* Ambient sky wash: the only place the brand accent #0EA5E9 is used as a fill. */
+  --c-accent: #0EA5E9;
+  --c-wash-a: #BAE6FD;
+  --c-wash-b: #E0F2FE;
+  --c-wash-c: #F0F9FF;
+  --c-rim: rgb(255 255 255 / 35%);
+  --c-shadow: rgb(3 105 161 / 18%);
+  --c-scrim: rgb(15 27 38 / 45%);
+  --glass-shadow-tint: rgb(3 105 161 / 18%);
+
+  /* Status washes (tonal fills) */
+  --c-urgent-wash: color-mix(in srgb, var(--c-urgent) 12%, var(--c-surface-container-high));
+  --c-caution-wash: color-mix(in srgb, var(--c-caution) 12%, var(--c-surface-container-high));
+  --c-success-wash: color-mix(in srgb, var(--c-success) 12%, var(--c-surface-container-high));
+  --c-info-wash: color-mix(in srgb, var(--c-info) 12%, var(--c-surface-container-high));
+  --c-neutral-wash: var(--c-surface-container);
+
+  /* Radii (§4.2) */
+  --r-panel: 28px;
+  --r-card: 24px;
+  --r-section: 20px;
+  --r-dialog: 32px;
+  --r-capsule: 999px;
+  --r-control: 10px;
+
+  /* Spacing scale */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 48px;
+  --inset: 12px; /* floating glass inset from the viewport edge */
+
+  /* Type (§4.4) */
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-body: 14px;
+  --fs-dense: 13px;
+  --fs-min: 12px;
+  --fs-title: 20px;
+
+  /* Click target: 32 pointer, 44 touch */
+  --target: 32px;
+
+  /* Layout */
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 72px;
+  --bar-h: 52px;
+  --group-h: 44px;
+  --group-pad: 4px;
+  --child-h: 36px;
+
+  /* Motion (§5); springs are CSS linear() curves, see motion.css */
+  --dur-micro: 100ms;
+  --dur-short: 160ms;
+  --dur-medium: 240ms;
+  --dur-long: 300ms;
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0, 1);
+  --ease-accelerate: cubic-bezier(0.3, 0, 1, 1);
+  --stagger: 18ms;
+
+  /* z-index */
+  --z-content: 1;
+  --z-edge: 20;
+  --z-bar: 30;
+  --z-sidebar: 31;
+  --z-skip: 100;
+
+  color-scheme: light;
+}
+
+/* ---- Dark ------------------------------------------------------------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+  --c-primary: #7DD3FC;
+  --c-on-primary: #00344F;
+  --c-primary-container: #004B70;
+  --c-on-primary-container: #CDEBFF;
+  --c-surface: #0E141A;
+  --c-surface-container-low: #151C23;
+  --c-surface-container: #1A222A;
+  --c-surface-container-high: #212A33;
+  --c-surface-container-highest: #2B3540;
+  --c-on-surface: #E3EAF1;
+  --c-on-surface-variant: #B6C3CF;
+  --c-outline: #8B98A5;
+  --c-outline-variant: #38444F;
+  --c-error: #F2B8B5;
+  --c-on-error: #601410;
+  --c-urgent: #F2B8B5;
+  --c-caution: #FFB95C;
+  --c-success: #7DD99B;
+  --c-info: #7DD3FC;
+  --c-wash-a: #0B3A5A;
+  --c-wash-b: #123A52;
+  --c-wash-c: #0E2A3B;
+  --c-rim: rgb(255 255 255 / 14%);
+  --c-shadow: rgb(0 0 0 / 40%);
+  --c-scrim: rgb(0 0 0 / 45%);
+  --glass-shadow-tint: rgb(0 0 0 / 40%);
+  color-scheme: dark;
+
+    --c-urgent-wash: color-mix(in srgb, var(--c-urgent) 16%, var(--c-surface-container-high));
+    --c-caution-wash: color-mix(in srgb, var(--c-caution) 16%, var(--c-surface-container-high));
+    --c-success-wash: color-mix(in srgb, var(--c-success) 16%, var(--c-surface-container-high));
+    --c-info-wash: color-mix(in srgb, var(--c-info) 16%, var(--c-surface-container-high));
+  }
+}
+:root[data-theme='dark'] {
+  --c-primary: #7DD3FC;
+  --c-on-primary: #00344F;
+  --c-primary-container: #004B70;
+  --c-on-primary-container: #CDEBFF;
+  --c-surface: #0E141A;
+  --c-surface-container-low: #151C23;
+  --c-surface-container: #1A222A;
+  --c-surface-container-high: #212A33;
+  --c-surface-container-highest: #2B3540;
+  --c-on-surface: #E3EAF1;
+  --c-on-surface-variant: #B6C3CF;
+  --c-outline: #8B98A5;
+  --c-outline-variant: #38444F;
+  --c-error: #F2B8B5;
+  --c-on-error: #601410;
+  --c-urgent: #F2B8B5;
+  --c-caution: #FFB95C;
+  --c-success: #7DD99B;
+  --c-info: #7DD3FC;
+  --c-wash-a: #0B3A5A;
+  --c-wash-b: #123A52;
+  --c-wash-c: #0E2A3B;
+  --c-rim: rgb(255 255 255 / 14%);
+  --c-shadow: rgb(0 0 0 / 40%);
+  --c-scrim: rgb(0 0 0 / 45%);
+  --glass-shadow-tint: rgb(0 0 0 / 40%);
+  color-scheme: dark;
+
+  --c-urgent-wash: color-mix(in srgb, var(--c-urgent) 16%, var(--c-surface-container-high));
+  --c-caution-wash: color-mix(in srgb, var(--c-caution) 16%, var(--c-surface-container-high));
+  --c-success-wash: color-mix(in srgb, var(--c-success) 16%, var(--c-surface-container-high));
+  --c-info-wash: color-mix(in srgb, var(--c-info) 16%, var(--c-surface-container-high));
+}
+
+/* ---- Increase contrast (7:1 text, 1.5px outlines) --------------------- */
+@media (prefers-contrast: more) {
+  :root:not([data-contrast='normal']):not([data-scheme='dark']) {
+  --c-primary: #014A73;
+  --c-on-primary: #FFFFFF;
+  --c-on-primary-container: #06314D;
+  --c-on-surface: #000000;
+  --c-on-surface-variant: #1F2A33;
+  --c-outline: #3D4A55;
+  --c-outline-variant: #5C6A76;
+  --c-error: #8C1D18;
+  --c-urgent: #8C1D18;
+  --c-caution: #5E3A00;
+  --c-success: #0F5C2E;
+  --c-info: #014A73;
+
+    --outline-w: 1.5px;
+  }
+}
+:root[data-contrast='more'] {
+  --c-primary: #014A73;
+  --c-on-primary: #FFFFFF;
+  --c-on-primary-container: #06314D;
+  --c-on-surface: #000000;
+  --c-on-surface-variant: #1F2A33;
+  --c-outline: #3D4A55;
+  --c-outline-variant: #5C6A76;
+  --c-error: #8C1D18;
+  --c-urgent: #8C1D18;
+  --c-caution: #5E3A00;
+  --c-success: #0F5C2E;
+  --c-info: #014A73;
+
+  --outline-w: 1.5px;
+}
+:root[data-contrast='more'][data-scheme='dark'] {
+  --c-primary: #A8E0FF;
+  --c-on-primary: #00263B;
+  --c-primary-container: #00547F;
+  --c-on-primary-container: #FFFFFF;
+  --c-on-surface: #FFFFFF;
+  --c-on-surface-variant: #DCE5EC;
+  --c-outline: #B6C3CF;
+  --c-outline-variant: #8B98A5;
+  --c-error: #FFD2CF;
+  --c-urgent: #FFD2CF;
+  --c-caution: #FFD08A;
+  --c-success: #A6EBBE;
+  --c-info: #A8E0FF;
+
+  --outline-w: 1.5px;
+}
+:root {
+  --outline-w: 1px;
+}
+
+/* ---- Touch targets ---------------------------------------------------- */
+@media (pointer: coarse) {
+  :root {
+    --target: 44px;
+    --child-h: 44px;
+  }
+}

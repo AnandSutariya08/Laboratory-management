@@ -1,0 +1,289 @@
+/* Glass (DESIGN.md §4.1). Content is solid; glass floats. Regular glass only.
+   Variants: .glass (small: bars, sidebar, toasts), .glass--large (modals, drawers,
+   menus, popovers), .glass--tinted (the single primary action of a surface).
+   Tier B (default): no blur, high-opacity fill. Tier A: @supports backdrop-filter.
+   Identity (Reduce Transparency / Increase Contrast): opaque + outline, no blur, no rim. */
+
+:root {
+  --glass-blur-small: 24px;
+  --glass-blur-large: 32px;
+}
+
+/* Shared selector set: our own classes and the themed Ant Design overlays. */
+.glass,
+.glass--large,
+.ant-modal .ant-modal-container,
+.ant-drawer .ant-drawer-section,
+.ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+.ant-select-dropdown,
+.ant-picker-dropdown .ant-picker-panel-container,
+.ant-popover .ant-popover-container,
+.ant-popover .ant-popover-inner,
+.ant-popconfirm .ant-popover-inner,
+.ant-message .ant-message-notice-wrapper,
+.ant-notification .ant-notification-notice,
+.ant-tooltip .ant-tooltip-container,
+.ant-tooltip .ant-tooltip-inner {
+  --glass-fill-pct: 88%;
+  --glass-fill-base: var(--c-surface-container-high);
+  --glass-blur: 0px;
+  --glass-shadow: 0 4px 12px var(--glass-shadow-tint);
+  position: relative;
+  background: color-mix(in srgb, var(--glass-fill-base) var(--glass-fill-pct), transparent);
+  border: 0;
+  box-shadow: var(--glass-shadow);
+  color: var(--c-on-surface);
+}
+
+/* Large variants: 97% fill in tier B. */
+.glass--large,
+.ant-modal .ant-modal-container,
+.ant-drawer .ant-drawer-section,
+.ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+.ant-select-dropdown,
+.ant-picker-dropdown .ant-picker-panel-container,
+.ant-popover .ant-popover-container,
+.ant-popover .ant-popover-inner,
+.ant-popconfirm .ant-popover-inner {
+  --glass-fill-pct: 97%;
+  --glass-shadow: 0 12px 32px var(--glass-shadow-tint);
+}
+
+/* Toast padding (the wrapper is the glass surface). */
+.ant-message .ant-message-notice-wrapper { padding: 10px 16px; display: inline-flex; align-items: center; gap: 8px; }
+
+/* Radii: panels 28, dialogs 32, small glass uses the capsule/ card radius of the host. */
+.glass--large,
+.ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+.ant-select-dropdown,
+.ant-popover .ant-popover-container,
+.ant-popover .ant-popover-inner,
+.ant-popconfirm .ant-popover-inner { border-radius: var(--r-panel); }
+.ant-drawer .ant-drawer-section { border-radius: var(--r-panel); }
+.ant-modal .ant-modal-container { border-radius: var(--r-dialog); }
+.ant-message .ant-message-notice-wrapper,
+.ant-notification .ant-notification-notice { border-radius: var(--r-panel); }
+.ant-tooltip .ant-tooltip-container,
+.ant-tooltip .ant-tooltip-inner { border-radius: 12px; }
+
+/* Rim: 1px gradient stroke, white 35% light / 14% dark fading to 0. */
+.glass::before,
+.glass--large::before,
+.ant-modal .ant-modal-container::before,
+.ant-drawer .ant-drawer-section::before,
+.ant-dropdown .ant-dropdown-menu::before,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub::before,
+.ant-popover .ant-popover-inner::before,
+.ant-message .ant-message-notice-wrapper::before,
+.ant-notification .ant-notification-notice::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(145deg, var(--c-rim), transparent 55%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Tier A: real backdrop blur where supported. */
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass,
+  .ant-message .ant-message-notice-wrapper,
+  .ant-notification .ant-notification-notice,
+  .ant-tooltip .ant-tooltip-container,
+  .ant-tooltip .ant-tooltip-inner {
+    --glass-fill-pct: 62%;
+    --glass-fill-base: var(--c-surface);
+    --glass-blur: var(--glass-blur-small);
+  }
+  .glass--large,
+  .ant-modal .ant-modal-container,
+  .ant-drawer .ant-drawer-section,
+  .ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+  .ant-select-dropdown,
+  .ant-picker-dropdown .ant-picker-panel-container,
+  .ant-popover .ant-popover-container,
+  .ant-popover .ant-popover-inner,
+  .ant-popconfirm .ant-popover-inner {
+    --glass-fill-pct: 76%;
+    --glass-fill-base: var(--c-surface);
+    --glass-blur: var(--glass-blur-large);
+  }
+  .glass,
+  .glass--large,
+  .ant-modal .ant-modal-container,
+  .ant-drawer .ant-drawer-section,
+  .ant-dropdown .ant-dropdown-menu,
+.ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+  .ant-select-dropdown,
+  .ant-picker-dropdown .ant-picker-panel-container,
+  .ant-popover .ant-popover-container,
+  .ant-popover .ant-popover-inner,
+  .ant-popconfirm .ant-popover-inner,
+  .ant-message .ant-message-notice-wrapper,
+  .ant-notification .ant-notification-notice,
+  .ant-tooltip .ant-tooltip-container,
+  .ant-tooltip .ant-tooltip-inner {
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+  }
+}
+
+/* Tinted: fill blended 35% toward primary; content onPrimaryContainer. One per surface. */
+.glass--tinted {
+  --glass-fill-pct: 100%;
+  --glass-fill-base: color-mix(in srgb, var(--c-primary) 35%, var(--c-surface-container-high));
+  color: var(--c-on-primary-container);
+}
+
+/* Inner sections of large glass are tonal content with concentric radii. */
+.glass-section {
+  background: var(--c-surface-container);
+  border-radius: var(--r-section);
+}
+
+/* Scrim for modals: 45% */
+.ant-modal-mask { background: var(--c-scrim); }
+.ant-drawer-mask { background: transparent; } /* parallel panels: no scrim */
+.ant-drawer-mask.hcl-modal-drawer, .ant-drawer-modal .ant-drawer-mask { background: var(--c-scrim); }
+.ant-modal .ant-modal-header, .ant-modal .ant-modal-footer,
+.ant-drawer .ant-drawer-header, .ant-drawer .ant-drawer-footer { background: transparent; }
+/* Side drawers inset 16 from the viewport edge. */
+.ant-drawer-right > .ant-drawer-content-wrapper,
+.ant-drawer-left > .ant-drawer-content-wrapper { margin: 16px; height: calc(100% - 32px); box-shadow: none; }
+
+/* ---- Identity: Reduce Transparency, Increase Contrast ---- */
+@media (prefers-reduced-transparency: reduce) {
+  :root:not([data-transparency='full']) .glass,
+  :root:not([data-transparency='full']) .glass--large,
+  :root:not([data-transparency='full']) .ant-modal .ant-modal-container,
+  :root:not([data-transparency='full']) .ant-drawer .ant-drawer-section,
+  :root:not([data-transparency='full']) .ant-dropdown .ant-dropdown-menu,
+  :root:not([data-transparency='full']) .ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+  :root:not([data-transparency='full']) .ant-select-dropdown,
+  :root:not([data-transparency='full']) .ant-picker-dropdown .ant-picker-panel-container,
+  :root:not([data-transparency='full']) .ant-popover .ant-popover-container,
+  :root:not([data-transparency='full']) .ant-popover .ant-popover-inner,
+  :root:not([data-transparency='full']) .ant-popconfirm .ant-popover-inner,
+  :root:not([data-transparency='full']) .ant-message .ant-message-notice-wrapper,
+  :root:not([data-transparency='full']) .ant-notification .ant-notification-notice,
+  :root:not([data-transparency='full']) .ant-tooltip .ant-tooltip-container,
+  :root:not([data-transparency='full']) .ant-tooltip .ant-tooltip-inner {
+    --glass-fill-pct: 100%;
+    --glass-fill-base: var(--c-surface-container-high);
+    --glass-blur: 0px;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    background: var(--c-surface-container-high);
+    border: var(--outline-w) solid var(--c-outline-variant);
+  }
+}
+:root[data-transparency='reduce'] .glass,
+:root[data-transparency='reduce'] .glass--large,
+:root[data-transparency='reduce'] .ant-modal .ant-modal-container,
+:root[data-transparency='reduce'] .ant-drawer .ant-drawer-section,
+:root[data-transparency='reduce'] .ant-dropdown .ant-dropdown-menu,
+  :root[data-transparency='reduce'] .ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+:root[data-transparency='reduce'] .ant-select-dropdown,
+:root[data-transparency='reduce'] .ant-picker-dropdown .ant-picker-panel-container,
+:root[data-transparency='reduce'] .ant-popover .ant-popover-container,
+:root[data-transparency='reduce'] .ant-popover .ant-popover-inner,
+:root[data-transparency='reduce'] .ant-popconfirm .ant-popover-inner,
+:root[data-transparency='reduce'] .ant-message .ant-message-notice-wrapper,
+:root[data-transparency='reduce'] .ant-notification .ant-notification-notice,
+:root[data-transparency='reduce'] .ant-tooltip .ant-tooltip-container,
+:root[data-transparency='reduce'] .ant-tooltip .ant-tooltip-inner,
+:root[data-contrast='more'] .glass,
+:root[data-contrast='more'] .glass--large,
+:root[data-contrast='more'] .ant-modal .ant-modal-container,
+:root[data-contrast='more'] .ant-drawer .ant-drawer-section,
+:root[data-contrast='more'] .ant-dropdown .ant-dropdown-menu,
+  :root[data-contrast='more'] .ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub,
+:root[data-contrast='more'] .ant-select-dropdown,
+:root[data-contrast='more'] .ant-picker-dropdown .ant-picker-panel-container,
+:root[data-contrast='more'] .ant-popover .ant-popover-container,
+:root[data-contrast='more'] .ant-popover .ant-popover-inner,
+:root[data-contrast='more'] .ant-popconfirm .ant-popover-inner,
+:root[data-contrast='more'] .ant-message .ant-message-notice-wrapper,
+:root[data-contrast='more'] .ant-notification .ant-notification-notice,
+:root[data-contrast='more'] .ant-tooltip .ant-tooltip-container,
+:root[data-contrast='more'] .ant-tooltip .ant-tooltip-inner {
+  --glass-fill-pct: 100%;
+  --glass-fill-base: var(--c-surface-container-high);
+  --glass-blur: 0px;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  background: var(--c-surface-container-high);
+  border: var(--outline-w) solid var(--c-on-surface-variant);
+}
+:root[data-transparency='reduce'] .glass::before,
+:root[data-transparency='reduce'] .glass--large::before,
+:root[data-transparency='reduce'] .ant-modal .ant-modal-container::before,
+:root[data-transparency='reduce'] .ant-drawer .ant-drawer-section::before,
+:root[data-transparency='reduce'] .ant-dropdown .ant-dropdown-menu::before,
+  :root[data-transparency='reduce'] .ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub::before,
+:root[data-transparency='reduce'] .ant-popover .ant-popover-inner::before,
+:root[data-transparency='reduce'] .ant-message .ant-message-notice-wrapper::before,
+:root[data-transparency='reduce'] .ant-notification .ant-notification-notice::before,
+:root[data-contrast='more'] .glass::before,
+:root[data-contrast='more'] .glass--large::before,
+:root[data-contrast='more'] .ant-modal .ant-modal-container::before,
+:root[data-contrast='more'] .ant-drawer .ant-drawer-section::before,
+:root[data-contrast='more'] .ant-dropdown .ant-dropdown-menu::before,
+  :root[data-contrast='more'] .ant-dropdown-menu-submenu-popup .ant-dropdown-menu-sub::before,
+:root[data-contrast='more'] .ant-popover .ant-popover-inner::before,
+:root[data-contrast='more'] .ant-message .ant-message-notice-wrapper::before,
+:root[data-contrast='more'] .ant-notification .ant-notification-notice::before { display: none; }
+
+/* Tinted glass: no tint in identity modes (solid primary container instead). */
+:root[data-transparency='reduce'] .glass--tinted,
+:root[data-contrast='more'] .glass--tinted {
+  background: var(--c-primary-container);
+  border: var(--outline-w) solid var(--c-primary);
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root:not([data-transparency='full']) .glass--tinted {
+    background: var(--c-primary-container);
+    border: var(--outline-w) solid var(--c-primary);
+  }
+}
+/* Increase contrast without the data attribute (no JS): same identity. */
+@media (prefers-contrast: more) {
+  :root:not([data-contrast='normal']) .glass,
+  :root:not([data-contrast='normal']) .glass--large {
+    background: var(--c-surface-container-high);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    border: var(--outline-w) solid var(--c-on-surface-variant);
+  }
+}
+
+/* Dialogs stay in place: the dialog never grows past the window, and only its body scrolls
+   (header and footer stay visible). The page behind does not scroll. */
+.ant-modal-wrap { overflow: hidden; }
+/* Responsive widths come from dialogWidth() (src/design/dialog.ts); never wider than the window. */
+.ant-modal { max-width: calc(100vw - 48px); }
+.ant-drawer-right > .ant-drawer-content-wrapper,
+.ant-drawer-left > .ant-drawer-content-wrapper { max-width: calc(100vw - 32px); }
+.ant-modal:not(.ant-modal-centered .ant-modal) { top: 32px; padding-bottom: 0; }
+.ant-modal .ant-modal-container {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100dvh - 64px);
+}
+.ant-modal .ant-modal-header,
+.ant-modal .ant-modal-footer { flex: 0 0 auto; }
+.ant-modal .ant-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}

@@ -1,0 +1,25 @@
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--s-3); margin-bottom: var(--s-4); }
+.stat-tile { padding: var(--s-3) var(--s-4); display: grid; }
+.stat-tile__btn { all: unset; display: grid; gap: var(--s-1); cursor: pointer; border-radius: var(--r-section); }
+.stat-tile__btn:focus-visible { outline: 2px solid var(--c-primary); outline-offset: 4px; }
+.stat-tile > .stat-tile__label, .stat-tile__btn > .stat-tile__label { font-size: var(--fs-dense); color: var(--c-on-surface-variant); }
+.stat-tile__value { font-size: 24px; font-weight: 600; color: var(--c-on-surface); display: block; }
+.stat-tile__value--success { color: var(--c-success); }
+.stat-tile__value--urgent { color: var(--c-urgent); }
+.stat-tile__value--caution { color: var(--c-caution); }
+.stat-tile__value--info { color: var(--c-info); }
+.stat-tile__hint { font-size: var(--fs-min); color: var(--c-on-surface-variant); }
+.qc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
+.qc-toolbar__spacer { flex: 1; }
+.qc-stack { display: grid; gap: var(--s-4); }
+.qc-card-title { margin: 0 0 var(--s-3); font-size: var(--fs-body); font-weight: 600; }
+.qc-muted { color: var(--c-on-surface-variant); }
+.qc-subnav { margin-bottom: var(--s-4); }
+.qc-subnav > * + * { margin-top: var(--s-2); }
+.panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); } .panel-head .qc-card-title { margin: 0; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); }
+.wizard { list-style: none; margin: 0 0 var(--s-3); padding: 0; display: grid; gap: var(--s-2); }
+.wizard li { padding: var(--s-3); border-radius: var(--r-section); background: var(--c-surface-container); }
+.wizard li[data-done='true'] { background: var(--c-success-wash); }
+.wizard label { display: flex; gap: var(--s-3); align-items: flex-start; cursor: pointer; }
+.wizard input { margin-top: 4px; width: 18px; height: 18px; }

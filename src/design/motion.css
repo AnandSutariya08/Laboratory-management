@@ -1,0 +1,121 @@
+/* Motion (DESIGN.md §5). Productivity profile: medium, durations x0.8.
+   Springs are CSS linear() curves sampled from damped springs; no animation library. */
+
+:root {
+  /* press: scale to 0.97 in 130ms, then released on --spring-release */
+  --press-scale: 0.97;
+  --press-dur: 130ms;
+  --spring-release: linear(0, 0.06, 0.21, 0.39, 0.56, 0.71, 0.84, 0.92, 0.98, 1.02, 1.04, 1.046, 1.044, 1.038, 1.03, 1.022, 1.014, 1.009, 1.004, 1.001, 0.999, 1);
+  --spring-release-dur: 250ms;
+  --spring-select: linear(0, 0.063, 0.204, 0.371, 0.533, 0.674, 0.787, 0.873, 0.934, 0.975, 0.999, 1.013, 1.019, 1.02, 1.018, 1.015, 1.012, 1.009, 1.006, 1.004, 1.002, 1);
+  --spring-select-dur: 280ms;
+  --spring-morph: linear(0, 0.062, 0.2, 0.362, 0.519, 0.656, 0.766, 0.85, 0.911, 0.953, 0.98, 0.997, 1.006, 1.01, 1.011, 1.01, 1.009, 1.007, 1.005, 1.003, 1.001, 1);
+  --spring-morph-dur: 300ms;
+  --spring-settle: linear(0, 0.06, 0.186, 0.33, 0.466, 0.584, 0.682, 0.76, 0.821, 0.868, 0.903, 0.929, 0.949, 0.963, 0.981, 0.993, 1);
+  --spring-settle-dur: 100ms;
+}
+
+/* Reduce motion (system or Settings > Display): every spring becomes a 100ms fade/settle. */
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) {
+    --press-scale: 1;
+    --spring-release: linear(0, 1);
+    --spring-select: var(--spring-settle);
+    --spring-morph: var(--spring-settle);
+    --spring-release-dur: 100ms;
+    --spring-select-dur: 100ms;
+    --spring-morph-dur: 100ms;
+    --dur-short: 100ms;
+    --dur-medium: 100ms;
+    --dur-long: 100ms;
+    --stagger: 0ms;
+  }
+}
+:root[data-motion='reduce'] {
+  --press-scale: 1;
+  --spring-release: linear(0, 1);
+  --spring-select: var(--spring-settle);
+  --spring-morph: var(--spring-settle);
+  --spring-release-dur: 100ms;
+  --spring-select-dur: 100ms;
+  --spring-morph-dur: 100ms;
+  --dur-short: 100ms;
+  --dur-medium: 100ms;
+  --dur-long: 100ms;
+  --stagger: 0ms;
+}
+
+/* ---- Press feedback on glass controls (pressed overlay only under reduce motion) ---- */
+.press {
+  transition: transform var(--spring-release-dur) var(--spring-release), background-color var(--dur-micro) linear;
+  position: relative;
+}
+.press:active {
+  transform: scale(var(--press-scale));
+  transition-duration: var(--press-dur), var(--dur-micro);
+  transition-timing-function: var(--ease-emphasized), linear;
+}
+.press::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--c-on-surface);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-micro) linear;
+}
+.press:hover::after { opacity: 0.06; }
+.press:active::after { opacity: 0.1; }
+
+/* ---- Materialize / dematerialize (glass appears by ramping material) ---- */
+@keyframes hcl-materialize {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+.materialize { animation: hcl-materialize var(--spring-morph-dur) var(--spring-morph) both; }
+
+/* ---- Fade-through between content layouts ---- */
+@keyframes hcl-fade-through {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.fade-through { animation: hcl-fade-through var(--dur-short) var(--ease-decelerate) both; }
+
+/* ---- Cascade (first visible items only): rise 12, stagger 18ms, cap 8 ---- */
+@keyframes hcl-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+.cascade > * {
+  animation: hcl-rise var(--dur-medium) var(--ease-decelerate) both;
+  animation-delay: calc(min(var(--i, 0), 8) * var(--stagger));
+}
+
+/* ---- Live data: cross-fade only ---- */
+@keyframes hcl-crossfade { from { opacity: 0.35; } to { opacity: 1; } }
+.crossfade { animation: hcl-crossfade var(--dur-micro) linear both; }
+
+/* ---- Error shake (360ms, decaying) ---- */
+@keyframes hcl-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-8px); }
+  30% { transform: translateX(6px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  80% { transform: translateX(-1px); }
+}
+.shake { animation: hcl-shake 360ms var(--ease-emphasized); }
+:root[data-motion='reduce'] .shake { animation: none; }
+@media (prefers-reduced-motion: reduce) { :root:not([data-motion='full']) .shake { animation: none; } }
+
+/* ---- Skeleton shimmer 1.2s ---- */
+@keyframes hcl-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Reduce motion: no cascade, single fade; no shimmer sweep. */
+:root[data-motion='reduce'] .cascade > *,
+:root[data-motion='reduce'] .materialize { animation-name: hcl-crossfade; animation-duration: 100ms; animation-delay: 0ms; }
+@media (prefers-reduced-motion: reduce) {
+  :root:not([data-motion='full']) .cascade > *,
+  :root:not([data-motion='full']) .materialize { animation-name: hcl-crossfade; animation-duration: 100ms; animation-delay: 0ms; }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Health Care Labs",
+  "short_name": "HC Labs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F8FBFE",
+  "theme_color": "#0369A1",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

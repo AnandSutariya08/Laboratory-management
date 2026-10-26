@@ -1,0 +1,36 @@
+rules_version = '2';
+// Files live under labs/{labId}/... and follow the same people as the database:
+// active staff read and upload; only lab admins delete. Partner portal users may read and upload
+// only under their own partner folder (labs/{labId}/partners/{partnerId}/...).
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Our Firestore database is a named one, which storage rules cannot read. The user's lab, role, active flag
+    // and partnerId are copied onto their sign-in token by the syncUserClaims function instead.
+    function active(labId) {
+      return request.auth != null && request.auth.token.lab == labId && request.auth.token.active == true;
+    }
+    function partnerRole(labId) {
+      return request.auth.token.role in ['b2b', 'collectionCentre', 'corporate', 'referrer'];
+    }
+    function staff(labId) { return active(labId) && !partnerRole(labId); }
+    function admin(labId) { return active(labId) && request.auth.token.role in ['labAdmin', 'admin']; }
+    // 15 MB per file; images, PDFs and the usual office/report formats only.
+    function okUpload() {
+      return request.resource.size < 15 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf|text/html|text/csv|application/zip|audio/.*');
+    }
+
+    match /labs/{labId}/partners/{partnerId}/{rest=**} {
+      allow read: if staff(labId) || (active(labId) && request.auth.token.partnerId == partnerId);
+      allow create: if okUpload() && (staff(labId) || (active(labId) && request.auth.token.partnerId == partnerId));
+      allow update: if false;
+      allow delete: if admin(labId);
+    }
+    match /labs/{labId}/{rest=**} {
+      allow read: if staff(labId);
+      allow create: if staff(labId) && okUpload();
+      allow update: if false;
+      allow delete: if admin(labId);
+    }
+  }
+}

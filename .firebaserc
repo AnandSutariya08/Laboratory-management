@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "demo-health-care-labs",
+    "prod": "laboratory-management-systems"
+  }
+}

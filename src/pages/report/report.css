@@ -1,0 +1,7 @@
+/* Screen chrome of the report page uses tokens; the printed sheet (.rpt) stays plain white. */
+.rp-bar { position: sticky; top: var(--s-3); z-index: var(--z-bar); display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; padding: var(--s-2); margin: 0 auto var(--s-4); max-width: 230mm; }
+.rp-bar__spacer { flex: 1; }
+.rp-opt { display: grid; gap: var(--s-4); }
+.rp-opt__row { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
+.rp-opt h3 { margin: var(--s-2) 0 0; font-size: var(--fs-body); color: var(--c-on-surface-variant); }
+.rp-sheet-wrap { overflow-x: auto; padding-bottom: var(--s-6); }
