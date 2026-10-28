@@ -164,11 +164,21 @@
 .search-wide--long { width: clamp(460px, 38vw, 640px); }
 
 /* Scrollbars: vertical bars are hidden app-wide (content still scrolls by wheel, trackpad,
-   keyboard and touch). Horizontal bars stay, slim, so wide tables still show they scroll sideways. */
-*::-webkit-scrollbar { width: 0; height: 8px; background: transparent; }
-*::-webkit-scrollbar-thumb { background: var(--c-outline-variant); border-radius: 8px; }
-*::-webkit-scrollbar-thumb:hover { background: var(--c-outline); }
-*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+   keyboard and touch). Horizontal bars stay, slim, so wide tables still show they scroll sideways.
+   The thumb floats inside the box: a transparent border insets it from the bottom edge, and the track stops
+   short of the ends so it never runs into a rounded corner. */
+*::-webkit-scrollbar { width: 0; height: 12px; background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--c-outline); background-clip: padding-box; border: 3px solid transparent; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background-color: var(--c-on-surface-variant); }
+*::-webkit-scrollbar-track { background: transparent; margin-inline: 20px; }
+*::-webkit-scrollbar-corner { background: transparent; }
+/* antd themes table scrollbars with scrollbar-color, which makes Chrome skip the rules above (bar edge to edge,
+   clipping the rounded corners). Reset it so tables get the same inset bar. */
+@supports not (-moz-appearance: none) {
+  .ant-table-wrapper .ant-table-content, .ant-table-wrapper .ant-table-body { scrollbar-color: auto; scrollbar-width: auto; }
+}
+/* Firefox only (in Chrome these properties would switch off the styling above): slim bar in theme colours. */
+@supports (-moz-appearance: none) { * { scrollbar-width: thin; scrollbar-color: var(--c-outline) transparent; } }
 /* Firefox has no per-axis control: hide on the containers that only scroll vertically. */
 html, body, .sidebar__scroll, .app-shell__main, .ant-modal-wrap, .ant-modal .ant-modal-body,
 .ant-drawer .ant-drawer-body, .ant-select-dropdown .rc-virtual-list-holder, .ant-dropdown-menu,
