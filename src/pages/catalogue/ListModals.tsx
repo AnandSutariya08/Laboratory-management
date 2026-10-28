@@ -47,7 +47,7 @@ export function SequenceModal({ open, onClose }: { open: boolean; onClose: () =>
       <p className="cat-muted">Drag rows, or use the arrow buttons, to set the order used on printed reports.</p>
       <div className="cat-toolbar">
         <Radio.Group value={mode} onChange={(e) => setMode(e.target.value)} optionType="button" options={[{ value: 'tests', label: 'Tests in a department' }, { value: 'departments', label: 'Departments' }]} />
-        {mode === 'tests' && <Select aria-label="Department" style={{ width: 200 }} value={dept} onChange={setDept} options={departments.map((d) => ({ value: d.id, label: d.name }))} />}
+        {mode === 'tests' && <Select aria-label="Department" style={{ minWidth: 200, flex: '1 1 200px' }} value={dept} onChange={setDept} options={departments.map((d) => ({ value: d.id, label: d.name }))} />}
       </div>
       <ul className="cat-seq" aria-label="Sequence">
         {ids.map((id, i) => (

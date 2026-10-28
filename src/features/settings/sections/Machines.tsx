@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { App, Input, Modal, Select, Switch, Table } from 'antd'
+import { App, Input, Modal, Select, Table } from 'antd'
 import { addDoc, deleteDoc, getDocs, limit, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { can, useAuth } from '../../../auth/AuthProvider'
 import { useBranchScope } from '../../../lib/branchScope'
@@ -11,7 +11,8 @@ import { branchStamp } from '../../../lib/activeBranch'
 import { col, docRef } from '../../../lib/db'
 import { useMachines } from '../../qc/components/shared'
 import { QC, type QcMachine } from '../../qc/types'
-import { Field, SectionCard, useDraft } from '../ui'
+import { dialogWidth } from '../../../design/dialog'
+import { Field, Group, SectionCard, SwitchRow, useDraft } from '../ui'
 
 type Machine = QcMachine & { model?: string; machineCode?: string; interfaceType?: 'none' | 'astm' | 'hl7' | 'file' | 'manual'; integrationStatus?: 'connected' | 'pending' | 'offline' | 'none' }
 
@@ -106,23 +107,35 @@ export function Machines() {
           },
         ]}
       />
-      <Modal open={!!editing} title={editing?.id ? 'Edit machine' : 'Add machine'} onCancel={() => setEditing(null)} onOk={save} okText="Save" destroyOnHidden>
+      <Modal open={!!editing} title={editing?.id ? 'Edit machine' : 'Add machine'} onCancel={() => setEditing(null)} onOk={save} okText="Save" destroyOnHidden width={dialogWidth(680)}>
         {editing && (
-          <div className="st-grid">
-            <Field label="Machine name"><Input value={editing.name} onChange={(e) => set({ name: e.target.value })} /></Field>
-            <Field label="Machine ID"><Input value={editing.machineCode} onChange={(e) => set({ machineCode: e.target.value })} /></Field>
-            <Field label="Model"><Input value={editing.model} onChange={(e) => set({ model: e.target.value })} /></Field>
-            <Field label="Serial number"><Input value={editing.serial} onChange={(e) => set({ serial: e.target.value })} /></Field>
-            <Field label="Department">
-              <Select value={editing.departmentId || undefined} onChange={(v) => set({ departmentId: v })} options={departments.map((d) => ({ value: d.id, label: d.name }))} />
-            </Field>
-            <Field label="Interface type"><Select value={editing.interfaceType} options={IFACE} onChange={(v) => set({ interfaceType: v })} /></Field>
-            <Field label="Integration status"><Select value={editing.integrationStatus} options={STATUS} onChange={(v) => set({ integrationStatus: v })} /></Field>
-            <Field label="Test mapping" wide>
-              <Select mode="multiple" optionFilterProp="label" value={editing.testIds} onChange={(v) => set({ testIds: v })} options={tests.map((t) => ({ value: t.id, label: t.name }))} />
-            </Field>
-            <div className="st-actions"><Switch checked={editing.active !== false} onChange={(v) => set({ active: v })} aria-label="Active" /> Active</div>
-          </div>
+          <>
+            <Group title="Machine">
+              <div className="st-grid" style={{ ['--st-min' as string]: '200px' }}>
+                <Field label="Machine name"><Input value={editing.name} onChange={(e) => set({ name: e.target.value })} /></Field>
+                <Field label="Machine ID"><Input value={editing.machineCode} onChange={(e) => set({ machineCode: e.target.value })} /></Field>
+                <Field label="Model"><Input value={editing.model} onChange={(e) => set({ model: e.target.value })} /></Field>
+                <Field label="Serial number"><Input value={editing.serial} onChange={(e) => set({ serial: e.target.value })} /></Field>
+              </div>
+            </Group>
+            <Group title="Department and tests">
+              <div className="st-grid" style={{ ['--st-min' as string]: '200px' }}>
+                <Field label="Department">
+                  <Select value={editing.departmentId || undefined} onChange={(v) => set({ departmentId: v })} options={departments.map((d) => ({ value: d.id, label: d.name }))} />
+                </Field>
+                <Field label="Test mapping" wide>
+                  <Select mode="multiple" optionFilterProp="label" value={editing.testIds} onChange={(v) => set({ testIds: v })} options={tests.map((t) => ({ value: t.id, label: t.name }))} />
+                </Field>
+              </div>
+            </Group>
+            <Group title="Interface">
+              <div className="st-grid" style={{ ['--st-min' as string]: '200px' }}>
+                <Field label="Interface type"><Select value={editing.interfaceType} options={IFACE} onChange={(v) => set({ interfaceType: v })} /></Field>
+                <Field label="Integration status"><Select value={editing.integrationStatus} options={STATUS} onChange={(v) => set({ integrationStatus: v })} /></Field>
+              </div>
+              <SwitchRow title="Active" description="Inactive machines are hidden from QC and result entry." checked={editing.active !== false} onChange={(v) => set({ active: v })} />
+            </Group>
+          </>
         )}
       </Modal>
     </SectionCard>

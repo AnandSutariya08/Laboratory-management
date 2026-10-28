@@ -7,6 +7,7 @@ import { col, docRef } from '../../../lib/db'
 import { can, useAuth } from '../../../auth/AuthProvider'
 import { ApproveModal, DeleteReasonModal } from './StudyActions'
 import CapaModal from './CapaModal'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import { useCapas } from './shared'
 import { stripUndefined } from '../lib/clean'
 import type { Capa } from '../types'
@@ -191,41 +192,46 @@ export default function ValidationSection() {
       />
       <Modal title={editing?.id ? 'Edit validation study' : 'New validation study'} open={!!editing} onOk={save} okButtonProps={{ disabled: locked }} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(760)}>
         <Form form={form} layout="vertical" disabled={locked}>
-          <Space wrap size="middle">
-            <Form.Item name="type" label="Study type" rules={[{ required: true }]}>
-              <Select
-                style={{ width: 240 }}
-                disabled={!!editing?.id}
-                options={Object.entries(VALIDATION_LABEL).map(([k, l]) => ({ value: k, label: l }))}
-                onChange={(t: ValidationType) => form.setFieldValue('criteria', { ...DEFAULT_CRITERIA[t] })}
-              />
-            </Form.Item>
-            <Form.Item name="machineId" label={type === 'interEquipment' ? 'Machine A (reference)' : 'Machine'} rules={[{ required: true }]}>
-              <Select style={{ width: 220 }} options={machines.map((m) => ({ value: m.id, label: m.name }))} />
-            </Form.Item>
-            {type === 'interEquipment' && (
-              <Form.Item name="machineBId" label="Machine B (comparator)" rules={[{ required: true }]}>
-                <Select style={{ width: 220 }} options={machines.map((m) => ({ value: m.id, label: m.name }))} />
+          <FormSection title="Study" description="What is being validated, on which machine and when.">
+            <FieldGrid min={220}>
+              <Form.Item name="type" label="Study type" rules={[{ required: true }]}>
+                <Select
+                  disabled={!!editing?.id}
+                  options={Object.entries(VALIDATION_LABEL).map(([k, l]) => ({ value: k, label: l }))}
+                  onChange={(t: ValidationType) => form.setFieldValue('criteria', { ...DEFAULT_CRITERIA[t] })}
+                />
               </Form.Item>
-            )}
-            <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-              <DatePicker />
-            </Form.Item>
-          </Space>
+              <Form.Item name="machineId" label={type === 'interEquipment' ? 'Machine A (reference)' : 'Machine'} rules={[{ required: true }]}>
+                <Select options={machines.map((m) => ({ value: m.id, label: m.name }))} />
+              </Form.Item>
+              {type === 'interEquipment' && (
+                <Form.Item name="machineBId" label="Machine B (comparator)" rules={[{ required: true }]}>
+                  <Select options={machines.map((m) => ({ value: m.id, label: m.name }))} />
+                </Form.Item>
+              )}
+              <Form.Item name="date" label="Date" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
           <Form.Item name="tp" label="Test and parameter">
             <TestParamSelect tests={maps.tests} onChange={(tp) => { form.setFieldValue('tp', tp); if (!tp.testId || !tp.paramKey) return; const tea = teaFor(qcSettings, tp.testId, tp.paramKey); const claim = qcSettings.claimCv?.[`${tp.testId}|${tp.paramKey}`]; const cur = form.getFieldValue('criteria') ?? {}; form.setFieldValue('criteria', { ...cur, ...(tea && 'teaPct' in cur ? { teaPct: tea } : {}), ...(tea && 'maxBiasPct' in cur ? { maxBiasPct: tea / 2 } : {}), ...(claim && 'claimCv' in cur ? { claimCv: claim } : {}) }) }} />
           </Form.Item>
+          </FormSection>
+          <FormSection title="Study data">
           <Form.Item name="text" label="Study data" extra={ROW_HELP[type]} rules={[{ required: true }]}>
             <StructuredRows type={type} disabled={locked} />
           </Form.Item>
           {type === 'linearity' && <LinearityChart rows={parseRows(w?.text ?? '')} />}
-          <Space wrap size="middle">
+          </FormSection>
+          <FormSection title="Acceptance criteria" description="The study passes when the results are within these limits.">
+            <FieldGrid min={160}>
             {Object.keys(DEFAULT_CRITERIA[type]).map((k) => (
               <Form.Item key={k} name={['criteria', k]} label={CRITERIA_LABEL[k] ?? k}>
-                <InputNumber style={{ width: 130 }} step={k === 'minR2' ? 0.001 : 1} />
+                <InputNumber style={{ width: '100%' }} step={k === 'minR2' ? 0.001 : 1} />
               </Form.Item>
             ))}
-          </Space>
+            </FieldGrid>
+          </FormSection>
           <Alert
             type={comp.outcome === 'pass' ? 'success' : comp.outcome === 'fail' ? 'error' : 'info'}
             showIcon
@@ -251,9 +257,11 @@ export default function ValidationSection() {
               )
             }
           />
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+          <FormSection title="Notes">
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </FormSection>
         </Form>
       </Modal>
       <ApproveModal

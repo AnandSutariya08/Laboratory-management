@@ -7,6 +7,7 @@ import { Button } from '../../design/Button'
 import { Card } from '../../design/Card'
 import { PageHeader } from '../../design/PageHeader'
 import { StatusChip } from '../../design/StatusChip'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 
 // Home-collection partner onboarding ("Credent" in the Flabs menu): the lab's pickup details are saved
 // here; the partner API itself is an external service and is not connected, so the status stays
@@ -33,19 +34,27 @@ export default function CredentPage() {
       <PageHeader title="Credent" subtitle="Home-collection partner onboarding." actions={<StatusChip variant={onboarded ? 'success' : 'neutral'}>{onboarded ? 'Onboarded' : 'Not onboarded'}</StatusChip>} />
       <Card>
         <Form form={form} layout="vertical" style={{ maxWidth: 960 }}>
-          <Form.Item name="company" label="Company name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="labName" label="Lab name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="pincode" label="Pincode" rules={[{ required: true, pattern: /^\d{6}$/, message: '6 digits' }]}><Input maxLength={6} inputMode="numeric" /></Form.Item>
-          <Form.Item name="landmark" label="Landmark"><Input /></Form.Item>
-          <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="city" label="City" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item label="Sample drop location (latitude, longitude)">
-            <Input.Group compact>
-              <Form.Item name="lat" noStyle><InputNumber placeholder="Latitude" min={-90} max={90} style={{ width: 160 }} aria-label="Latitude" /></Form.Item>
-              <Form.Item name="lng" noStyle><InputNumber placeholder="Longitude" min={-180} max={180} style={{ width: 160 }} aria-label="Longitude" /></Form.Item>
-            </Input.Group>
-          </Form.Item>
-          <Button variant="primary" onClick={() => void save()}>Save details</Button>
+          <FormSection title="Business" description="Who we register with the partner.">
+            <FieldGrid min={260}>
+              <Form.Item name="company" label="Company name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="labName" label="Lab name" rules={[{ required: true }]}><Input /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Pickup address" description="Where the partner collects or delivers.">
+            <Form.Item name="address" label="Address" rules={[{ required: true }]}><Input.TextArea rows={2} /></Form.Item>
+            <FieldGrid min={200}>
+              <Form.Item name="city" label="City" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="pincode" label="Pincode" rules={[{ required: true, pattern: /^\d{6}$/, message: '6 digits' }]}><Input maxLength={6} inputMode="numeric" /></Form.Item>
+              <Form.Item name="landmark" label="Landmark"><Input /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Sample drop location" description="Map coordinates of the lab, in decimal degrees.">
+            <FieldGrid min={200}>
+              <Form.Item name="lat" label="Latitude"><InputNumber placeholder="e.g. 19.0760" min={-90} max={90} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item name="lng" label="Longitude"><InputNumber placeholder="e.g. 72.8777" min={-180} max={180} style={{ width: '100%' }} /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <div style={{ marginTop: 'var(--s-5)' }}><Button variant="primary" onClick={() => void save()}>Save details</Button></div>
         </Form>
       </Card>
     </div>

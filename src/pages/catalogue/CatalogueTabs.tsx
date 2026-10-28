@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { App, ColorPicker, Form, Input, Modal, Switch, Table } from 'antd'
 import { serverTimestamp, setDoc, updateDoc } from 'firebase/firestore'
 import { PlusOutlined, DownloadOutlined, HolderOutlined } from '@ant-design/icons'
@@ -119,12 +120,18 @@ export function DepartmentsTab({ canEdit, canDelete = canEdit }: { canEdit: bool
       />
       <Modal title={editing?.id ? 'Edit department' : 'Add department'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden>
         <Form form={form} layout="vertical">
+          <FormSection title="Department details" description="Name and where it sits in lists and reports.">
+            <FieldGrid min={220}>
           <Form.Item name="name" label="Department name" rules={[{ required: true }]}><Input /></Form.Item>
           <Form.Item name="order" label="Display order" rules={[{ required: true }]}><Input type="number" min={0} /></Form.Item>
+            </FieldGrid>
           <Form.Item name="reportTemplateId" label="Report template" extra="Used for this department's tests unless a test names its own.">
             <Select allowClear placeholder="Lab default" options={templates.map((t) => ({ value: t.id, label: t.name }))} />
           </Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked" extra="An inactive department stays on old tests but is not offered for new ones."><Switch /></Form.Item>
+          </FormSection>
+          <FormSection title="Availability">
+            <SettingRow label="Active" help="An inactive department stays on old tests but is not offered for new ones." htmlFor="dept-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="dept-active" /></Form.Item></SettingRow>
+          </FormSection>
         </Form>
       </Modal>
       <Modal title={`Delete "${moveFrom?.name}"`} open={!!moveFrom} onCancel={() => setMoveFrom(null)} onOk={() => void moveAndDelete()} okText="Move tests and delete" okButtonProps={{ disabled: !moveTo, danger: true }} destroyOnHidden>
@@ -386,13 +393,23 @@ export function SamplesTab({ canEdit, canDelete = canEdit }: { canEdit: boolean;
       />
       <Modal title={editing?.id ? 'Edit sample' : 'New sample'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Sample" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="tubeColor" label="Tube colour" getValueFromEvent={(c: { toHexString: () => string }) => c.toHexString()}><ColorPicker showText /></Form.Item>
-          <Form.Item name="container" label="Container"><Input placeholder="e.g. EDTA vacutainer" /></Form.Item>
-          <Form.Item name="volume" label="Volume"><Input placeholder="e.g. 3 mL" /></Form.Item>
-          <Form.Item name="barcodePrefix" label="Barcode prefix"><Input /></Form.Item>
-          <Form.Item name="barcodeSuffix" label="Barcode suffix"><Input /></Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+          <FormSection title="Sample" description="The specimen and the tube it is collected in.">
+            <FieldGrid min={220}>
+              <Form.Item name="name" label="Sample" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="tubeColor" label="Tube colour" getValueFromEvent={(c: { toHexString: () => string }) => c.toHexString()}><ColorPicker showText /></Form.Item>
+              <Form.Item name="container" label="Container"><Input placeholder="e.g. EDTA vacutainer" /></Form.Item>
+              <Form.Item name="volume" label="Volume"><Input placeholder="e.g. 3 mL" /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Barcode" description="Added to the sample barcode printed on labels.">
+            <FieldGrid min={220}>
+              <Form.Item name="barcodePrefix" label="Barcode prefix"><Input /></Form.Item>
+              <Form.Item name="barcodeSuffix" label="Barcode suffix"><Input /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Availability">
+            <SettingRow label="Active" help="An inactive sample stays on old tests but is not offered for new ones." htmlFor="smp-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="smp-active" /></Form.Item></SettingRow>
+          </FormSection>
         </Form>
       </Modal>
     </div>

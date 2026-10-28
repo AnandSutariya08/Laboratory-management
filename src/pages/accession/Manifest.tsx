@@ -8,6 +8,8 @@ import { useBranchScope } from '../../lib/branchScope'
 import { MANIFESTS, type Manifest } from '../../lib/accession'
 import { StatusChip } from '../../design/StatusChip'
 import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
+import '../../components/results/results.css'
 import { fmtDateTime, tsToDate } from '../../components/results/common'
 import type { UserProfile } from '../../types'
 import { receiveManifest, type AOrder } from './ops'
@@ -76,16 +78,35 @@ export function DispatchModal({
       }}
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <Select showSearch optionFilterProp="label" style={{ width: '100%' }} aria-label="Collection centre" placeholder="Collection centre" value={centreId} onChange={setCentreId} options={centres.map((c) => ({ value: c.id, label: c.name }))} />
-        <Input aria-label="Courier" placeholder="Courier or person carrying the box" value={courier} onChange={(e) => setCourier(e.target.value)} />
-        <Space wrap>
-          <InputNumber aria-label="Number of tubes" min={1} value={tubes} onChange={setTubes} addonAfter="tubes" />
-          <Input aria-label="Temperature" style={{ width: 200 }} placeholder="Temperature (e.g. 2-8 C)" value={temp} onChange={(e) => setTemp(e.target.value)} />
-        </Space>
-        <Input.TextArea aria-label="Note" rows={2} placeholder="Note (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
-        <Text type="secondary">{entries.map((e) => e.order.billNo).join(', ')}</Text>
-      </Space>
+      <FormSection title="Destination" description="Where the box is going and who is carrying it.">
+        <FieldGrid min={220}>
+          <div className="re-field">
+            <label htmlFor="mf-centre">Collection centre</label>
+            <Select id="mf-centre" showSearch optionFilterProp="label" aria-label="Collection centre" placeholder="Choose a centre" value={centreId} onChange={setCentreId} options={centres.map((c) => ({ value: c.id, label: c.name }))} />
+          </div>
+          <div className="re-field">
+            <label htmlFor="mf-courier">Courier</label>
+            <Input id="mf-courier" aria-label="Courier" placeholder="Person carrying the box" value={courier} onChange={(e) => setCourier(e.target.value)} />
+          </div>
+        </FieldGrid>
+      </FormSection>
+      <FormSection title="Package">
+        <FieldGrid min={200}>
+          <div className="re-field">
+            <label htmlFor="mf-tubes">Number of tubes</label>
+            <InputNumber id="mf-tubes" aria-label="Number of tubes" min={1} value={tubes} onChange={setTubes} addonAfter="tubes" style={{ width: '100%' }} />
+          </div>
+          <div className="re-field">
+            <label htmlFor="mf-temp">Temperature</label>
+            <Input id="mf-temp" aria-label="Temperature" placeholder="e.g. 2-8 C" value={temp} onChange={(e) => setTemp(e.target.value)} />
+          </div>
+        </FieldGrid>
+        <div className="re-field">
+          <label htmlFor="mf-note">Note (optional)</label>
+          <Input.TextArea id="mf-note" aria-label="Note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+        <Text type="secondary">Bills: {entries.map((e) => e.order.billNo).join(', ')}</Text>
+      </FormSection>
     </Modal>
   )
 }
@@ -153,7 +174,9 @@ export function ManifestReceiveModal({ open, user, autoBarcode, onClose }: { ope
         <Text type="secondary">No manifest is on its way.</Text>
       ) : (
         <Space direction="vertical" style={{ width: '100%' }}>
+          <label htmlFor="mf-pick" style={{ fontWeight: 600 }}>Manifest</label>
           <Select
+            id="mf-pick"
             style={{ width: '100%' }}
             aria-label="Manifest"
             value={id}

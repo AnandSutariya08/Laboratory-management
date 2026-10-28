@@ -16,6 +16,8 @@ import { StatusChip, type StatusVariant } from '../../design/StatusChip'
 import { PageHeader } from '../../design/PageHeader'
 import { Segmented } from '../../design/Segmented'
 import { Button as DsButton } from '../../design/Button'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
+import { dialogWidth } from '../../design/dialog'
 import { useBranch } from '../../branch/BranchProvider'
 import '../../features/qc/qc.css'
 
@@ -48,19 +50,27 @@ function statusOf(c: McpConnection): { text: string; color: StatusVariant } {
   return { text: 'Active', color: 'success' }
 }
 
+const CHECK_GRID = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--s-2) var(--s-4)' } as const
+
 function GrantFields() {
   return (
     <>
-      <Form.Item name="scopes" label="What this connection may read" extra="Finance numbers and bill-level tools need the Finance scope. Patient details stay hidden unless you add the masked-patient scope, which shows initials only.">
-        <Checkbox.Group options={MCP_SCOPES.map((x) => ({ value: x.value, label: x.label }))} style={{ display: 'grid', gap: 4 }} />
-      </Form.Item>
-      <Form.Item name="tools" label="Tools it may call">
-        <Checkbox.Group options={MCP_TOOLS.map((x) => ({ value: x.value, label: x.label }))} style={{ display: 'grid', gap: 4 }} />
-      </Form.Item>
-      <Space wrap>
-        <Form.Item name="rowLimit" label="Row limit per call"><InputNumber min={1} max={5000} /></Form.Item>
-        <Form.Item name="ips" label="Allowed IP addresses (optional)" extra="Comma separated; empty = any."><Input style={{ width: 280 }} /></Form.Item>
-      </Space>
+      <FormSection title="What it may read" description="Finance numbers and bill-level tools need the Finance scope. Patient details stay hidden unless you add the masked-patient scope, which shows initials only.">
+        <Form.Item name="scopes" label="Data scopes">
+          <Checkbox.Group options={MCP_SCOPES.map((x) => ({ value: x.value, label: x.label }))} style={CHECK_GRID} />
+        </Form.Item>
+      </FormSection>
+      <FormSection title="What it may do" description="The tools this connection is allowed to call.">
+        <Form.Item name="tools" label="Tools">
+          <Checkbox.Group options={MCP_TOOLS.map((x) => ({ value: x.value, label: x.label }))} style={CHECK_GRID} />
+        </Form.Item>
+      </FormSection>
+      <FormSection title="Limits">
+        <FieldGrid min={220}>
+          <Form.Item name="rowLimit" label="Row limit per call" style={{ marginBottom: 0 }}><InputNumber min={1} max={5000} addonAfter="rows" style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="ips" label="Allowed IP addresses (optional)" extra="Comma separated; empty = any." style={{ marginBottom: 0 }}><Input /></Form.Item>
+        </FieldGrid>
+      </FormSection>
     </>
   )
 }
@@ -302,6 +312,7 @@ export default function ConnectAiPage() {
 
       <Modal
         title={`Access for ${grantsFor?.label ?? ''}`}
+        width={dialogWidth(640)}
         open={!!grantsFor}
         onCancel={() => setGrantsFor(null)}
         okText="Save access"
@@ -321,6 +332,7 @@ export default function ConnectAiPage() {
       </Modal>
       <Modal
         title="Create MCP connection"
+        width={dialogWidth(640)}
         open={open}
         onCancel={() => setOpen(false)}
         onOk={create}
@@ -329,17 +341,22 @@ export default function ConnectAiPage() {
         destroyOnHidden
       >
         <Form form={form} layout="vertical" initialValues={{ days: 30, scopes: DEFAULT_MCP_SCOPES, tools: MCP_TOOLS.map((x) => x.value), rowLimit: 500, ips: '' }}>
-          <Form.Item name="label" label="Label" rules={[{ required: true, message: 'Give the connection a name' }]} extra="For example: Owner's Claude">
-            <Input maxLength={60} />
-          </Form.Item>
-          <Form.Item name="days" label="Valid for">
-            <Radio.Group options={[{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} optionType="button" />
-          </Form.Item>
+          <FormSection title="Connection">
+            <FieldGrid min={240}>
+              <Form.Item name="label" label="Label" rules={[{ required: true, message: 'Give the connection a name' }]} extra="For example: Owner's Claude" style={{ marginBottom: 0 }}>
+                <Input maxLength={60} />
+              </Form.Item>
+              <Form.Item name="days" label="Valid for" style={{ marginBottom: 0 }}>
+                <Radio.Group options={[{ value: 7, label: '7 days' }, { value: 30, label: '30 days' }, { value: 90, label: '90 days' }]} optionType="button" />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
           <GrantFields />
-          <Form.Item name="consent" valuePropName="checked" rules={[{ validator: (_, v) => (v ? Promise.resolve() : Promise.reject(new Error('Consent is needed to connect'))) }]}>
-            <Checkbox>I allow this external AI app to read my lab's aggregated, read-only figures. I can revoke it at any time.</Checkbox>
-          </Form.Item>
-          <Text type="secondary">A one-time code is sent to your registered phone or email. Enter it in the next step to activate the connection.</Text>
+          <FormSection title="Consent" description="A one-time code is sent to your registered phone or email. Enter it in the next step to activate the connection.">
+            <Form.Item name="consent" valuePropName="checked" style={{ marginBottom: 0 }} rules={[{ validator: (_, v) => (v ? Promise.resolve() : Promise.reject(new Error('Consent is needed to connect'))) }]}>
+              <Checkbox>I allow this external AI app to read my lab's aggregated, read-only figures. I can revoke it at any time.</Checkbox>
+            </Form.Item>
+          </FormSection>
         </Form>
       </Modal>
 

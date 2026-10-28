@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { App, DatePicker, Modal, Select, Space, Table } from 'antd'
+import { App, DatePicker, Form, Modal, Select, Table } from 'antd'
 import { PrinterOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import { addDoc, orderBy, query, serverTimestamp, limit } from 'firebase/firestore'
@@ -15,6 +15,7 @@ import { biasPct, cv, fmt, mean, sd } from '../lib/stats'
 import { QC, type QcLevel, type QcRun } from '../types'
 import { paramName, runTime, useMachines, useMaterials } from './shared'
 import { Chip } from '../ui'
+import { FieldGrid } from '../../../design/FormLayout'
 import { dialogWidth } from '../../../design/dialog'
 
 interface Download {
@@ -117,13 +118,17 @@ export default function IqcSheet({ open, onClose, runs }: { open: boolean; onClo
 
   return (
     <Modal title="IQC data sheet" open={open} onCancel={onClose} footer={null} width={dialogWidth(900)} destroyOnHidden>
-      <Space wrap style={{ marginBottom: 12 }}>
-        <Select placeholder="Machine" style={{ width: 200 }} value={machineId} onChange={setMachineId} options={machines.map((m) => ({ value: m.id, label: m.name }))} aria-label="Machine" />
-        <Select placeholder="Sample kit / lot" style={{ width: 240 }} value={materialId} onChange={(v) => { setMaterialId(v); setParam(undefined) }} options={materials.map((m) => ({ value: m.id, label: `${m.name} (${m.lotNo})` }))} aria-label="Sample kit" />
-        <Select placeholder="Parameter" style={{ width: 240 }} value={param} onChange={setParam} options={params.map((k) => { const [t, p] = k.split('|'); return { value: k, label: `${maps.testById.get(t)?.name ?? t} / ${paramName(maps.testById.get(t), p)}` } })} aria-label="Parameter" />
-        <DatePicker picker="month" allowClear={false} value={month} onChange={(v) => v && setMonth(v)} aria-label="Month" />
+      <Form layout="vertical" component="div">
+        <FieldGrid min={200}>
+          <Form.Item label="Machine"><Select placeholder="Machine" style={{ width: '100%' }} value={machineId} onChange={setMachineId} options={machines.map((m) => ({ value: m.id, label: m.name }))} aria-label="Machine" /></Form.Item>
+          <Form.Item label="Sample kit / lot"><Select placeholder="Sample kit / lot" style={{ width: '100%' }} value={materialId} onChange={(v) => { setMaterialId(v); setParam(undefined) }} options={materials.map((m) => ({ value: m.id, label: `${m.name} (${m.lotNo})` }))} aria-label="Sample kit" /></Form.Item>
+          <Form.Item label="Parameter"><Select placeholder="Parameter" style={{ width: '100%' }} value={param} onChange={setParam} options={params.map((k) => { const [t, p] = k.split('|'); return { value: k, label: `${maps.testById.get(t)?.name ?? t} / ${paramName(maps.testById.get(t), p)}` } })} aria-label="Parameter" /></Form.Item>
+          <Form.Item label="Month"><DatePicker style={{ width: '100%' }} picker="month" allowClear={false} value={month} onChange={(v) => v && setMonth(v)} aria-label="Month" /></Form.Item>
+        </FieldGrid>
+      </Form>
+      <div className="qc-actionbar" style={{ marginBottom: 12 }}>
         <Button variant="primary" icon={<PrinterOutlined />} disabled={!sheet} onClick={print}>Print / save as PDF</Button>
-      </Space>
+      </div>
       {sheet && (
         <Table
           size="small"

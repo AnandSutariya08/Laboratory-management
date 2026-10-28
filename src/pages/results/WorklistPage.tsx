@@ -19,6 +19,7 @@ import { Card } from '../../design/Card'
 import { Segmented } from '../../design/Segmented'
 import { StatusChip } from '../../design/StatusChip'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { EmptyState } from '../../design/EmptyState'
 import { SkeletonRows } from '../../design/Skeletons'
 import type { OrderItem, Patient, UserProfile } from '../../types'
@@ -630,7 +631,7 @@ export default function WorklistPage() {
         <Popover
           trigger="click"
           placement="bottomLeft"
-          content={<Checkbox.Group value={cols} onChange={(v) => setCols(v as string[])} options={COLUMN_OPTIONS} style={{ display: 'grid', gap: 8 }} />}
+          content={<Checkbox.Group value={cols} onChange={(v) => setCols(v as string[])} options={COLUMN_OPTIONS} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(130px, 1fr))', gap: 'var(--s-2) var(--s-4)', minWidth: 280 }} />}
         >
           <Button icon={<TableOutlined />} aria-label="Choose columns">Columns</Button>
         </Popover>
@@ -694,26 +695,38 @@ export default function WorklistPage() {
         width={380}
         footer={<Button onClick={() => setFilters(NO_FILTERS)}>Reset filters</Button>}
       >
-        <div className="re-field"><label htmlFor="f-tests">Test</label>
-          <Select id="f-tests" mode="multiple" allowClear value={filters.tests} onChange={(v) => setF('tests', v)} optionFilterProp="label" options={maps.tests.map((t) => ({ value: t.id, label: t.name }))} /></div>
-        <div className="re-field"><label htmlFor="f-pk">Package</label>
-          <Select id="f-pk" mode="multiple" allowClear value={filters.packages} onChange={(v) => setF('packages', v)} optionFilterProp="label" options={maps.packages.map((t) => ({ value: t.id, label: t.name }))} /></div>
-        <div className="re-field"><label htmlFor="f-ref">Referral doctor or hospital</label>
-          <Input id="f-ref" value={filters.referrer} onChange={(e) => setF('referrer', e.target.value)} /></div>
-        <div className="re-field"><label htmlFor="f-b2b">B2B lab</label>
-          <Input id="f-b2b" value={filters.b2b} onChange={(e) => setF('b2b', e.target.value)} /></div>
-        <div className="re-field"><label htmlFor="f-cc">Collection centre</label>
-          <Input id="f-cc" value={filters.centre} onChange={(e) => setF('centre', e.target.value)} /></div>
-        <div className="re-field"><label htmlFor="f-ca">Collected at</label>
-          <Select id="f-ca" value={filters.collectedAt} onChange={(v) => setF('collectedAt', v)} options={[{ value: '', label: 'Anywhere' }, { value: 'lab', label: 'Lab' }, { value: 'home', label: 'Home' }]} /></div>
-        <div className="re-field"><label htmlFor="f-who">Patient type</label>
-          <Select id="f-who" value={filters.who} onChange={(v) => setF('who', v)} options={[{ value: '', label: 'All' }, { value: 'self', label: 'Self / walk-in' }, { value: 'referred', label: 'Referred' }]} /></div>
-        <div className="re-field"><label htmlFor="f-sort">Bill order</label>
-          <Select id="f-sort" value={filters.billSort} onChange={(v) => setF('billSort', v)} options={[{ value: 'desc', label: 'Newest first' }, { value: 'asc', label: 'Oldest first' }]} /></div>
-        <div className="re-field"><label htmlFor="f-asg">Assigned to</label>
-          <Select id="f-asg" value={filters.assigned} onChange={(v) => setF('assigned', v)} options={[{ value: '', label: 'Anyone' }, { value: 'me', label: 'Me' }, { value: 'unassigned', label: 'Unassigned' }]} /></div>
-        <div className="re-field"><Checkbox checked={filters.urgent} onChange={(e) => setF('urgent', e.target.checked)}>Urgent only</Checkbox></div>
-        <div className="re-field"><Checkbox checked={filters.machineValue} onChange={(e) => setF('machineValue', e.target.checked)}>Has machine value</Checkbox></div>
+        <FormSection title="What was ordered">
+          <div className="re-field"><label htmlFor="f-tests">Test</label>
+            <Select id="f-tests" mode="multiple" allowClear value={filters.tests} onChange={(v) => setF('tests', v)} optionFilterProp="label" options={maps.tests.map((t) => ({ value: t.id, label: t.name }))} /></div>
+          <div className="re-field"><label htmlFor="f-pk">Package</label>
+            <Select id="f-pk" mode="multiple" allowClear value={filters.packages} onChange={(v) => setF('packages', v)} optionFilterProp="label" options={maps.packages.map((t) => ({ value: t.id, label: t.name }))} /></div>
+        </FormSection>
+        <FormSection title="Where it came from">
+          <FieldGrid min={150}>
+            <div className="re-field"><label htmlFor="f-ref">Referral doctor or hospital</label>
+              <Input id="f-ref" value={filters.referrer} onChange={(e) => setF('referrer', e.target.value)} /></div>
+            <div className="re-field"><label htmlFor="f-b2b">B2B lab</label>
+              <Input id="f-b2b" value={filters.b2b} onChange={(e) => setF('b2b', e.target.value)} /></div>
+            <div className="re-field"><label htmlFor="f-cc">Collection centre</label>
+              <Input id="f-cc" value={filters.centre} onChange={(e) => setF('centre', e.target.value)} /></div>
+            <div className="re-field"><label htmlFor="f-ca">Collected at</label>
+              <Select id="f-ca" value={filters.collectedAt} onChange={(v) => setF('collectedAt', v)} options={[{ value: '', label: 'Anywhere' }, { value: 'lab', label: 'Lab' }, { value: 'home', label: 'Home' }]} /></div>
+            <div className="re-field"><label htmlFor="f-who">Patient type</label>
+              <Select id="f-who" value={filters.who} onChange={(v) => setF('who', v)} options={[{ value: '', label: 'All' }, { value: 'self', label: 'Self / walk-in' }, { value: 'referred', label: 'Referred' }]} /></div>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Order and assignment">
+          <FieldGrid min={150}>
+            <div className="re-field"><label htmlFor="f-sort">Bill order</label>
+              <Select id="f-sort" value={filters.billSort} onChange={(v) => setF('billSort', v)} options={[{ value: 'desc', label: 'Newest first' }, { value: 'asc', label: 'Oldest first' }]} /></div>
+            <div className="re-field"><label htmlFor="f-asg">Assigned to</label>
+              <Select id="f-asg" value={filters.assigned} onChange={(v) => setF('assigned', v)} options={[{ value: '', label: 'Anyone' }, { value: 'me', label: 'Me' }, { value: 'unassigned', label: 'Unassigned' }]} /></div>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Show only">
+          <div className="re-field"><Checkbox checked={filters.urgent} onChange={(e) => setF('urgent', e.target.checked)}>Urgent only</Checkbox></div>
+          <div className="re-field"><Checkbox checked={filters.machineValue} onChange={(e) => setF('machineValue', e.target.checked)}>Has machine value</Checkbox></div>
+        </FormSection>
       </Drawer>
       <ReasonModal
         open={holdOpen}

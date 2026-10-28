@@ -4,6 +4,7 @@ import { MailOutlined, MessageOutlined, SendOutlined, WhatsAppOutlined } from '@
 import { sendReportsBulk, type BulkSendRow, type ReportRecipient } from '../../lib/messaging'
 import type { Channel } from '../../types'
 import { dialogWidth } from '../../design/dialog'
+import { FormSection } from '../../design/FormLayout'
 
 const CHUNK = 5 // bills per server call, so the progress bar moves
 
@@ -71,14 +72,16 @@ export default function BulkSendModal({
         </Space>
       }
     >
-      <Radio.Group value={recipient} onChange={(e) => setRecipient(e.target.value)} style={{ marginBottom: 12 }}>
-        <Radio.Button value="patient">Patients</Radio.Button>
-        <Radio.Button value="doctor">Referring doctors</Radio.Button>
-        <Radio.Button value="b2b">B2B centres</Radio.Button>
-        <Radio.Button value="centre">Collection centres</Radio.Button>
-        <Radio.Button value="corporate">Corporate clients</Radio.Button>
-      </Radio.Group>
-      <div>
+      <FormSection title="Who gets the reports">
+        <Radio.Group value={recipient} onChange={(e) => setRecipient(e.target.value)} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+          <Radio.Button value="patient">Patients</Radio.Button>
+          <Radio.Button value="doctor">Referring doctors</Radio.Button>
+          <Radio.Button value="b2b">B2B centres</Radio.Button>
+          <Radio.Button value="centre">Collection centres</Radio.Button>
+          <Radio.Button value="corporate">Corporate clients</Radio.Button>
+        </Radio.Group>
+      </FormSection>
+      <FormSection title="How to send" description="Each bill is checked on its own: bills with a due balance, a report that is not ready, or a send within the last hour are skipped.">
         <Checkbox.Group
           value={channels}
           onChange={(v) => setChannels(v as Channel[])}
@@ -88,8 +91,7 @@ export default function BulkSendModal({
             { value: 'email', label: <span><MailOutlined /> Email</span> },
           ]}
         />
-      </div>
-      <p style={{ marginTop: 8 }}>Each bill is checked on its own: bills with a due balance, a report that is not ready, or a send within the last hour are skipped.</p>
+      </FormSection>
       {error && <Alert type="error" showIcon message={error} style={{ marginBottom: 8 }} />}
       {(busy || rows.length > 0) && <Progress percent={orders.length ? Math.round((done / orders.length) * 100) : 0} />}
       {rows.length > 0 && (

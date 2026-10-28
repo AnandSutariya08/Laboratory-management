@@ -204,18 +204,44 @@ export default function EditBillModal({ order, open, onClose }: { order: Order; 
           },
         ]}
       />
-      <div className="bill-row" style={{ marginTop: 'var(--s-3)' }}>
-        <InputNumber aria-label="Discount percent" addonAfter="%" min={0} max={100} precision={2} value={derivedPercent(items)} style={{ width: 130 }} onChange={(v) => applyHeader('pct', v ?? 0)} />
-        <InputNumber aria-label="Discount amount" addonBefore="₹" min={0} max={toRupees(gross)} precision={2} value={toRupees(totals.discount)} style={{ width: 150 }} onChange={(v) => applyHeader('amt', v ?? 0)} />
-        <AutoComplete aria-label="Discount reason" style={{ width: 240 }} value={reason} onChange={setReason} options={masters.reasons.map((r) => ({ value: r }))} placeholder="Discount reason" />
-        <Input aria-label="Discounted by" style={{ width: 160 }} value={discBy} onChange={(e) => setDiscBy(e.target.value)} placeholder="Discounted by" />
+      <div className="bill-section" style={{ marginTop: 'var(--s-3)' }}>
+        <h3 className="bill-section__title">Discount</h3>
+        <div className="bill-fgrid">
+          <div>
+            <label className="bill-field-label" htmlFor="eb-pct">Discount percent</label>
+            <InputNumber id="eb-pct" aria-label="Discount percent" addonAfter="%" min={0} max={100} precision={2} value={derivedPercent(items)} style={{ width: '100%' }} onChange={(v) => applyHeader('pct', v ?? 0)} />
+          </div>
+          <div>
+            <label className="bill-field-label" htmlFor="eb-amt">Discount amount</label>
+            <InputNumber id="eb-amt" aria-label="Discount amount" addonBefore="₹" min={0} max={toRupees(gross)} precision={2} value={toRupees(totals.discount)} style={{ width: '100%' }} onChange={(v) => applyHeader('amt', v ?? 0)} />
+          </div>
+          <div>
+            <label className="bill-field-label" htmlFor="eb-reason">Reason</label>
+            <AutoComplete id="eb-reason" aria-label="Discount reason" style={{ width: '100%' }} value={reason} onChange={setReason} options={masters.reasons.map((r) => ({ value: r }))} placeholder="Discount reason" />
+          </div>
+          <div>
+            <label className="bill-field-label" htmlFor="eb-by">Discounted by</label>
+            <Input id="eb-by" aria-label="Discounted by" value={discBy} onChange={(e) => setDiscBy(e.target.value)} placeholder="Discounted by" />
+          </div>
+        </div>
       </div>
       <p style={{ marginTop: 'var(--s-3)' }}>
         Net {formatINR(totals.net)} (was {formatINR(order.net)}) · collected {formatINR(order.paid)}
       </p>
       {overpaid && <Alert type="error" showIcon message="The new net is below what was collected, so this edit cannot be saved. Use Refund to return the difference." style={{ marginBottom: 8 }} />}
-      <Input.TextArea rows={2} aria-label="Note on bill" placeholder="Note on bill" value={note} onChange={(e) => setNote(e.target.value)} />
-      <Input style={{ marginTop: 8 }} aria-label="Reason for edit" placeholder="Reason for this edit (optional)" value={why} onChange={(e) => setWhy(e.target.value)} />
+      <div className="bill-section" style={{ marginTop: 'var(--s-3)' }}>
+        <h3 className="bill-section__title">Notes</h3>
+        <div className="bill-fgrid">
+          <div>
+            <label className="bill-field-label" htmlFor="eb-note">Note on bill</label>
+            <Input.TextArea id="eb-note" rows={2} aria-label="Note on bill" placeholder="Note on bill" value={note} onChange={(e) => setNote(e.target.value)} />
+          </div>
+          <div>
+            <label className="bill-field-label" htmlFor="eb-why">Reason for this edit (optional)</label>
+            <Input.TextArea id="eb-why" rows={2} aria-label="Reason for edit" placeholder="Reason for this edit (optional)" value={why} onChange={(e) => setWhy(e.target.value)} />
+          </div>
+        </div>
+      </div>
       {revisions.length > 0 && (
         <div className="bill-section" style={{ marginTop: 'var(--s-3)' }}>
           <h3 className="bill-section__title">Revision trail</h3>

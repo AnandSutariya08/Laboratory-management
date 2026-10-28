@@ -44,3 +44,4 @@
 .rr-print .rt { margin: 0; }
 .rr-print figure { margin: 0; }
 .rr-print figcaption { font-size: 10px; text-align: center; }
+.rd-field > .ant-select, .rd-field > .ant-picker { width: 100%; }

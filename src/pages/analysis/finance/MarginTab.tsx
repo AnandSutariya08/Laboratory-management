@@ -6,6 +6,7 @@ import { Button } from '../../../design/Button'
 import { Card } from '../../../design/Card'
 import { StatusChip } from '../../../design/StatusChip'
 import { dialogWidth } from '../../../design/dialog'
+import '../../../components/results/results.css'
 import { useAuth } from '../../../auth/AuthProvider'
 import { useLiveQuery } from '../../../hooks/useLive'
 import { col } from '../../../lib/db'
@@ -149,13 +150,15 @@ export default function MarginTab({ ctx, labs, range }: { ctx: Ctx; labs: Master
       {settle && (
         <Modal open title={`Settle ${settle.vendor}`} onCancel={() => setSettle(null)} onOk={create} okText="Create settlement" confirmLoading={busy} width={dialogWidth(520)}>
           <p>{settle.lines.length} outsourced tests from {range[0].format('DD MMM')} to {range[1].format('DD MMM YYYY')}, {money(settle.lines.reduce((s, l) => s + l.cost, 0))} payable to the lab. These tests are locked into this settlement and will not appear in another.</p>
-          <Input.TextArea aria-label="Notes" placeholder="Notes (optional)" rows={2} maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <div className="re-field"><label htmlFor="mg-notes">Notes (optional)</label></div>
+          <Input.TextArea id="mg-notes" aria-label="Notes" placeholder="Notes" rows={2} maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </Modal>
       )}
       {paying && (
         <Modal open title={`Mark paid: ${paying.vendor}`} onCancel={() => setPaying(null)} onOk={markPaid} okText="Mark paid" confirmLoading={busy} width={dialogWidth(440)}>
           <p>{money(paying.amount)} for {paying.lines} tests.</p>
-          <Input aria-label="Payment reference" placeholder="Payment reference (UTR, cheque no.)" maxLength={80} value={payRef} onChange={(e) => setPayRef(e.target.value)} />
+          <div className="re-field"><label htmlFor="mg-ref">Payment reference</label></div>
+          <Input id="mg-ref" aria-label="Payment reference" placeholder="UTR or cheque no." maxLength={80} value={payRef} onChange={(e) => setPayRef(e.target.value)} />
         </Modal>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { useState } from 'react'
 import { Drawer, Form, Input, InputNumber, Popconfirm, Switch, message } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
@@ -84,13 +85,19 @@ function LabDrawer({ value, onClose }: { value: Partial<ProcessingLab> | null; o
     <Drawer open={!!value} onClose={onClose} destroyOnHidden title={value?.id ? 'Edit processing lab' : 'Add processing lab'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={{ active: true, ...value }}>
-        <Form.Item name="name" label="Lab name" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="contact" label="Contact"><Input /></Form.Item>
-        <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
-        <Form.Item name="address" label="Address"><Input.TextArea rows={3} /></Form.Item>
-        <Form.Item name="turnaroundHours" label="Turnaround (hours)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-        <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
-        <p className="pt-muted">After saving, use the price list button to choose the tests this lab offers and what they charge us.</p>
+        <FormSection title="Lab details" description="Who to contact at the processing lab.">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Lab name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="contact" label="Contact"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
+            <Form.Item name="turnaroundHours" label="Turnaround"><InputNumber min={0} addonAfter="hours" style={{ width: '100%' }} /></Form.Item>
+          </FieldGrid>
+          <Form.Item name="address" label="Address"><Input.TextArea rows={3} /></Form.Item>
+        </FormSection>
+        <FormSection title="Status and pricing">
+          <SettingRow label="Active" help="Inactive labs are not offered when sending out samples." htmlFor="pl-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="pl-active" /></Form.Item></SettingRow>
+          <p className="pt-muted" style={{ marginBottom: 0 }}>After saving, use the price list button to choose the tests this lab offers and what they charge us.</p>
+        </FormSection>
       </Form>
     </Drawer>
   )

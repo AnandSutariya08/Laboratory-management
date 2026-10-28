@@ -4,6 +4,7 @@ import { query, where } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
 import dayjs from 'dayjs'
 import { can, useAuth } from '../../auth/AuthProvider'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { Button } from '../../design/Button'
 import { PageHeader } from '../../design/PageHeader'
 import { StatusChip } from '../../design/StatusChip'
@@ -137,7 +138,7 @@ export function FinancialView() {
         actions={<Button onClick={() => downloadCsv('financial-analysis', [['month', 'bills', 'billed', 'collected', 'due', ...(p.role === 'referrer' ? ['commission'] : [])], ...monthly.map((r) => [r.month, r.bills, r.net / 100, r.paid / 100, r.due / 100, ...(p.role === 'referrer' ? [r.commission / 100] : [])])])}>Export CSV</Button>} />
       <div className="portal__row">
         <span>Period</span>
-        <InputNumber aria-label="Months to include" min={1} max={36} value={months} onChange={(v) => setMonths(v ?? 12)} addonAfter="months" style={{ width: 150 }} />
+        <InputNumber aria-label="Months to include" min={1} max={36} value={months} onChange={(v) => setMonths(v ?? 12)} addonAfter="months" style={{ width: 170 }} />
       </div>
       <TileGrid>
         <StatTile label="Bills" value={t.bills} />
@@ -250,13 +251,17 @@ export function DispatchView() {
             { title: 'Tests', render: (_: unknown, o) => o.items.filter((i) => !i.isCharge && i.status !== 'refunded').map((i) => i.name).join(', ') },
           ]}
         />
-        <div className="portal__row" style={{ marginTop: 12 }}>
-          <Input aria-label="Courier" placeholder="Courier / runner" style={{ width: 180 }} value={courier} onChange={(e) => setCourier(e.target.value)} />
-          <InputNumber aria-label="Tubes" placeholder="Tubes" min={0} value={tubes} onChange={setTubes} />
-          <Input aria-label="Temperature" placeholder="Temperature (e.g. 2-8 C)" style={{ width: 200 }} value={temp} onChange={(e) => setTemp(e.target.value)} />
-          <Input aria-label="Note" placeholder="Note" style={{ width: 240 }} value={note} onChange={(e) => setNote(e.target.value)} />
-          <Button variant="primary" disabled={!sel.length || busy} onClick={create}>{busy ? 'Creating...' : `Create manifest (${sel.length})`}</Button>
-        </div>
+        <FormSection title="Box details" description="Who is carrying the box and how it is kept.">
+          <FieldGrid min={200}>
+            <div className="portal__field"><label htmlFor="pm-courier">Courier</label><Input id="pm-courier" aria-label="Courier" placeholder="Courier / runner" value={courier} onChange={(e) => setCourier(e.target.value)} /></div>
+            <div className="portal__field"><label htmlFor="pm-tubes">Tubes</label><InputNumber id="pm-tubes" aria-label="Tubes" min={0} value={tubes} onChange={setTubes} addonAfter="tubes" style={{ width: '100%' }} /></div>
+            <div className="portal__field"><label htmlFor="pm-temp">Temperature</label><Input id="pm-temp" aria-label="Temperature" placeholder="e.g. 2-8 C" value={temp} onChange={(e) => setTemp(e.target.value)} /></div>
+            <div className="portal__field"><label htmlFor="pm-note">Note</label><Input id="pm-note" aria-label="Note" value={note} onChange={(e) => setNote(e.target.value)} /></div>
+          </FieldGrid>
+          <div className="portal__row" style={{ marginTop: 'var(--s-3)' }}>
+            <Button variant="primary" disabled={!sel.length || busy} onClick={create}>{busy ? 'Creating...' : `Create manifest (${sel.length})`}</Button>
+          </div>
+        </FormSection>
       </Panel>
       <Panel title="Your manifests">
         <Table<Manifest>

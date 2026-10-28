@@ -591,7 +591,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
             <h3 className="bill-section__title">Outsourced tests: processing lab</h3>
             {[...new Set(outsourcedTests)].map((tid) => (
               <div key={tid} className="bill-row">
-                <b style={{ minWidth: 180 }}>{pricer.cat.testById.get(tid)?.name ?? tid}</b>
+                <b className="bill-row__name">{pricer.cat.testById.get(tid)?.name ?? tid}</b>
                 <OutsourceLabSelect testId={tid} value={outsourceChoice[tid]} onChange={(labId) => setOutsourceChoice({ ...outsourceChoice, [tid]: labId })} />
               </div>
             ))}
@@ -616,7 +616,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
               if (!n.lmp && !n.id && !n.consent) return null
               return (
                 <div key={l.lineId} className="bill-row">
-                  <b style={{ minWidth: 180 }}>{l.name}</b>
+                  <b className="bill-row__name">{l.name}</b>
                   {n.lmp && (
                     <DatePicker
                       aria-label={`LMP for ${l.name}`}
@@ -631,7 +631,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                     <Input
                       aria-label={`ID proof for ${l.name}`}
                       placeholder="ID proof number"
-                      style={{ width: 200 }}
+                      style={{ width: 220 }}
                       status={l.idRef?.trim() ? undefined : 'error'}
                       value={l.idRef ?? ''}
                       onChange={(e) => setLine(l.lineId, { idRef: e.target.value })}
@@ -651,28 +651,36 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
         <div className="bill-grid2" style={{ marginTop: 'var(--s-4)' }}>
           <div className="bill-section">
             <h3 className="bill-section__title">Discount</h3>
-            <div className="bill-row">
-              <InputNumber
-                aria-label="Discount percent"
-                addonAfter="%"
-                min={0}
-                max={100}
-                precision={2}
-                value={setting?.kind === 'pct' ? setting.value : Number(discPct.toFixed(2))}
-                onChange={setDiscountPct}
-                style={{ width: 130 }}
-              />
-              <InputNumber
-                aria-label="Discount amount"
-                addonBefore="₹"
-                min={0}
-                max={toRupees(discGross)}
-                precision={2}
-                value={toRupees(totals.discount)}
-                onChange={setDiscountAmt}
-                style={{ width: 150 }}
-              />
-              <Checkbox checked={zeroBill} onChange={(e) => toggleZero(e.target.checked)}>
+            <div className="bill-fgrid">
+              <div>
+                <label className="bill-field-label" htmlFor="disc-pct">Discount percent</label>
+                <InputNumber
+                  id="disc-pct"
+                  aria-label="Discount percent"
+                  addonAfter="%"
+                  min={0}
+                  max={100}
+                  precision={2}
+                  value={setting?.kind === 'pct' ? setting.value : Number(discPct.toFixed(2))}
+                  onChange={setDiscountPct}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div>
+                <label className="bill-field-label" htmlFor="disc-amt">Discount amount</label>
+                <InputNumber
+                  id="disc-amt"
+                  aria-label="Discount amount"
+                  addonBefore="₹"
+                  min={0}
+                  max={toRupees(discGross)}
+                  precision={2}
+                  value={toRupees(totals.discount)}
+                  onChange={setDiscountAmt}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <Checkbox className="bill-fgrid__full" checked={zeroBill} onChange={(e) => toggleZero(e.target.checked)}>
                 Zero amount bill
               </Checkbox>
             </div>
@@ -689,7 +697,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                     optionFilterProp="label"
                     aria-label="Approved by (manager)"
                     placeholder="Approved by (manager or admin)"
-                    style={{ width: 260 }}
+                    style={{ width: '100%', minWidth: 220 }}
                     value={approverId || undefined}
                     onChange={(v) => setApproverId(v ?? '')}
                     options={approvers.map((u) => ({ value: u.uid, label: u.name }))}
@@ -697,13 +705,16 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                 }
               />
             )}
-            <div className="bill-row">
+            <div className="bill-fgrid" style={{ marginTop: 'var(--s-3)' }}>
+              <div>
+              <label className="bill-field-label" htmlFor="disc-by">Discounted by</label>
               <Select
+                id="disc-by"
                 allowClear
                 showSearch
                 aria-label="Discounted by"
                 placeholder="Discounted by"
-                style={{ width: 200 }}
+                style={{ width: '100%' }}
                 value={discountedBy || undefined}
                 onChange={(v) => setDiscountedBy(v ?? '')}
                 options={[
@@ -711,18 +722,24 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                   ...users.filter((u) => u.active).map((u) => ({ value: u.name, label: u.name })),
                 ]}
               />
+              </div>
+              <div>
+              <label className="bill-field-label" htmlFor="disc-reason">Reason</label>
               <AutoComplete
+                id="disc-reason"
                 aria-label="Discount reason"
-                style={{ width: 260 }}
+                style={{ width: '100%' }}
                 value={reason}
                 onChange={setReason}
                 options={masters.reasons.map((r) => ({ value: r }))}
                 placeholder={settings.discountReasonRequired && totals.discount > 0 ? 'Reason (required)' : 'Reason'}
                 status={reasonMissing ? 'error' : undefined}
               />
+              </div>
             </div>
+            <label className="bill-field-label" htmlFor="bill-note" style={{ marginTop: 'var(--s-3)' }}>Note on bill</label>
             <Input.TextArea
-              style={{ marginTop: 8 }}
+              id="bill-note"
               rows={2}
               aria-label="Note on bill"
               placeholder="Note on bill"
@@ -750,7 +767,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
             {payerName && (
               <div className="bill-row">
                 <label className="bill-muted" htmlFor="payer-amt">{panel ? 'Government panel' : 'TPA'} share</label>
-                <InputNumber id="payer-amt" addonBefore="₹" min={0} precision={2} value={payerAmt} onChange={(v) => setPayerAmt(v ?? 0)} style={{ width: 150 }} />
+                <InputNumber id="payer-amt" addonBefore="₹" min={0} precision={2} value={payerAmt} onChange={(v) => setPayerAmt(v ?? 0)} style={{ width: 170 }} />
               </div>
             )}
 
@@ -785,13 +802,13 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
               <Alert style={{ marginTop: 'var(--s-3)' }} type="info" showIcon message="You do not have permission to collect payments. The bill will be saved with the full amount due." />
             ) : (
               <>
-                <h3 className="bill-section__title" style={{ marginTop: 'var(--s-3)' }}>Payment</h3>
+                <h3 className="bill-section__title bill-section__title--split">Payment</h3>
                 {rows.map((r, idx) => (
-                  <div key={r.key} className="bill-row">
+                  <div key={r.key} className="bill-payrow">
                     <Select
                       aria-label="Payment mode"
                       value={r.mode}
-                      style={{ width: 110 }}
+                      style={{ width: '100%' }}
                       onChange={(mode) => setRows(rows.map((x) => (x.key === r.key ? { ...x, mode } : x)))}
                       options={payModes}
                     />
@@ -801,14 +818,14 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                       precision={2}
                       value={r.amount}
                       addonBefore="₹"
-                      style={{ width: 140 }}
+                      style={{ width: '100%' }}
                       onChange={(v) => setRows(rows.map((x) => (x.key === r.key ? { ...x, amount: v ?? 0 } : x)))}
                     />
                     <Input
                       aria-label="Transaction ID"
                       status={needsRef(r.mode) && r.amount > 0 && !r.reference.trim() ? 'error' : undefined}
                       placeholder={needsRef(r.mode) ? 'Transaction ID (required)' : 'Transaction ID'}
-                      style={{ width: 150 }}
+                      style={{ width: '100%' }}
                       value={r.reference}
                       onChange={(e) => setRows(rows.map((x) => (x.key === r.key ? { ...x, reference: e.target.value } : x)))}
                     />
@@ -822,7 +839,7 @@ export default function BillingModal({ open, patient, onClose, onSaved, context,
                     Split payment
                   </Button>
                 </div>
-                <div className="bill-row">
+                <div className="bill-row bill-row--tight">
                   <Checkbox checked={due > 0} disabled aria-label="Due payment">Due payment</Checkbox>
                   <span className="bill-muted">Ticks itself when less than the total is collected.</span>
                 </div>

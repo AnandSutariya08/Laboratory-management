@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { App, Input, Modal, Table } from 'antd'
+import { App, Input, Modal, Switch, Table } from 'antd'
+import { SettingRow } from '../../design/FormLayout'
 import { addDoc, deleteDoc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { col, docRef } from '../../lib/db'
 import { useAuth } from '../../auth/AuthProvider'
@@ -93,7 +94,7 @@ export default function MacrosModal({ open, onClose, canEdit }: { open: boolean;
           <>
             <div className="rd-field"><label htmlFor="mc-label">Label</label><Input id="mc-label" value={editing.label} onChange={(e) => setEditing({ ...editing, label: e.target.value })} /></div>
             <div className="rd-field"><label htmlFor="mc-text">Text</label><Input.TextArea id="mc-text" rows={4} value={editing.text} onChange={(e) => setEditing({ ...editing, text: e.target.value })} /></div>
-            <label><input type="checkbox" checked={editing.active !== false} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> Active</label>
+            <SettingRow label="Active" help="Inactive macros are hidden from the report editor."><Switch aria-label="Active" checked={editing.active !== false} onChange={(v) => setEditing({ ...editing, active: v })} /></SettingRow>
           </>
         )}
       </Modal>

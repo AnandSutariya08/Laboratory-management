@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Alert, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, message } from 'antd'
+import { Alert, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Table, message } from 'antd'
 import { MinusCircleOutlined } from '@ant-design/icons'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, MergeOutlined, PlusOutlined, PrinterOutlined, ProfileOutlined, UploadOutlined } from '@ant-design/icons'
 import { getDocs, query, where, writeBatch } from 'firebase/firestore'
@@ -19,6 +19,7 @@ import { downloadCsv, parseCsvObjects } from './lib/csv'
 import { removeMaster, saveMaster, useMaster, useRateLists } from './lib/master'
 import { usePartnerOrders, orderDate, type Range } from './lib/orders'
 import { esc, printHtml } from './lib/print'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { PriceListDrawer } from './RateListEditor'
 import type { CommissionRule, CommissionType, GovPanel, MarketingMember, PartnerOrder, Referrer, Tpa } from './types'
 import { ActiveChip, DataTable, FileButton, fmtDate, Kpis, RangeField, Spacer, thisMonth, Toolbar } from './ui'
@@ -259,14 +260,22 @@ export default function ReferralsPage() {
           await saveMaster('phlebotomists', editPh.id ?? null, { name: editPh.name.trim(), gender: editPh.gender ?? '', phone: editPh.phone ?? '', email: editPh.email ?? '', commissionType: editPh.commissionType ?? 'none', commissionValue: editPh.commissionValue ?? 0, active: editPh.active !== false })
           setEditPh(null)
         }}>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Input aria-label="Name" placeholder="Name" value={editPh?.name} onChange={(e) => setEditPh({ ...editPh, name: e.target.value })} />
-          <Select aria-label="Gender" style={{ width: '100%' }} value={editPh?.gender} onChange={(v) => setEditPh({ ...editPh, gender: v })} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
-          <Input aria-label="Phone" placeholder="Phone" value={editPh?.phone} onChange={(e) => setEditPh({ ...editPh, phone: e.target.value })} />
-          <Input aria-label="Email" placeholder="Email" value={editPh?.email} onChange={(e) => setEditPh({ ...editPh, email: e.target.value })} />
-          <Select aria-label="Commission type" style={{ width: '100%' }} value={editPh?.commissionType} onChange={(v) => setEditPh({ ...editPh, commissionType: v })} options={COMMISSION_OPTS} />
-          <InputNumber aria-label="Commission value" style={{ width: '100%' }} min={0} value={editPh?.commissionValue} onChange={(v) => setEditPh({ ...editPh, commissionValue: v ?? 0 })} placeholder="Percent, or paise per bill when flat" />
-        </Space>
+        <Form layout="vertical" component="div">
+          <FormSection title="Phlebotomist" description="Who they are and how to reach them.">
+            <FieldGrid min={220}>
+              <Form.Item label="Name" required><Input aria-label="Name" value={editPh?.name} onChange={(e) => setEditPh({ ...editPh, name: e.target.value })} /></Form.Item>
+              <Form.Item label="Gender"><Select aria-label="Gender" value={editPh?.gender} onChange={(v) => setEditPh({ ...editPh, gender: v })} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} /></Form.Item>
+              <Form.Item label="Phone"><Input aria-label="Phone" value={editPh?.phone} onChange={(e) => setEditPh({ ...editPh, phone: e.target.value })} /></Form.Item>
+              <Form.Item label="Email"><Input aria-label="Email" value={editPh?.email} onChange={(e) => setEditPh({ ...editPh, email: e.target.value })} /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Commission" description="Percent of the bill, or paise per bill when flat.">
+            <FieldGrid min={220}>
+              <Form.Item label="Commission type"><Select aria-label="Commission type" value={editPh?.commissionType} onChange={(v) => setEditPh({ ...editPh, commissionType: v })} options={COMMISSION_OPTS} /></Form.Item>
+              <Form.Item label="Commission value"><InputNumber aria-label="Commission value" style={{ width: '100%' }} min={0} value={editPh?.commissionValue} onChange={(v) => setEditPh({ ...editPh, commissionValue: v ?? 0 })} /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+        </Form>
       </Modal>
       <BulkUpload open={bulk} onClose={() => setBulk(false)} type={tab === 'hospital' ? 'hospital' : tab === 'second' ? 'second' : 'doctor'} />
       <MergeModal source={merge} onClose={() => setMerge(null)} referrers={referrers.data} />
@@ -342,9 +351,9 @@ function CommissionRulesFields({ form }: { form: ReturnType<typeof Form.useForm>
           <div style={{ marginBottom: 12 }}>
             <div className="pt-muted" style={{ marginBottom: 6 }}>Overrides by test, package or department (the most specific one wins).</div>
             {fields.map((f) => (
-              <Space key={f.key} align="baseline" wrap style={{ display: 'flex' }}>
+              <div key={f.key} className="pt-rule">
                 <Form.Item name={[f.name, 'scope']} rules={[{ required: true }]}>
-                  <Select aria-label="Rule applies to" style={{ width: 130 }} placeholder="Applies to" options={[{ value: 'test', label: 'Test' }, { value: 'package', label: 'Package' }, { value: 'department', label: 'Department' }]} onChange={() => form.setFieldValue(['commissionRules', f.name, 'refId'], undefined)} />
+                  <Select aria-label="Rule applies to" placeholder="Applies to" options={[{ value: 'test', label: 'Test' }, { value: 'package', label: 'Package' }, { value: 'department', label: 'Department' }]} onChange={() => form.setFieldValue(['commissionRules', f.name, 'refId'], undefined)} />
                 </Form.Item>
                 <Form.Item noStyle shouldUpdate>
                   {({ getFieldValue }) => (
@@ -353,7 +362,6 @@ function CommissionRulesFields({ form }: { form: ReturnType<typeof Form.useForm>
                         aria-label="Rule item"
                         showSearch
                         optionFilterProp="label"
-                        style={{ width: 220 }}
                         placeholder="Pick one"
                         options={options(getFieldValue(['commissionRules', f.name, 'scope']))}
                         onChange={(_, o) => form.setFieldValue(['commissionRules', f.name, 'refName'], (o as { label?: string })?.label ?? '')}
@@ -363,13 +371,13 @@ function CommissionRulesFields({ form }: { form: ReturnType<typeof Form.useForm>
                 </Form.Item>
                 <Form.Item name={[f.name, 'refName']} hidden><Input /></Form.Item>
                 <Form.Item name={[f.name, 'type']} rules={[{ required: true }]}>
-                  <Select aria-label="Rule commission type" style={{ width: 130 }} placeholder="Type" options={COMMISSION_OPTS} />
+                  <Select aria-label="Rule commission type" placeholder="Type" options={COMMISSION_OPTS} />
                 </Form.Item>
                 <Form.Item name={[f.name, 'value']}>
-                  <InputNumber aria-label="Rule value" min={0} precision={2} placeholder="% or Rs" style={{ width: 100 }} />
+                  <InputNumber aria-label="Rule value" min={0} precision={2} placeholder="% or Rs" style={{ width: '100%' }} />
                 </Form.Item>
                 <Button variant="text" aria-label="Remove rule" icon={<MinusCircleOutlined />} onClick={() => remove(f.name)} />
-              </Space>
+              </div>
             ))}
             <Button icon={<PlusOutlined />} onClick={() => add({ scope: 'test', type: 'percent', value: 0 })}>Add override</Button>
           </div>
@@ -407,38 +415,44 @@ function ReferrerDrawer({ value, onClose, pros }: { value: Partial<Referrer> | n
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit} disabled={busy}>Save</Button></div>}
     >
       <Form form={form} layout="vertical" initialValues={toForm({ active: true, temporary: false, commissionType: 'percent', commissionValue: 0, commissionMode: 'standard', countryCode: '+91', ...value } as Referrer)}>
-        <div className="pt-grid2">
-          <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}><Input /></Form.Item>
-          {!isHospital && <Form.Item name="degree" label="Degree"><Input /></Form.Item>}
-          <Form.Item name="countryCode" label="Country code"><Select showSearch options={['+91', '+1', '+44', '+971', '+966', '+977', '+880', '+94', '+65', '+61'].map((c) => ({ value: c, label: c }))} /></Form.Item>
-          <Form.Item name="phone" label="Phone"><Input inputMode="tel" /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Enter a valid email' }]}><Input /></Form.Item>
-          <Form.Item name="speciality" label="Speciality"><Input /></Form.Item>
-          <Form.Item name="proManagerId" label="PRO / marketing manager">
-            <Select allowClear showSearch optionFilterProp="label" options={pros.filter((p) => p.active).map((p) => ({ value: p.id, label: p.name }))} />
+        <FormSection title="Contact details" description="Who the referrer is and how to reach them.">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Name" rules={[{ required: true, message: 'Name is required' }]}><Input /></Form.Item>
+            {!isHospital && <Form.Item name="degree" label="Degree"><Input /></Form.Item>}
+            <Form.Item name="speciality" label="Speciality"><Input /></Form.Item>
+            <Form.Item name="countryCode" label="Country code"><Select showSearch options={['+91', '+1', '+44', '+971', '+966', '+977', '+880', '+94', '+65', '+61'].map((c) => ({ value: c, label: c }))} /></Form.Item>
+            <Form.Item name="phone" label="Phone"><Input inputMode="tel" /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Enter a valid email' }]}><Input /></Form.Item>
+            <Form.Item name="proManagerId" label="PRO / marketing manager">
+              <Select allowClear showSearch optionFilterProp="label" options={pros.filter((p) => p.active).map((p) => ({ value: p.id, label: p.name }))} />
+            </Form.Item>
+          </FieldGrid>
+          <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+        </FormSection>
+        <FormSection title="Commission" description="How much this referrer earns on the bills they send.">
+          <CommissionFields />
+          <CommissionRulesFields form={form} />
+          <FieldGrid min={240}>
+            <Form.Item name="discountBearer" label="Discount borne by" tooltip="Who absorbs a bill discount when commission is calculated. Blank = plain commission basis.">
+              <Select allowClear placeholder="Not adjusted" options={[{ value: 'lab', label: 'Lab only' }, { value: 'referrer', label: 'Referrer' }, { value: 'split', label: 'Split' }]} />
+            </Form.Item>
+            <Form.Item noStyle shouldUpdate={(a, b) => a.discountBearer !== b.discountBearer}>
+              {({ getFieldValue }) => getFieldValue('discountBearer') === 'split' && <Form.Item name="discountSplitReferrerPct" label="Referrer's share of discount"><InputNumber min={0} max={100} addonAfter="%" style={{ width: '100%' }} /></Form.Item>}
+            </Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Pricing" description="Which prices this referrer's bills use.">
+          <Form.Item name="rateListId" label="Rate list">
+            <Select allowClear showSearch optionFilterProp="label" placeholder="MRP (no list)" options={rates.data.filter((r) => r.active).map((r) => ({ value: r.id, label: r.name }))} />
           </Form.Item>
-        </div>
-        <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
-        <CommissionFields />
-        <CommissionRulesFields form={form} />
-        <div className="pt-grid2">
-          <Form.Item name="discountBearer" label="Discount borne by" tooltip="Who absorbs a bill discount when commission is calculated. Blank = plain commission basis.">
-            <Select allowClear placeholder="Not adjusted" options={[{ value: 'lab', label: 'Lab only' }, { value: 'referrer', label: 'Referrer' }, { value: 'split', label: 'Split' }]} />
-          </Form.Item>
-          <Form.Item noStyle shouldUpdate={(a, b) => a.discountBearer !== b.discountBearer}>
-            {({ getFieldValue }) => getFieldValue('discountBearer') === 'split' && <Form.Item name="discountSplitReferrerPct" label="Referrer's share of discount (%)"><InputNumber min={0} max={100} style={{ width: '100%' }} /></Form.Item>}
-          </Form.Item>
-        </div>
-        <Form.Item name="rateListId" label="Rate list">
-          <Select allowClear showSearch optionFilterProp="label" placeholder="MRP (no list)" options={rates.data.filter((r) => r.active).map((r) => ({ value: r.id, label: r.name }))} />
-        </Form.Item>
-        <div className="pt-grid3">
-          <Form.Item name="autoSendReports" label="Auto-send paid reports" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="temporary" label="Temporary referrer" valuePropName="checked" extra="Quick-added at billing; merge later."><Switch /></Form.Item>
-          <Form.Item name="b2b" label="B2B" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="loginAccess" label="Login access" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
-        </div>
+        </FormSection>
+        <FormSection title="Settings">
+          <SettingRow label="Auto-send paid reports" help="Reports are sent to the referrer once the bill is paid." htmlFor="rf-auto"><Form.Item name="autoSendReports" valuePropName="checked" noStyle><Switch id="rf-auto" /></Form.Item></SettingRow>
+          <SettingRow label="Temporary referrer" help="Quick-added at billing; merge later." htmlFor="rf-temp"><Form.Item name="temporary" valuePropName="checked" noStyle><Switch id="rf-temp" /></Form.Item></SettingRow>
+          <SettingRow label="B2B" help="Treat this referrer as a business account." htmlFor="rf-b2b"><Form.Item name="b2b" valuePropName="checked" noStyle><Switch id="rf-b2b" /></Form.Item></SettingRow>
+          <SettingRow label="Login access" help="Allow this referrer to sign in to the portal." htmlFor="rf-login"><Form.Item name="loginAccess" valuePropName="checked" noStyle><Switch id="rf-login" /></Form.Item></SettingRow>
+          <SettingRow label="Active" help="Inactive referrers are hidden when billing." htmlFor="rf-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="rf-active" /></Form.Item></SettingRow>
+        </FormSection>
       </Form>
     </Drawer>
   )
@@ -461,12 +475,20 @@ function TpaDrawer({ value, onClose }: { value: Partial<Tpa> | null; onClose: ()
     <Drawer open={!!value} onClose={onClose} destroyOnHidden title={value?.id ? 'Edit TPA' : 'Add TPA'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={toForm({ active: true, commissionType: 'none', commissionValue: 0, ...value })}>
-        <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-        <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
-        <CommissionFields />
-        <Form.Item name="rateListId" label="Rate list"><Select allowClear options={rates.data.map((r) => ({ value: r.id, label: r.name }))} /></Form.Item>
-        <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+        <FormSection title="Contact details">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Commission and pricing" description="Commission earned and the price list used for this TPA's bills.">
+          <CommissionFields />
+          <Form.Item name="rateListId" label="Rate list"><Select allowClear options={rates.data.map((r) => ({ value: r.id, label: r.name }))} /></Form.Item>
+        </FormSection>
+        <FormSection title="Settings">
+          <SettingRow label="Active" help="Inactive TPAs are hidden when billing." htmlFor="tpa-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="tpa-active" /></Form.Item></SettingRow>
+        </FormSection>
       </Form>
     </Drawer>
   )
@@ -489,11 +511,17 @@ function GovDrawer({ value, onClose }: { value: Partial<GovPanel> | null; onClos
     <Drawer open={!!value} onClose={onClose} destroyOnHidden title={value?.id ? 'Edit government panel' : 'Add government panel'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={{ active: true, panelType: 'central', ...value }}>
-        <Form.Item name="name" label="Panel name" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="panelType" label="Panel type"><Select options={['central', 'state', 'municipal', 'other'].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }))} /></Form.Item>
-        <Form.Item name="recipientAddress" label="Recipient address"><Input.TextArea rows={3} /></Form.Item>
-        <Form.Item name="rateListId" label="Price list"><Select allowClear options={rates.data.map((r) => ({ value: r.id, label: r.name }))} /></Form.Item>
-        <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+        <FormSection title="Panel details">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Panel name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="panelType" label="Panel type"><Select options={['central', 'state', 'municipal', 'other'].map((v) => ({ value: v, label: v[0].toUpperCase() + v.slice(1) }))} /></Form.Item>
+          </FieldGrid>
+          <Form.Item name="recipientAddress" label="Recipient address"><Input.TextArea rows={3} /></Form.Item>
+        </FormSection>
+        <FormSection title="Pricing and status">
+          <Form.Item name="rateListId" label="Price list"><Select allowClear options={rates.data.map((r) => ({ value: r.id, label: r.name }))} /></Form.Item>
+          <SettingRow label="Active" help="Inactive panels are hidden when billing." htmlFor="gov-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="gov-active" /></Form.Item></SettingRow>
+        </FormSection>
       </Form>
     </Drawer>
   )
@@ -533,8 +561,8 @@ function BulkUpload({ open, onClose, type }: { open: boolean; onClose: () => voi
   }
   return (
     <Modal open={open} onCancel={onClose} title="Bulk upload referrers" okText={`Import ${valid.length}`} onOk={run} okButtonProps={{ disabled: !valid.length, loading: busy }} destroyOnHidden>
-      <p>Upload a CSV with the columns of the template. Commission value is a percent, or rupees for flat.</p>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+      <p className="pt-muted">Upload a CSV with the columns of the template. Commission value is a percent, or rupees for flat.</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         <Button icon={<DownloadOutlined />} onClick={() => downloadCsv('referrer-template', TEMPLATE)}>Download template</Button>
         <FileButton label="Choose CSV" icon={<UploadOutlined />} onText={(t) => setRows(parseCsvObjects(t))} />
       </div>

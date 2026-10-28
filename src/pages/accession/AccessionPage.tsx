@@ -64,6 +64,8 @@ import {
   type AOrder,
 } from './ops'
 import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
+import '../../components/results/results.css'
 import CollectionPhotos from '../../components/results/CollectionPhotos'
 import { DispatchModal, ManifestReceiveModal, printManifest } from './Manifest'
 
@@ -740,6 +742,16 @@ export default function AccessionPage() {
       </div>
     )
 
+
+  const filterFields = [
+    ['b2b', 'B2B Center', b2bs.map((b) => ({ value: b.id, label: b.name }))],
+    ['department', 'Department', maps.departments.map((d) => ({ value: d.id, label: d.name }))],
+    ['place', 'Collected At', [{ value: 'lab', label: 'Lab' }, { value: 'home', label: 'Home' }, { value: 'cc', label: 'Collection centre' }]],
+    ['sampleType', 'Sample Type', maps.sampleTypes.map((s) => ({ value: s.id, label: s.name }))],
+    ['phlebo', 'Phlebotomist', phlebos.map((p) => ({ value: p.uid, label: p.name }))],
+    ['centre', 'Collection Center', centres.map((c) => ({ value: c.id, label: c.name }))],
+  ] as [keyof Filters, string, { value: string; label: string }[]][]
+
   return (
     <div>
       <PageHeader
@@ -921,40 +933,36 @@ export default function AccessionPage() {
         <Form layout="vertical">
           {(
             [
-              ['b2b', 'B2B Center', b2bs.map((b) => ({ value: b.id, label: b.name }))],
-              ['department', 'Department', maps.departments.map((d) => ({ value: d.id, label: d.name }))],
-              [
-                'place',
-                'Collected At',
-                [
-                  { value: 'lab', label: 'Lab' },
-                  { value: 'home', label: 'Home' },
-                  { value: 'cc', label: 'Collection centre' },
-                ],
-              ],
-              ['sampleType', 'Sample Type', maps.sampleTypes.map((s) => ({ value: s.id, label: s.name }))],
-              ['phlebo', 'Phlebotomist', phlebos.map((p) => ({ value: p.uid, label: p.name }))],
-              ['centre', 'Collection Center', centres.map((c) => ({ value: c.id, label: c.name }))],
-            ] as [keyof Filters, string, { value: string; label: string }[]][]
-          ).map(([k, label, options]) => (
-            <Form.Item key={k} label={label}>
-              <Select
-                allowClear
-                showSearch
-                optionFilterProp="label"
-                placeholder="Any"
-                value={(draftFilters[k] as string) || undefined}
-                onChange={(v) => setDraftFilters((d) => ({ ...d, [k]: v ?? '' }))}
-                options={options}
-              />
-            </Form.Item>
+              ['Where it came from', ['b2b', 'place', 'centre']],
+              ['Sample and staff', ['department', 'sampleType', 'phlebo']],
+            ] as [string, (keyof Filters)[]][]
+          ).map(([title, keys]) => (
+            <FormSection key={title} title={title}>
+              <FieldGrid min={150}>
+                {filterFields.filter((f) => keys.includes(f[0])).map(([k, label, options]) => (
+                  <Form.Item key={k} label={label} style={{ marginBottom: 0 }}>
+                    <Select
+                      allowClear
+                      showSearch
+                      optionFilterProp="label"
+                      placeholder="Any"
+                      value={(draftFilters[k] as string) || undefined}
+                      onChange={(v) => setDraftFilters((d) => ({ ...d, [k]: v ?? '' }))}
+                      options={options}
+                    />
+                  </Form.Item>
+                ))}
+              </FieldGrid>
+            </FormSection>
           ))}
-          <Form.Item label="Rejected">
-            <Switch checked={draftFilters.rejected} onChange={(v) => setDraftFilters((d) => ({ ...d, rejected: v }))} />
-          </Form.Item>
-          <Form.Item label="Urgent">
-            <Switch checked={draftFilters.urgent} onChange={(v) => setDraftFilters((d) => ({ ...d, urgent: v }))} />
-          </Form.Item>
+          <FormSection title="Show only">
+            <SettingRow label="Rejected" help="Only samples that were rejected.">
+              <Switch aria-label="Rejected" checked={draftFilters.rejected} onChange={(v) => setDraftFilters((d) => ({ ...d, rejected: v }))} />
+            </SettingRow>
+            <SettingRow label="Urgent" help="Only urgent bills.">
+              <Switch aria-label="Urgent" checked={draftFilters.urgent} onChange={(v) => setDraftFilters((d) => ({ ...d, urgent: v }))} />
+            </SettingRow>
+          </FormSection>
         </Form>
       </Drawer>
 
@@ -1022,30 +1030,35 @@ export default function AccessionPage() {
       >
         {detail && (
           <div>
-            <Space style={{ marginBottom: 'var(--s-3)' }} wrap>
-              <Text type="secondary">Barcode</Text>
-              <BarcodeCell order={detail} autoGenerate={autoBarcode} />
-              <Text type="secondary">Billed {fmtDateTime(detail.createdAt)}</Text>
-              <Select
-                allowClear
-                aria-label="Collected by"
-                placeholder="Collected by"
-                style={{ width: 180 }}
-                value={collector || undefined}
-                onChange={(v) => setCollector(v ?? '')}
-                options={phlebos.map((p) => ({ value: p.uid, label: p.name }))}
-              />
-            </Space>
-            <div style={{ marginBottom: 'var(--s-3)' }}>
-              <Text type="secondary">Collection photos</Text>
-              <CollectionPhotos
-                orderId={detail.id}
-                files={detail.collectionPhotoFiles}
-                legacy={detail.collectionPhotos}
-                canAdd={canCollect}
-                who={{ uid: user.uid, name: user.name }}
-              />
-            </div>
+            <FormSection title="Sample details">
+              <FieldGrid min={200}>
+                <div className="re-field"><label>Barcode</label><BarcodeCell order={detail} autoGenerate={autoBarcode} /></div>
+                <div className="re-field"><label>Billed</label><div>{fmtDateTime(detail.createdAt)}</div></div>
+                <div className="re-field">
+                  <label htmlFor="acc-collector">Collected by</label>
+                  <Select
+                    id="acc-collector"
+                    allowClear
+                    aria-label="Collected by"
+                    placeholder="Collected by"
+                    value={collector || undefined}
+                    onChange={(v) => setCollector(v ?? '')}
+                    options={phlebos.map((p) => ({ value: p.uid, label: p.name }))}
+                  />
+                </div>
+              </FieldGrid>
+              <div className="re-field">
+                <label>Collection photos</label>
+                <CollectionPhotos
+                  orderId={detail.id}
+                  files={detail.collectionPhotoFiles}
+                  legacy={detail.collectionPhotos}
+                  canAdd={canCollect}
+                  who={{ uid: user.uid, name: user.name }}
+                />
+              </div>
+            </FormSection>
+            <FormSection title="Tests">
             <Table<AItem>
               rowKey="lineId"
               size="small"
@@ -1097,6 +1110,7 @@ export default function AccessionPage() {
                 },
               ]}
             />
+            </FormSection>
           </div>
         )}
       </Modal>
@@ -1226,7 +1240,10 @@ export default function AccessionPage() {
           setAssignFor(null)
         }}
       >
+        <div className="re-field">
+        <label htmlFor="acc-assign">Phlebotomist</label>
         <Select
+          id="acc-assign"
           allowClear
           style={{ width: '100%' }}
           aria-label="Phlebotomist"
@@ -1235,6 +1252,7 @@ export default function AccessionPage() {
           onChange={(v) => setCollector(v ?? '')}
           options={phlebos.map((p) => ({ value: p.uid, label: p.name }))}
         />
+        </div>
       </Modal>
     </div>
   )
@@ -1457,8 +1475,9 @@ function PickTestsModal({
       onCancel={onClose}
       destroyOnHidden
     >
-      <p style={{ marginTop: 0 }}>Select test(s)</p>
-      <Checkbox.Group style={{ display: 'grid', gap: 4 }} value={chosen} onChange={(v) => setChosen(v as string[])} options={lines.map((i) => ({ value: i.lineId, label: i.name }))} />
+      <FormSection title="Select test(s)" description="Only the ticked tests are collected.">
+      <Checkbox.Group style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--s-2) var(--s-4)' }} value={chosen} onChange={(v) => setChosen(v as string[])} options={lines.map((i) => ({ value: i.lineId, label: i.name }))} />
+      </FormSection>
     </Modal>
   )
 }
@@ -1510,45 +1529,48 @@ function RejectModal({
   return (
     <Modal open={!!target} title="Reason for rejection" okText="Reject" okButtonProps={{ danger: true, loading: busy }} onOk={submit} onCancel={onClose} destroyOnHidden>
       {target && (
-        <div style={{ display: 'grid', gap: 'var(--s-3)' }}>
-          {pickLines ? (
-            <div>
-              <Text type="secondary">Select test(s)</Text>
-              <div>
-                <Checkbox.Group
-                  style={{ display: 'grid', gap: 4 }}
-                  value={chosen}
-                  onChange={(v) => setChosen(v as string[])}
-                  options={lines.map((i) => ({ value: i.lineId, label: i.name }))}
-                />
-              </div>
+        <>
+          <FormSection title={pickLines ? 'Which tests' : 'Sample'}>
+            {pickLines ? (
+              <Checkbox.Group
+                style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--s-2) var(--s-4)' }}
+                value={chosen}
+                onChange={(v) => setChosen(v as string[])}
+                options={lines.map((i) => ({ value: i.lineId, label: i.name }))}
+              />
+            ) : (
+              <p style={{ margin: 0 }}>
+                {label ?? `${lines.map((i) => i.name).join(', ')} for ${target.order.patientName}`}
+              </p>
+            )}
+          </FormSection>
+          <FormSection title="Why">
+            <div className="re-field">
+              <label htmlFor="rej-reason">Rejection reason</label>
+              <Select
+                id="rej-reason"
+                aria-label="Rejection reason"
+                placeholder="Select a reason"
+                value={pick}
+                onChange={setPick}
+                options={[...list.map((r) => ({ value: r, label: r })), { value: OTHER, label: 'Other (type below)' }]}
+              />
             </div>
-          ) : (
-            <p style={{ margin: 0 }}>
-              {label ?? `${lines.map((i) => i.name).join(', ')} for ${target.order.patientName}`}
-            </p>
-          )}
-          <Select
-            aria-label="Rejection reason"
-            placeholder="Select a reason"
-            value={pick}
-            onChange={setPick}
-            options={[...list.map((r) => ({ value: r, label: r })), { value: OTHER, label: 'Other (type below)' }]}
-          />
-          {pick === OTHER && (
-            <Input.TextArea
-              rows={2}
-              aria-label="Reason"
-              placeholder="Reason (required)"
-              value={other}
-              onChange={(e) => setOther(e.target.value)}
-            />
-          )}
-          <Input.TextArea rows={2} aria-label="Remark" placeholder="Remark (optional)" value={remark} onChange={(e) => setRemark(e.target.value)} />
-          <Checkbox checked={recollect} onChange={(e) => setRecollect(e.target.checked)}>
-            Send for recollection
-          </Checkbox>
-        </div>
+            {pick === OTHER && (
+              <div className="re-field">
+                <label htmlFor="rej-other">Reason (required)</label>
+                <Input.TextArea id="rej-other" rows={2} aria-label="Reason" placeholder="Reason (required)" value={other} onChange={(e) => setOther(e.target.value)} />
+              </div>
+            )}
+            <div className="re-field">
+              <label htmlFor="rej-remark">Remark (optional)</label>
+              <Input.TextArea id="rej-remark" rows={2} aria-label="Remark" placeholder="Remark" value={remark} onChange={(e) => setRemark(e.target.value)} />
+            </div>
+            <Checkbox checked={recollect} onChange={(e) => setRecollect(e.target.checked)}>
+              Send for recollection
+            </Checkbox>
+          </FormSection>
+        </>
       )}
     </Modal>
   )
@@ -1586,7 +1608,10 @@ function ReasonModal({
       onOk={() => (requiredReason && !reason.trim() ? message.warning('A reason is required') : onSubmit(reason.trim()))}
       destroyOnHidden
     >
-      <Input.TextArea rows={3} aria-label="Reason" placeholder={requiredReason ? 'Reason (required)' : 'Reason (optional)'} value={reason} onChange={(e) => setReason(e.target.value)} />
+      <div className="re-field">
+        <label htmlFor="acc-reason">{requiredReason ? 'Reason (required)' : 'Reason (optional)'}</label>
+        <Input.TextArea id="acc-reason" rows={3} aria-label="Reason" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+      </div>
     </Modal>
   )
 }
@@ -1625,13 +1650,17 @@ function DateModal({
       }}
       destroyOnHidden
     >
-      <Space direction="vertical" style={{ width: '100%' }}>
-        <DatePicker showTime style={{ width: '100%' }} value={d} onChange={setD} aria-label="New accession date" allowClear={false} />
-        <Input.TextArea rows={2} aria-label="Reason" placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
-        {(order?.accessionLog ?? []).length > 0 && (
-          <Text type="secondary">Changed {order?.accessionLog?.length} time(s) before.</Text>
-        )}
-      </Space>
+      <div className="re-field">
+        <label htmlFor="acc-date">New accession date and time</label>
+        <DatePicker id="acc-date" showTime style={{ width: '100%' }} value={d} onChange={setD} aria-label="New accession date" allowClear={false} />
+      </div>
+      <div className="re-field">
+        <label htmlFor="acc-date-reason">Reason (required)</label>
+        <Input.TextArea id="acc-date-reason" rows={2} aria-label="Reason" placeholder="Reason" value={reason} onChange={(e) => setReason(e.target.value)} />
+      </div>
+      {(order?.accessionLog ?? []).length > 0 && (
+        <Text type="secondary">Changed {order?.accessionLog?.length} time(s) before.</Text>
+      )}
     </Modal>
   )
 }

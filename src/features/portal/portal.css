@@ -13,4 +13,7 @@
 .portal__note { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
 .portal__lines { display: flex; flex-direction: column; gap: var(--s-2); }
 .portal__line { display: flex; justify-content: space-between; gap: var(--s-3); border-bottom: 1px solid var(--c-outline-variant); padding: var(--s-2) 0; }
+.portal__field { display: grid; gap: var(--s-1); }
+.portal__field > label { font-size: var(--fs-dense); font-weight: 600; color: var(--c-on-surface-variant); }
+.portal__sub { margin: 0 0 var(--s-3); font-size: var(--fs-dense); color: var(--c-on-surface-variant); }
 @media (max-width: 767px) { .portal__bar { padding: var(--s-3) 16px; } .portal__main { padding: var(--s-4) 16px; } }

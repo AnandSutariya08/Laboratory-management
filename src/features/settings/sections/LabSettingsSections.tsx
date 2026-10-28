@@ -4,7 +4,7 @@ import { StatusChip } from '../../../design/StatusChip'
 import { useDisplay } from '../../../design/DisplaySettings'
 import { B2B_DISPATCH_MODES, CYCLES, DISPATCH_MODES, PATIENT_LIST_COLUMNS, REGISTRATION_FIELDS } from '../constants'
 import CreditWallet from '../../../components/billing/CreditWallet'
-import { bind, Field, SectionCard, SwitchRow, useDraft } from '../ui'
+import { bind, Field, Group, SectionCard, SwitchRow, useDraft } from '../ui'
 import type { DispatchMode } from '../../../types'
 
 const RG = bind('registration')
@@ -37,8 +37,8 @@ export function Registration() {
       </SectionCard>
       <SectionCard title="Patient identity">
         <RG.Sw f="uniqueContact" title="Unique contact number" description="Warn when another patient already uses the same phone number." />
-        <RG.Sw f="autoSalutationFromGender" title="Suggest salutation from gender" />
-        <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
+        <RG.Sw f="autoSalutationFromGender" title="Suggest salutation from gender" description="Pre-selects Mr, Ms or similar once the gender is chosen." />
+        <div className="st-grid">
           <RG.Sel f="uhidMode" label="UHID" options={[{ value: 'none', label: 'Not used (no UHID)' }, { value: 'manual', label: 'Enter manually' }, { value: 'auto', label: 'Generate automatically' }]} />
           <RG.Sel f="idDisplay" label="ID shown in patient list and Enter & Verify" options={[{ value: 'patientId', label: 'Patient ID' }, { value: 'uhid', label: 'UHID' }, { value: 'daywise', label: 'Day-wise number' }]} />
           <RG.Sel f="defaultAgeUnit" label="Default age unit" options={[{ value: 'year', label: 'Years' }, { value: 'month', label: 'Months' }, { value: 'day', label: 'Days' }]} />
@@ -49,11 +49,11 @@ export function Registration() {
         </div>
       </SectionCard>
       <SectionCard title="Billing defaults">
-        <RG.Sw f="defaultDueBill" title="Create bills as due by default" />
+        <RG.Sw f="defaultDueBill" title="Create bills as due by default" description="New bills start with the full amount unpaid." />
+        <Top f="discountReasonRequired" title="Require a reason for discounts" description="Billing staff must type a reason whenever a discount is applied." />
         <div className="st-grid">
           <RG.Sel f="defaultDiscountedBy" label="Default discounted by" options={[{ value: 'none', label: 'None' }, { value: 'staff', label: 'Logged-in staff' }]} />
         </div>
-        <Top f="discountReasonRequired" title="Require a reason for discounts" description="Billing staff must type a reason whenever a discount is applied." />
       </SectionCard>
       <SectionCard title="Extras (not part of Flabs; all off by default)" description="Additions that do not change the standard registration and billing flow unless switched on.">
         <SwitchRow title="Confirm a likely duplicate patient" description="Ask before registering a new patient with the same phone, name and a similar age." checked={reg.strongDuplicateGuard === true} onChange={(v) => set(['registration', 'strongDuplicateGuard'], v)} />
@@ -61,12 +61,14 @@ export function Registration() {
         <SwitchRow title="Print line discount and net on the bill" description="Off: the bill prints gross line amounts and the discount once, in the totals." checked={draft.billDetails.showLineDiscount === true} onChange={(v) => set(['billDetails', 'showLineDiscount'], v)} />
       </SectionCard>
       <SectionCard title="Default report dispatch" description="Pre-selected at registration; the front desk can change them per patient.">
-        <Field label="Patients (B2C)">
-          <Checkbox.Group options={DISPATCH_MODES} value={draft.dispatchDefaults} onChange={(v) => set(['dispatchDefaults'], v as DispatchMode[])} />
-        </Field>
-        <Field label="B2B partners">
-          <Checkbox.Group options={B2B_DISPATCH_MODES} value={reg.dispatchDefaultsB2b} onChange={(v) => set(['registration', 'dispatchDefaultsB2b'], v as DispatchMode[])} />
-        </Field>
+        <div className="st-grid" style={{ ['--st-min' as string]: '320px' }}>
+          <Field label="Patients (B2C)">
+            <Checkbox.Group options={DISPATCH_MODES} value={draft.dispatchDefaults} onChange={(v) => set(['dispatchDefaults'], v as DispatchMode[])} />
+          </Field>
+          <Field label="B2B partners">
+            <Checkbox.Group options={B2B_DISPATCH_MODES} value={reg.dispatchDefaultsB2b} onChange={(v) => set(['registration', 'dispatchDefaultsB2b'], v as DispatchMode[])} />
+          </Field>
+        </div>
       </SectionCard>
     </>
   )
@@ -102,7 +104,7 @@ export function Integration() {
         <IN.Sw f="machineInterface" title="Enable machine interface" description="Accept results pushed from connected analysers. Set up machines under Lab Profile, Machine list." />
       </SectionCard>
       <SectionCard title="Messaging providers" description="Provider keys are Firebase secrets on the server, not stored here. Without them, messages are written to the outbox.">
-        <div className="st-actions" style={{ marginBottom: 'var(--s-3)' }}>
+        <div className="st-actions" style={{ marginBottom: 'var(--s-4)' }}>
           <StatusChip variant="neutral">WhatsApp: configured on server</StatusChip>
           <StatusChip variant="neutral">SMS: configured on server</StatusChip>
           <StatusChip variant="neutral">Email: configured on server</StatusChip>
@@ -147,7 +149,7 @@ export function Accession() {
   return (
     <SectionCard title="Accession and barcodes">
       <AC.Sw f="enabled" title="Enable accession" description="Samples must be received before results can be entered." />
-      <AC.Sw f="autoGenerateBarcode" title="Generate barcodes automatically" />
+      <AC.Sw f="autoGenerateBarcode" title="Generate barcodes automatically" description="Creates a barcode for each bill or sample as soon as it is registered." />
       <div className="st-grid">
         <AC.Sel f="mode" label="Accession mode" options={[{ value: 'patient', label: 'Patient wise' }, { value: 'sample', label: 'Sample wise' }, { value: 'department', label: 'Department wise' }]} />
         <AC.Sel f="barcodePer" label="Barcode per" options={[{ value: 'bill', label: 'Bill' }, { value: 'sample', label: 'Sample' }]} />
@@ -162,21 +164,27 @@ export function ReportEntry() {
   const { draft, set } = useDraft()
   const signatories = draft.signatories.filter((s) => s.active)
   return (
-    <SectionCard title="Report entry">
-      <RE.Sw f="showPreviousResults" title="Show previous results" />
-      <RE.Sw f="colourCodedBackground" title="Colour-coded result background" />
-      <RE.Sw f="abnormalAlertBeforeApproval" title="Abnormal-value alert before approval" />
-      <RE.Sw f="criticalAckRequired" title="Require critical value acknowledgement" description="Approval needs a note that the critical value was communicated." />
-      <RE.Sw f="holdReasonModal" title="Ask for a reason when holding a result" />
-      <RE.Sw f="criticalWhatsappAlert" title="WhatsApp alert for critical values" description="Messages the patient (and the B2B / collection centre) to contact the lab when a critical value is entered. The value itself is never sent." />
-      <RE.Sw f="notifyOnRejection" title="Notify on sample rejection" description="Messages the patient (and centre) that a fresh sample is needed." />
-      <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
-        <RE.Num f="deltaCheckPercent" label="Delta check threshold (%)" hint="0 turns delta check off" max={1000} />
-        <RE.Num f="formulaDecimals" label="Decimals on calculated values" hint="Used for every formula unless the parameter sets its own. Default 2." max={6} />
-        <Field label="Default signatory">
-          <Select allowClear value={draft.reportEntry.defaultSignatoryId || undefined} onChange={(v) => set(['reportEntry', 'defaultSignatoryId'], v ?? '')} options={signatories.map((s) => ({ value: s.id, label: s.name || 'Unnamed' }))} placeholder="Add doctors in Lab Profile" />
-        </Field>
-      </div>
+    <SectionCard title="Report entry" description="How technicians enter results and what the system checks before a result is approved.">
+      <Group title="Result entry">
+        <RE.Sw f="showPreviousResults" title="Show previous results" description="Show the patient's earlier values beside the result being entered." />
+        <RE.Sw f="colourCodedBackground" title="Colour-coded result background" description="Tint the result cell when a value is outside its reference range." />
+        <RE.Sw f="holdReasonModal" title="Ask for a reason when holding a result" />
+      </Group>
+      <Group title="Alerts and approval" description="Safety checks shown before a result can be approved.">
+        <RE.Sw f="abnormalAlertBeforeApproval" title="Abnormal-value alert before approval" />
+        <RE.Sw f="criticalAckRequired" title="Require critical value acknowledgement" description="Approval needs a note that the critical value was communicated." />
+        <RE.Sw f="criticalWhatsappAlert" title="WhatsApp alert for critical values" description="Messages the patient (and the B2B / collection centre) to contact the lab when a critical value is entered. The value itself is never sent." />
+        <RE.Sw f="notifyOnRejection" title="Notify on sample rejection" description="Messages the patient (and centre) that a fresh sample is needed." />
+      </Group>
+      <Group title="Checks and defaults">
+        <div className="st-grid">
+          <RE.Num f="deltaCheckPercent" label="Delta check threshold (%)" hint="0 turns delta check off" max={1000} />
+          <RE.Num f="formulaDecimals" label="Decimals on calculated values" hint="Used for every formula unless the parameter sets its own. Default 2." max={6} />
+          <Field label="Default signatory">
+            <Select allowClear value={draft.reportEntry.defaultSignatoryId || undefined} onChange={(v) => set(['reportEntry', 'defaultSignatoryId'], v ?? '')} options={signatories.map((s) => ({ value: s.id, label: s.name || 'Unnamed' }))} placeholder="Add doctors in Lab Profile" />
+          </Field>
+        </div>
+      </Group>
     </SectionCard>
   )
 }
@@ -184,27 +192,37 @@ export function ReportEntry() {
 export function Referrals() {
   return (
     <SectionCard title="Referrals">
+      <Group title="Commission">
       <div className="st-grid">
         <RF.Sel f="commissionBasis" label="Commission calculated on" options={[{ value: 'net', label: 'Total amount (after discount)' }, { value: 'paid', label: 'Paid amount' }, { value: 'gross', label: 'Gross amount (before discount)' }]} />
         <RF.Sel f="commissionTrigger" label="Commission is earned when" options={[{ value: 'billing', label: 'The bill is created' }, { value: 'reportFinal', label: 'The report is final' }, { value: 'fullyPaid', label: 'The bill is fully paid' }]} />
       </div>
+      </Group>
+      <Group title="Bills and reports">
       <RF.Sw f="showCommissionOnBills" title="Show commission on bills" description="Visible to staff on the bill, never on the patient copy." />
-      <RF.Sw f="govPanelSendDueReport" title="Send due reports for government panel bills" />
+      <RF.Sw f="govPanelSendDueReport" title="Send due reports for government panel bills" description="Lets the front desk send a report even if the panel bill has a balance due." />
+      </Group>
     </SectionCard>
   )
 }
 
 export function NablAudit() {
   return (
-    <SectionCard title="NABL audit">
-      <NB.Sw f="enabled" title="Enable NABL features" />
-      <NB.Sw f="rerunReasonModal" title="Ask for a reason when re-running a test" />
-      <NB.Sw f="urgentRemarkModal" title="Ask for a remark on urgent tests" />
-      <NB.Sw f="criticalRemarkModal" title="Ask for a remark on critical values" />
-      <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
-        <NB.Num f="retentionDays" label="Retain samples before discarding (days)" min={1} max={365} />
-        <NB.Num f="eqasMatchDays" label="EQAS match window (+/- days)" min={1} max={30} />
-      </div>
+    <SectionCard title="NABL audit" description="Extra records that an accreditation audit asks for.">
+      <Group title="Features">
+        <NB.Sw f="enabled" title="Enable NABL features" description="Turns on the audit trail, EQAS records and the prompts below." />
+      </Group>
+      <Group title="Required remarks" description="Staff must type a reason or remark before continuing.">
+        <NB.Sw f="rerunReasonModal" title="Ask for a reason when re-running a test" />
+        <NB.Sw f="urgentRemarkModal" title="Ask for a remark on urgent tests" />
+        <NB.Sw f="criticalRemarkModal" title="Ask for a remark on critical values" />
+      </Group>
+      <Group title="Retention and matching">
+        <div className="st-grid">
+          <NB.Num f="retentionDays" label="Retain samples before discarding (days)" min={1} max={365} />
+          <NB.Num f="eqasMatchDays" label="EQAS match window (+/- days)" min={1} max={30} />
+        </div>
+      </Group>
     </SectionCard>
   )
 }
@@ -231,17 +249,21 @@ export function Tat() {
 
 export function PatientList() {
   return (
-    <SectionCard title="Patient list">
-      <div className="st-grid">
-        <PL.Sel f="defaultRange" label="Default date range" options={[{ value: 'today', label: 'Today' }, { value: '7d', label: 'Last 7 days' }, { value: '30d', label: 'Last 30 days' }, { value: 'month', label: 'This month' }]} />
-        <PL.Sel f="defaultTab" label="Default tab" options={[{ value: 'all', label: 'All' }, { value: 'pending', label: 'Pending' }, { value: 'final', label: 'Final' }, { value: 'due', label: 'Due' }]} />
-      </div>
-      <PL.Sw f="newestFirst" title="Newest first" />
-      <PL.Sw f="voidReasonRequired" title="Require a reason when deleting or voiding a bill" />
-      <TopSw f="allowDispatchedDueAccess" title="Allow report access for dispatched bills with a due" description="Staff can open the report of a bill that was dispatched but still has a balance due." />
-      <Field label="Columns">
+    <SectionCard title="Patient list" description="What staff see when they open the patient list.">
+      <Group title="Defaults">
+        <div className="st-grid">
+          <PL.Sel f="defaultRange" label="Default date range" options={[{ value: 'today', label: 'Today' }, { value: '7d', label: 'Last 7 days' }, { value: '30d', label: 'Last 30 days' }, { value: 'month', label: 'This month' }]} />
+          <PL.Sel f="defaultTab" label="Default tab" options={[{ value: 'all', label: 'All' }, { value: 'pending', label: 'Pending' }, { value: 'final', label: 'Final' }, { value: 'due', label: 'Due' }]} />
+        </div>
+        <PL.Sw f="newestFirst" title="Newest first" description="Sort the list with the latest bills at the top." />
+      </Group>
+      <Group title="Voids and dispatched bills">
+        <PL.Sw f="voidReasonRequired" title="Require a reason when deleting or voiding a bill" />
+        <TopSw f="allowDispatchedDueAccess" title="Allow report access for dispatched bills with a due" description="Staff can open the report of a bill that was dispatched but still has a balance due." />
+      </Group>
+      <Group title="Columns" description="Columns shown in the patient list table.">
         <PL.Checks f="columns" options={PATIENT_LIST_COLUMNS} />
-      </Field>
+      </Group>
     </SectionCard>
   )
 }
@@ -255,9 +277,9 @@ export function Display() {
           <Select value={prefs.theme} onChange={(v) => set({ theme: v })} options={[{ value: 'system', label: 'Match system' }, { value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark' }]} />
         </Field>
       </div>
-      <SwitchRow title="Increase contrast" checked={prefs.increaseContrast} onChange={(v) => set({ increaseContrast: v })} />
-      <SwitchRow title="Reduce motion" checked={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
-      <SwitchRow title="Reduce transparency" checked={prefs.reduceTransparency} onChange={(v) => set({ reduceTransparency: v })} />
+      <SwitchRow title="Increase contrast" description="Stronger borders and text colours." checked={prefs.increaseContrast} onChange={(v) => set({ increaseContrast: v })} />
+      <SwitchRow title="Reduce motion" description="Turn off animations and transitions." checked={prefs.reduceMotion} onChange={(v) => set({ reduceMotion: v })} />
+      <SwitchRow title="Reduce transparency" description="Use solid backgrounds instead of frosted glass." checked={prefs.reduceTransparency} onChange={(v) => set({ reduceTransparency: v })} />
     </SectionCard>
   )
 }
@@ -266,8 +288,9 @@ export function Ai() {
   const { draft, set } = useDraft()
   return (
     <SectionCard title="AI" description="The API key is a Firebase secret (ANTHROPIC_API_KEY) on the server. Analyst and MCP use aggregated numbers; result interpretation sends de-identified values only.">
+      <Group title="AI features">
       <Top f="aiEnabled" title="Enable AI features" description="Analyst, dashboards and result interpretation." />
-      <div className="st-grid">
+      <div className="st-grid" style={{ ['--st-min' as string]: '320px' }}>
         <Field label="Model">
           <Select
             value={draft.aiModel}
@@ -280,10 +303,10 @@ export function Ai() {
           />
         </Field>
       </div>
-      <div style={{ marginTop: 'var(--s-4)' }}>
-        <h4 style={{ margin: '0 0 var(--s-2)' }}>AI credits</h4>
-        <CreditWallet />
-      </div>
+      </Group>
+      <Group title="AI credits">
+        <div className="st-table-wrap"><CreditWallet /></div>
+      </Group>
     </SectionCard>
   )
 }

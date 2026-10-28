@@ -27,6 +27,7 @@ import type { Patient } from '../../types'
 import { useLiveDoc, useLiveQuery } from '../../hooks/useLive'
 import { useCatalogueMaps, useLabSettings } from '../../hooks/useCatalogue'
 import { Button } from '../../design/Button'
+import { FormSection, SettingRow } from '../../design/FormLayout'
 import { Glass } from '../../design/Glass'
 import { StatusChip } from '../../design/StatusChip'
 import { EmptyState } from '../../design/EmptyState'
@@ -44,6 +45,7 @@ import { DISPATCH_STATUS_LABEL, deriveDispatchStatus } from '../../features/repo
 import type { PrevMap, ReportModel, ReportOpts, RResult } from '../../features/report/model'
 import type { TestExt } from '../catalogue/ext'
 import './report.css'
+import '../../components/results/results.css'
 
 const MODE_LABEL: Record<string, string> = { email: 'Email', hardcopy: 'Hard copy', sms: 'SMS', whatsapp: 'WhatsApp', manualWhatsapp: 'WhatsApp (manual)' }
 
@@ -323,8 +325,8 @@ export default function ReportPage() {
     download()
   }
   const dstatus = deriveDispatchStatus(order)
-  const Toggle = ({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) => (
-    <div className="rp-opt__row"><span id={`t-${label}`}>{label}</span><Switch aria-labelledby={`t-${label}`} checked={value} onChange={onChange} /></div>
+  const Toggle = ({ label, help, value, onChange }: { label: string; help?: string; value: boolean; onChange: (v: boolean) => void }) => (
+    <SettingRow label={<span id={`t-${label}`}>{label}</span>} help={help}><Switch aria-labelledby={`t-${label}`} checked={value} onChange={onChange} /></SettingRow>
   )
   const reportDate = tsToDate(order.reportDateOverride) ?? tsToDate(order.firstApprovedAt) ?? tsToDate(order.reportedAt)
 
@@ -381,10 +383,10 @@ export default function ReportPage() {
         />
       )}
 
-      <Drawer open={optOpen} onClose={() => setOptOpen(false)} title="Report options" width={380} destroyOnHidden>
+      <Drawer open={optOpen} onClose={() => setOptOpen(false)} title="Report options" width="min(460px, 100vw)" destroyOnHidden>
         <div className="rp-opt">
-          <h3>Layout</h3>
-          <Toggle label="Print on letterhead (hide header and footer)" value={useLH} onChange={setLetterhead} />
+          <FormSection title="Layout" description="What appears on each printed page.">
+          <Toggle label="Print on letterhead" help="Hides the lab header and footer, for pre-printed stationery." value={useLH} onChange={setLetterhead} />
           <Toggle label="Header" value={opts.header && !useLH} onChange={(v) => { setHeader(v); if (v) setLetterhead(false) }} />
           <Toggle label="Footer" value={opts.footer && !useLH} onChange={(v) => { setFooter(v); if (v) setLetterhead(false) }} />
           <Toggle label="New page for each department" value={opts.perDept} onChange={setPerDept} />
@@ -403,11 +405,12 @@ export default function ReportPage() {
             </div>
           )}
           {frozen && <Toggle label="Use today's layout settings for this issued report" value={freshLayout} onChange={setFreshLayout} />}
-          <h3>Content</h3>
+          </FormSection>
+          <FormSection title="Content" description="What the report says and which tests it covers.">
           <div className="re-field">
             <label htmlFor="rp-lang">Report language</label>
             <Select id="rp-lang" value={lang} onChange={setLang} options={REPORT_LANGS} />
-            <small>Labels are translated; test names use the translation saved on the test, else English.</small>
+            <small className="wl-muted">Labels are translated; test names use the translation saved on the test, else English.</small>
           </div>
           <Toggle label="Compare with previous results" value={compare} onChange={setCompare} />
           <Toggle label="Abnormal summary page" value={abnSummary} onChange={setAbnSummary} />
@@ -432,9 +435,9 @@ export default function ReportPage() {
               }}
             />
           </div>
-          <h3>Stored copy</h3>
+          </FormSection>
+          <FormSection title="Stored copy" description="A hashed PDF and print-ready copy are stored each time the report is released or amended. Issued reports are shown and sent from that stored version.">
           <div className="re-field">
-            <small>A hashed PDF and print-ready copy are stored each time the report is released or amended. Issued reports are shown and sent from that stored version.</small>
             {snaps.map((sn) => (
               <div key={sn.id} style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
                 <span>Rev {sn.revision} ({sn.status}) {sn.createdAt ? dayjs(sn.createdAt.toDate()).format('DD-MMM HH:mm') : ''} <code>{sn.sha256.slice(0, 10)}</code></span>
@@ -449,14 +452,15 @@ export default function ReportPage() {
               try { const r = await ensureSnapshot(order.id); message.success(r.sha256 ? 'Stored copy is up to date' : 'Stored') } catch (e) { message.error((e as Error).message) } finally { setSnapBusy(false) }
             }}>Create stored copy now</Button>
           </div>
-          <h3>Bill PIN</h3>
+          </FormSection>
+          <FormSection title="Bill PIN" description="The patient can type this PIN to open the online report instead of waiting for a code.">
           <div className="re-field">
-            <small>The patient can type this PIN to open the online report instead of waiting for a code.</small>
             {pin ? <b style={{ fontSize: 20, letterSpacing: 4 }}>{pin}</b> : <Button disabled={!canQr} onClick={() => ensureBillPin(order.id).then(setPin).catch((e) => message.error((e as Error).message))}>Show bill PIN</Button>}
           </div>
-          <h3>Attached report</h3>
+          </FormSection>
+          <FormSection title="Attached report" description="Replace the generated report with your own PDF, and add a note that explains it.">
           <div className="re-field">
-            <label htmlFor="rp-file">Re-upload: replace the generated report with a PDF (up to 15 MB, kept in file storage)</label>
+            <label htmlFor="rp-file">Upload a PDF (up to 15 MB, kept in file storage)</label>
             <input id="rp-file" type="file" accept="application/pdf" disabled={!can(profile, 'reports.print')} onChange={async (e) => {
               const f = e.target.files?.[0]
               e.target.value = ''
@@ -470,6 +474,7 @@ export default function ReportPage() {
             <Input.TextArea id="rp-attach" rows={2} placeholder="e.g. Original report from partner lab attached" value={attach} onChange={(e) => setAttachNote(e.target.value)} />
             <Button disabled={attachNote === null} onClick={async () => { await updateDoc(docRef(paths.orders, orderId), { reportAttachmentNote: attachNote ?? '' }); message.success('Saved'); setAttachNote(null) }}>Save note</Button>
           </div>
+          </FormSection>
         </div>
       </Drawer>
 

@@ -33,6 +33,7 @@ export default function CollectorsModal({ open, onClose }: { open: boolean; onCl
         rowKey="uid"
         pagination={false}
         dataSource={users}
+        scroll={{ x: 'max-content' }}
         locale={{ emptyText: 'No phlebotomist users yet' }}
         columns={[
           { title: 'Collector', dataIndex: 'name' },

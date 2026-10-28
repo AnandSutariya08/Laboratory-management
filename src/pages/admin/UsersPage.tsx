@@ -25,6 +25,8 @@ import type { Role, RoleDoc, UserProfile } from '../../types'
 import { downloadCsv } from '../../components/billing/helpers'
 import { fmtDateTime } from '../../components/results/common'
 import { Button as DsButton } from '../../design/Button'
+import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { PageHeader } from '../../design/PageHeader'
 import { StatusChip } from '../../design/StatusChip'
 import { Panel, TileGrid, StatTile, Toolbar } from '../../features/qc/ui'
@@ -35,6 +37,7 @@ import { useViewAs } from '../../features/settings/ViewAs'
 import { AccountRequestsPanel } from '../../features/settings/AccountRequests'
 import { BrowserApprovals } from '../../features/settings/DeviceCode'
 import '../../features/qc/qc.css'
+import '../../features/settings/settings.css'
 
 interface UserForm {
   name: string
@@ -365,7 +368,7 @@ export default function UsersPage() {
       <Drawer
         title={isNew ? 'Add user' : 'Edit user'}
         open={!!editing}
-        size={560}
+        size={680}
         onClose={() => setEditing(null)}
         destroyOnHidden
         extra={
@@ -376,104 +379,117 @@ export default function UsersPage() {
         }
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Space wrap size="middle">
-            <Form.Item name="username" label="Username" extra="Stored in lowercase and must be unique. Can be used instead of the email to sign in.">
-              <Input style={{ width: 200 }} autoComplete="off" />
-            </Form.Item>
-            <Form.Item name="phone" label="Contact number">
-              <Input style={{ width: 200 }} inputMode="tel" />
-            </Form.Item>
-            <Form.Item name="gender" label="Gender">
-              <Select style={{ width: 140 }} allowClear options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
-            </Form.Item>
-          </Space>
-          <Form.Item name="email" label="Email (login)" rules={[{ required: true, type: 'email' }]}>
-            <Input disabled={!isNew} />
-          </Form.Item>
-          {isNew && (
-            <Form.Item name="password" label="Initial password" rules={[{ required: true, min: 6, message: 'At least 6 characters' }]}>
-              <Input.Password autoComplete="new-password" />
-            </Form.Item>
-          )}
-          <Form.Item name="role" label="Role" extra="The role's permissions are edited under Roles & permissions.">
-            <Select options={[
-              { label: 'Staff', options: ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] })) },
-              { label: 'Partner portal (sees only their own organisation)', options: PARTNER_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] })) },
-            ]} />
-          </Form.Item>
-          {role && isPartnerRole(role) && (
-            <Form.Item name="partnerId" label="Organisation" rules={[{ required: true, message: 'Required' }]} extra="The login can only open bills, reports, statements and wallet of this organisation.">
-              <Select showSearch optionFilterProp="label" loading={partnerList.loading} options={partnerList.data.map((x) => ({ value: x.id, label: x.name }))} placeholder="Select organisation" />
-            </Form.Item>
-          )}
-          <Form.Item name="maxDiscountPct" label="Max discount (%)" tooltip="Highest bill discount this user may give (needs the Give discounts permission)">
-            <InputNumber min={0} max={100} />
-          </Form.Item>
-          <Form.Item name="maxDiscountAmountRs" label="Max discount amount per bill (Rs)" tooltip="Highest rupee discount on one bill. 0 uses the lab-wide cap from Front desk settings (or no cap if none is set).">
-            <InputNumber min={0} precision={2} />
-          </Form.Item>
-
-          <Typography.Title level={5}>Session</Typography.Title>
-          <Space wrap size="middle">
-            <Form.Item name="sessionTimeoutMin" label="Sign out after inactivity" extra="Enforced in the browser.">
-              <Select style={{ width: 200 }} options={[{ value: 0, label: 'Never' }, { value: 60, label: '1 hour' }, { value: 480, label: '8 hours' }, { value: 720, label: '12 hours' }, { value: 15, label: '15 minutes' }, { value: 30, label: '30 minutes' }]} />
-            </Form.Item>
-            <Form.Item name="maxLogins" label="Login limit" extra="Enforced: signing in beyond the limit signs out the oldest session.">
-              <Select style={{ width: 160 }} options={[{ value: 0, label: 'No limit' }, ...[1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }))]} />
-            </Form.Item>
-          </Space>
-
-          <Form.Item name="allowPasswordChange" label="Allow user to change own password" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          {editing && editing !== 'new' && (
-            <Button onClick={() => void resetPassword(editing)} style={{ marginBottom: 16 }}>Send password reset email</Button>
-          )}
-
-          <Typography.Title level={5}>Branch access</Typography.Title>
-          <Form.Item name="allBranches" label="All branches" valuePropName="checked" extra="Access to every branch, including ones added later.">
-            <Switch />
-          </Form.Item>
-          {!allBranches && (
-            <>
-              <Form.Item name="branchIds" label="Branches" extra="No branch selected means the user cannot work anywhere.">
-                <Select mode="multiple" options={branches.map((b) => ({ value: b.id, label: b.name }))} placeholder="Select branches" />
+          <FormSection title="Account" description="Who this person is and how they sign in.">
+            <FieldGrid min={240}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                <Input />
               </Form.Item>
+              <Form.Item name="gender" label="Gender">
+                <Select allowClear options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} />
+              </Form.Item>
+              <Form.Item name="email" label="Email (login)" rules={[{ required: true, type: 'email' }]}>
+                <Input disabled={!isNew} />
+              </Form.Item>
+              <Form.Item name="phone" label="Contact number">
+                <Input inputMode="tel" />
+              </Form.Item>
+              <Form.Item name="username" label="Username" extra="Lowercase, must be unique. Can be used instead of the email to sign in.">
+                <Input autoComplete="off" />
+              </Form.Item>
+              {isNew && (
+                <Form.Item name="password" label="Initial password" rules={[{ required: true, min: 6, message: 'At least 6 characters' }]}>
+                  <Input.Password autoComplete="new-password" />
+                </Form.Item>
+              )}
+            </FieldGrid>
+          </FormSection>
+
+          <FormSection title="Role and discount limits" description="What this person can do. The role's permissions are edited under Roles & permissions.">
+            <FieldGrid min={240}>
+              <Form.Item name="role" label="Role">
+                <Select options={[
+                  { label: 'Staff', options: ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] })) },
+                  { label: 'Partner portal (sees only their own organisation)', options: PARTNER_ROLES.map((r) => ({ value: r, label: ROLE_LABEL[r] })) },
+                ]} />
+              </Form.Item>
+              {role && isPartnerRole(role) && (
+                <Form.Item name="partnerId" label="Organisation" rules={[{ required: true, message: 'Required' }]} extra="The login can only open bills, reports, statements and wallet of this organisation.">
+                  <Select showSearch optionFilterProp="label" loading={partnerList.loading} options={partnerList.data.map((x) => ({ value: x.id, label: x.name }))} placeholder="Select organisation" />
+                </Form.Item>
+              )}
+              <Form.Item name="maxDiscountPct" label="Max discount" tooltip="Highest bill discount this user may give (needs the Give discounts permission)">
+                <InputNumber min={0} max={100} addonAfter="%" style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="maxDiscountAmountRs" label="Max discount per bill" tooltip="Highest rupee discount on one bill. 0 uses the lab-wide cap from Front desk settings (or no cap if none is set).">
+                <InputNumber min={0} precision={2} addonBefore="Rs" style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+
+          <FormSection title="Sign-in and session" description="How long a session lasts and whether this person can manage their own password.">
+            <FieldGrid min={240}>
+              <Form.Item name="sessionTimeoutMin" label="Sign out after inactivity" extra="Enforced in the browser.">
+                <Select options={[{ value: 0, label: 'Never' }, { value: 60, label: '1 hour' }, { value: 480, label: '8 hours' }, { value: 720, label: '12 hours' }, { value: 15, label: '15 minutes' }, { value: 30, label: '30 minutes' }]} />
+              </Form.Item>
+              <Form.Item name="maxLogins" label="Login limit" extra="Signing in beyond the limit signs out the oldest session.">
+                <Select options={[{ value: 0, label: 'No limit' }, ...[1, 2, 3, 4, 5].map((n) => ({ value: n, label: String(n) }))]} />
+              </Form.Item>
+            </FieldGrid>
+            <SettingRow label="Allow user to change own password" help="When off, only an admin can reset this person's password." htmlFor="uf-allowPasswordChange">
+              <Form.Item name="allowPasswordChange" valuePropName="checked" noStyle><Switch id="uf-allowPasswordChange" /></Form.Item>
+            </SettingRow>
+            {editing && editing !== 'new' && (
+              <SettingRow label="Password reset" help="Emails a reset link to this user.">
+                <Button onClick={() => void resetPassword(editing)}>Send password reset email</Button>
+              </SettingRow>
+            )}
+          </FormSection>
+
+          <FormSection title="Branch access" description="Which branches this person can work in.">
+            <SettingRow label="All branches" help="Access to every branch, including ones added later." htmlFor="uf-allBranches">
+              <Form.Item name="allBranches" valuePropName="checked" noStyle><Switch id="uf-allBranches" /></Form.Item>
+            </SettingRow>
+            <FieldGrid min={240}>
+              {!allBranches && (
+                <Form.Item name="branchIds" label="Branches" extra="No branch selected means the user cannot work anywhere.">
+                  <Select mode="multiple" options={branches.map((b) => ({ value: b.id, label: b.name }))} placeholder="Select branches" />
+                </Form.Item>
+              )}
               <Form.Item name="defaultBranchId" label="Default branch">
-                <Select options={branches.filter((b) => branchIds.includes(b.id)).map((b) => ({ value: b.id, label: b.name }))} />
+                <Select options={(allBranches ? branches : branches.filter((b) => branchIds.includes(b.id))).map((b) => ({ value: b.id, label: b.name }))} />
               </Form.Item>
-            </>
-          )}
-          {allBranches && (
-            <Form.Item name="defaultBranchId" label="Default branch">
-              <Select options={branches.map((b) => ({ value: b.id, label: b.name }))} />
+            </FieldGrid>
+          </FormSection>
+
+          <FormSection
+            title="Permission overrides"
+            description="Fine-tune this person's access on top of their role."
+            className={role && isPartnerRole(role) ? 'st-hide' : ''}
+          >
+            <Form.Item name="grants" hidden={!!(role && isPartnerRole(role))} label="Extra permissions (grant)" tooltip="Added on top of the role">
+              <Select mode="multiple" allowClear options={permissionOptions} optionFilterProp="label" placeholder="Grant extra permissions" />
             </Form.Item>
-          )}
+            <Form.Item name="denies" hidden={!!(role && isPartnerRole(role))} label="Removed permissions (deny)" tooltip="Taken away even if the role has them">
+              <Select mode="multiple" allowClear options={permissionOptions} optionFilterProp="label" placeholder="Deny permissions" />
+            </Form.Item>
+            <Typography.Paragraph type="secondary" style={{ margin: 0 }}>
+              Effective: {role === 'labAdmin' ? 'everything (Lab admin)' : `${effective.length} permissions`}
+            </Typography.Paragraph>
+          </FormSection>
 
-          {!(role && isPartnerRole(role)) && <Typography.Title level={5}>Permission overrides</Typography.Title>}
-          <Form.Item name="grants" hidden={!!(role && isPartnerRole(role))} label="Extra permissions (grant)" tooltip="Added on top of the role">
-            <Select mode="multiple" allowClear options={permissionOptions} optionFilterProp="label" placeholder="Grant extra permissions" />
-          </Form.Item>
-          <Form.Item name="denies" hidden={!!(role && isPartnerRole(role))} label="Removed permissions (deny)" tooltip="Taken away even if the role has them">
-            <Select mode="multiple" allowClear options={permissionOptions} optionFilterProp="label" placeholder="Deny permissions" />
-          </Form.Item>
-          <Typography.Paragraph type="secondary">
-            Effective: {role === 'labAdmin' ? 'everything (Lab admin)' : `${effective.length} permissions`}
-          </Typography.Paragraph>
-
-          <Form.Item name="active" label="Active" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          {editingSelf && <Alert type="warning" showIcon message="You are editing your own account." />}
+          <FormSection title="Status">
+            <SettingRow label="Active" help="Inactive users cannot sign in." htmlFor="uf-active">
+              <Form.Item name="active" valuePropName="checked" noStyle><Switch id="uf-active" /></Form.Item>
+            </SettingRow>
+            {editingSelf && <Alert type="warning" showIcon message="You are editing your own account." style={{ marginTop: 'var(--s-3)' }} />}
+          </FormSection>
         </Form>
       </Drawer>
-      <Modal title={`Active sessions: ${sessionsOf?.name ?? ''}`} open={!!sessionsOf} onCancel={() => setSessionsOf(null)} footer={null} destroyOnHidden>
+      <Modal title={`Active sessions: ${sessionsOf?.name ?? ''}`} open={!!sessionsOf} onCancel={() => setSessionsOf(null)} footer={null} destroyOnHidden width={dialogWidth(720)}>
         <Table<SessionDoc>
           rowKey="id"
           size="small"
+          scroll={{ x: 'max-content' }}
           pagination={false}
           dataSource={liveSessions(sessionDocs)}
           locale={{ emptyText: 'No active sessions' }}

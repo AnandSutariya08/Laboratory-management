@@ -6,6 +6,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { col, docRef } from '../lib/db'
 import { useLiveQuery } from '../hooks/useLive'
 import { Button } from '../design/Button'
+import { FormSection } from '../design/FormLayout'
 
 export interface Announcement {
   id: string
@@ -89,7 +90,8 @@ export function AnnouncementComposer() {
     }
   }
   return (
-    <div style={{ display: 'grid', gap: 'var(--s-2)', marginTop: 'var(--s-3)' }}>
+    <div style={{ marginTop: 'var(--s-5)', paddingTop: 'var(--s-5)', borderTop: '1px solid var(--c-outline-variant)' }}>
+    <FormSection title="New announcement" description="Shown to everyone in the lab until it expires.">
       <div className="field-row">
         <label htmlFor="ann-title">Announcement title</label>
         <input id="ann-title" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -100,9 +102,10 @@ export function AnnouncementComposer() {
       </div>
       <div className="field-row">
         <label htmlFor="ann-days">Expires after (days, optional)</label>
-        <input id="ann-days" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} />
+        <input id="ann-days" inputMode="numeric" value={days} onChange={(e) => setDays(e.target.value.replace(/\D/g, ''))} placeholder="Leave empty to keep it" style={{ maxWidth: 220 }} />
       </div>
-      <Button variant="primary" disabled={!title.trim() || !body.trim() || busy} onClick={post}>Post announcement</Button>
+      <div><Button variant="primary" disabled={!title.trim() || !body.trim() || busy} onClick={post}>Post announcement</Button></div>
+    </FormSection>
     </div>
   )
 }

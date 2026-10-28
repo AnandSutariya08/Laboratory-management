@@ -8,6 +8,7 @@ import type { Parameter } from '../../types'
 import { downloadText } from './helpers'
 import type { TestExt } from './ext'
 import { dialogWidth } from '../../design/dialog'
+import { FormSection } from '../../design/FormLayout'
 
 // Master catalogue sync as import / export (CAT-05). There is no central master service: a "master" is a
 // JSON file exported from any lab (this screen's Export) and imported into another. Import shows a field
@@ -103,16 +104,20 @@ export default function MasterSyncModal({ open, onClose }: { open: boolean; onCl
 
   return (
     <Modal title="Master catalogue sync" open={open} onCancel={onClose} width={dialogWidth(760)} destroyOnHidden okText={`Apply ${picked.length} change(s)`} onOk={apply} okButtonProps={{ disabled: !picked.length || busy }}>
-      <p>Export this lab's tests as a master file, or import a master file from another lab to compare. Only the ticked changes are applied; prices are never changed. New tests arrive disabled with price 0.</p>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <Button onClick={exportMaster}>Export master file</Button>
-        <Button onClick={() => file.current?.click()}>Import master file</Button>
-        <input ref={file} type="file" accept="application/json,.json" hidden aria-label="Upload master catalogue file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void load(f) }} />
-      </div>
+      <p className="cat-muted" style={{ marginTop: 0 }}>Only the ticked changes are applied; prices are never changed. New tests arrive disabled with price 0.</p>
+      <FormSection title="Export" description="Download this lab's tests as a master file to share with another lab.">
+        <div><Button onClick={exportMaster}>Export master file</Button></div>
+      </FormSection>
+      <FormSection title="Import" description="Load a master file from another lab to compare it with this catalogue.">
+        <div><Button onClick={() => file.current?.click()}>Import master file</Button>
+        <input ref={file} type="file" accept="application/json,.json" hidden aria-label="Upload master catalogue file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void load(f) }} /></div>
+      </FormSection>
       {changes.length > 0 && (
+        <FormSection title="Differences found" description="Untick any change you do not want to apply.">
         <Table<Change> size="small" rowKey="key" pagination={{ pageSize: 8, hideOnSinglePage: true }} dataSource={changes}
           rowSelection={{ selectedRowKeys: picked, onChange: (k) => setPicked(k as string[]) }}
           columns={[{ title: 'Code', dataIndex: 'code' }, { title: 'Name', render: (_, c) => c.test.name }, { title: 'Differences', render: (_, c) => c.fields.join(', ') }]} />
+        </FormSection>
       )}
     </Modal>
   )

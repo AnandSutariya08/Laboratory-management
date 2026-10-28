@@ -1,7 +1,8 @@
-import { createContext, useContext, useRef, type ReactNode } from 'react'
+import { createContext, useContext, useId, useRef, type ReactNode } from 'react'
 import { App, Checkbox, Input as AntInput, InputNumber, Select, Switch } from 'antd'
 import { Button } from '../../design/Button'
 import { Card } from '../../design/Card'
+import { FormSection, SettingRow } from '../../design/FormLayout'
 import type { LabSettings } from '../../types'
 
 export interface DraftCtx {
@@ -32,24 +33,29 @@ export function useGroup<K extends Key>(key: K) {
 export function SectionCard({ title, description, children, extra }: { title: string; description?: string; children: ReactNode; extra?: ReactNode }) {
   return (
     <Card as="section" padding="var(--s-5)">
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 'var(--s-3)', flexWrap: 'wrap' }}>
+      <div className="st-card-head">
         <h2 className="st-card-title">{title}</h2>
-        {extra}
+        {extra && <div className="st-card-extra">{extra}</div>}
       </div>
       {description && <p className="st-card-desc">{description}</p>}
-      {children}
+      <div className="st-card-body">{children}</div>
     </Card>
   )
 }
 
-export function SwitchRow({ title, description, checked, onChange }: { title: string; description?: string; checked: boolean; onChange: (v: boolean) => void }) {
+// A titled group inside a SectionCard (separated from the previous group by a divider).
+export function Group({ title, description, children, extra }: { title: ReactNode; description?: ReactNode; children: ReactNode; extra?: ReactNode }) {
+  return <FormSection title={title} description={description} extra={extra}>{children}</FormSection>
+}
+
+// One on/off setting: label and help on the left, the switch on the right.
+export function SwitchRow({ title, description, checked, onChange, disabled }: { title: string; description?: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
+  const id = useId()
   return (
-    <div className="st-row">
-      <div className="st-row__text">
-        <div className="st-row__title">{title}</div>
-        {description && <div className="st-row__desc">{description}</div>}
-      </div>
-      <Switch checked={checked} onChange={onChange} aria-label={title} />
+    <div className="st-sw">
+      <SettingRow label={title} help={description} htmlFor={id}>
+        <Switch id={id} checked={checked} disabled={disabled} onChange={onChange} aria-label={title} />
+      </SettingRow>
     </div>
   )
 }
@@ -65,7 +71,7 @@ export function Field({ label, hint, wide, children }: { label: string; hint?: s
 }
 
 export function CheckGrid({ options, value, onChange }: { options: { value: string; label: string }[]; value: string[]; onChange: (v: string[]) => void }) {
-  return <Checkbox.Group options={options} value={value} onChange={(v) => onChange(v as string[])} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 'var(--s-2)' }} />
+  return <Checkbox.Group options={options} value={value} onChange={(v) => onChange(v as string[])} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 'var(--s-3) var(--s-4)' }} />
 }
 
 const MAX_IMAGE_BYTES = 200 * 1024
@@ -114,11 +120,11 @@ function make(group: keyof LabSettings) {
         </Field>
       )
     },
-    Num(p: { f: string; label: string; hint?: string; min?: number; max?: number }) {
+    Num(p: { f: string; label: string; hint?: string; min?: number; max?: number; unit?: string }) {
       const { g, put } = useG(group)
       return (
         <Field label={p.label} hint={p.hint}>
-          <InputNumber style={{ width: '100%' }} min={p.min ?? 0} max={p.max} value={g[p.f] as number} onChange={(v) => put(p.f, v ?? 0)} />
+          <InputNumber style={{ width: '100%' }} min={p.min ?? 0} max={p.max} addonAfter={p.unit} value={g[p.f] as number} onChange={(v) => put(p.f, v ?? 0)} />
         </Field>
       )
     },

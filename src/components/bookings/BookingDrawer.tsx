@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
+import '../billing/billing.css'
 import { Alert, App, Button, Checkbox, DatePicker, Descriptions, Divider, Drawer, Input, Modal, Select, Space, Tag, Timeline, Typography } from 'antd'
 import { StatusChip } from '../../design/StatusChip'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -291,13 +293,10 @@ export default function BookingDrawer({ bookingId, onClose, action }: Props) {
         <>
           <PatientFields value={draft} onChange={patch} />
           <ReferrerFields value={draft} onChange={patch} />
-          <Divider titlePlacement="start">Tests</Divider>
           <TestsFields value={draft} onChange={patch} />
-          <Divider titlePlacement="start">Schedule</Divider>
           <ScheduleFields value={draft} onChange={patch} />
-          <Divider titlePlacement="start">Charges</Divider>
           <ExtraFields value={draft} onChange={patch} />
-          <Space>
+          <Space style={{ marginTop: 'var(--s-5)' }}>
             <Button type="primary" loading={busy} onClick={saveEdit}>Save changes</Button>
             <Button onClick={() => setEditing(false)}>Discard</Button>
           </Space>
@@ -378,7 +377,9 @@ export default function BookingDrawer({ bookingId, onClose, action }: Props) {
       )}
 
       <Modal title="Assign phlebotomist" open={assignOpen} onCancel={() => setAssignOpen(false)} onOk={doAssign} confirmLoading={busy} okText="Assign">
+        <label className="bill-field-label" htmlFor="assign-sel">Phlebotomist</label>
         <Select
+          id="assign-sel"
           style={{ width: '100%', marginBottom: 12 }}
           placeholder={phlebos.length ? 'Select phlebotomist' : 'No phlebotomists found'}
           value={assignee}
@@ -402,11 +403,20 @@ export default function BookingDrawer({ bookingId, onClose, action }: Props) {
       </Modal>
 
       <Modal title="Reschedule" open={reschedOpen} onCancel={() => setReschedOpen(false)} onOk={doResched} confirmLoading={busy} okText="Reschedule">
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <DatePicker style={{ width: '100%' }} value={rDate} onChange={setRDate} disabledDate={(d) => d.isBefore(dayjs().startOf('day'))} />
-          <Select allowClear style={{ width: '100%' }} placeholder="Slot" value={rSlot || undefined} onChange={(s) => setRSlot(s ?? '')} options={SLOTS.map((s) => ({ value: s, label: s }))} />
-          <Input.TextArea rows={2} placeholder="Reason (required)" value={rReason} onChange={(e) => setRReason(e.target.value)} />
-        </Space>
+        <FormSection title="New time" description="Pick the new date and slot.">
+          <FieldGrid min={200}>
+            <div>
+              <label className="bill-field-label" htmlFor="rs-date">Date</label>
+              <DatePicker id="rs-date" style={{ width: '100%' }} value={rDate} onChange={setRDate} disabledDate={(d) => d.isBefore(dayjs().startOf('day'))} />
+            </div>
+            <div>
+              <label className="bill-field-label" htmlFor="rs-slot">Slot</label>
+              <Select id="rs-slot" allowClear style={{ width: '100%' }} placeholder="Slot" value={rSlot || undefined} onChange={(s) => setRSlot(s ?? '')} options={SLOTS.map((s) => ({ value: s, label: s }))} />
+            </div>
+          </FieldGrid>
+          <label className="bill-field-label" htmlFor="rs-reason" style={{ marginTop: 'var(--s-3)' }}>Reason</label>
+          <Input.TextArea id="rs-reason" rows={2} placeholder="Reason (required)" value={rReason} onChange={(e) => setRReason(e.target.value)} />
+        </FormSection>
       </Modal>
 
       {!closed && b.paymentChannel === 'online' && bookingTotal(b) - b.prepaid > 0 && (
@@ -423,7 +433,7 @@ export default function BookingDrawer({ bookingId, onClose, action }: Props) {
       <QuotationAttachments quotationId={b.id} parent="bookings" pending={[]} onPending={() => undefined} readOnly={closed} />
 
       <Modal title="Cancel booking" open={cancelOpen} onCancel={() => setCancelOpen(false)} onOk={doCancel} confirmLoading={busy} okText="Cancel booking" okButtonProps={{ danger: true }}>
-        <Input.TextArea rows={3} placeholder="Reason (required)" value={cReason} onChange={(e) => setCReason(e.target.value)} />
+        <Input.TextArea aria-label="Cancel reason" rows={3} placeholder="Reason (required)" value={cReason} onChange={(e) => setCReason(e.target.value)} />
       </Modal>
     </Drawer>
   )

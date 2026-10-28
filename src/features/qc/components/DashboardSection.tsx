@@ -532,7 +532,7 @@ export default function DashboardSection() {
         destroyOnHidden
       >
         <Space vertical style={{ width: '100%' }}>
-          {action?.kind === 'reschedule' && <DatePicker showTime value={newTime} onChange={setNewTime} aria-label="New date and time" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />}
+          {action?.kind === 'reschedule' && <DatePicker showTime style={{ width: '100%' }} value={newTime} onChange={setNewTime} aria-label="New date and time" disabledDate={(d) => d.isAfter(dayjs(), 'day')} />}
           <Input.TextArea
             rows={3}
             aria-label="Reason or remark"

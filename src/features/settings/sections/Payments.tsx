@@ -5,7 +5,7 @@ import { Button } from '../../../design/Button'
 import { StatusChip } from '../../../design/StatusChip'
 import { useLiveQuery } from '../../../hooks/useLive'
 import { col, docRef } from '../../../lib/db'
-import { SectionCard, useDraft } from '../ui'
+import { Group, SectionCard, useDraft } from '../ui'
 
 interface PaymentMode { id: string; name: string; active: boolean; builtIn?: boolean }
 const BUILT_IN = [
@@ -31,6 +31,7 @@ export function Payments() {
   }
   return (
     <SectionCard title="Payment methods" description="Methods offered when collecting payment (on the bill, clear due and reports). Cash, UPI and Card are always on; Wallet is settled by the B2B system. Removing a custom method never changes past payments.">
+      <Group title="Built-in methods">
       {BUILT_IN.map((b) => {
         // Default methods cannot be renamed, removed or switched off (Flabs); Wallet is settled by B2B billing, never offered on patient bills.
         const active = b.id !== 'wallet'
@@ -47,6 +48,9 @@ export function Payments() {
           </div>
         )
       })}
+      </Group>
+      {custom.length > 0 && (
+        <Group title="Custom methods">
       {custom.map((m) => (
         <div className="st-row" key={m.id}>
           <div className="st-row__title">{m.name}</div>
@@ -56,12 +60,16 @@ export function Payments() {
           </div>
         </div>
       ))}
+        </Group>
+      )}
       {canEdit && (
-        <div className="st-actions" style={{ marginTop: 'var(--s-4)' }}>
-          <Input style={{ maxWidth: 260 }} value={name} onChange={(e) => setName(e.target.value)} onPressEnter={add} placeholder="New method name" aria-label="New payment method name" />
-          <Button onClick={add}>Add method</Button>
-          <span className="st-field__hint">{custom.length} of 10 custom methods</span>
-        </div>
+        <Group title="Add a method" description="Up to 10 custom methods, for example a bank transfer or an insurance wallet.">
+          <div className="st-input-row">
+            <Input value={name} onChange={(e) => setName(e.target.value)} onPressEnter={add} placeholder="New method name" aria-label="New payment method name" />
+            <Button onClick={add}>Add method</Button>
+          </div>
+          <span className="st-field__hint" style={{ marginTop: 'var(--s-2)' }}>{custom.length} of 10 custom methods</span>
+        </Group>
       )}
     </SectionCard>
   )

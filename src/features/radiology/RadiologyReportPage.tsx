@@ -16,6 +16,7 @@ import { can, useAuth } from '../../auth/AuthProvider'
 import { PageHeader } from '../../design/PageHeader'
 import { Card } from '../../design/Card'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { Segmented } from '../../design/Segmented'
 import { StatusChip } from '../../design/StatusChip'
 import { EmptyState } from '../../design/EmptyState'
@@ -431,6 +432,7 @@ export default function RadiologyReportPage() {
         <Card as="section" aria-label="Report editor">
           <h2 style={{ marginTop: 0, fontSize: 'var(--fs-title)' }}>{test.name}</h2>
           {result?.status === 'hold' && saved.holdReason && <div className="re-notice re-notice--warn" role="status">On hold: {saved.holdReason}</div>}
+          <FormSection title="Start from" description="Apply a saved template, insert macros, or dictate into the report.">
           <div className="rd-field">
             <label htmlFor="rd-tpl">Template</label>
             <Select id="rd-tpl" allowClear showSearch optionFilterProp="label" disabled={locked || !canEnter} placeholder={templates.length ? 'Apply a template' : 'No templates yet'} value={d.templateId || undefined} onChange={(v) => v && applyTemplate(v)}
@@ -446,19 +448,27 @@ export default function RadiologyReportPage() {
             {dictation.supported ? (
               <>
                 <Button icon={<AudioOutlined />} disabled={locked || !canEnter} onClick={dictation.listening ? dictation.stop : dictation.start} aria-pressed={dictation.listening}>{dictation.listening ? 'Stop dictation' : 'Dictate'}</Button>
-                <Select aria-label="Dictation language" style={{ width: 150 }} value={dictLang} onChange={setDictLang} options={DICTATION_LANGS} disabled={dictation.listening} />
+                <Select aria-label="Dictation language" style={{ minWidth: 150 }} value={dictLang} onChange={setDictLang} options={DICTATION_LANGS} disabled={dictation.listening} />
               </>
             ) : (
               <span className="rd-muted" role="status">Dictation is not supported in this browser. Use Chrome, Edge or Safari.</span>
             )}
             {aiOn && <Button disabled={locked || !canEnter || aiBusy} onClick={draftImpression}>{aiBusy ? 'Drafting...' : 'Draft impression with AI'}</Button>}
           </div>
-          <div className="rd-field"><label htmlFor="rd-body">Body part</label><Input id="rd-body" disabled={locked || !canEnter} value={d.bodyPart ?? ''} onChange={(e) => patch({ bodyPart: e.target.value })} /></div>
-          <div className="rd-field"><label htmlFor="rd-contrast">Contrast / allergy note</label><Input id="rd-contrast" disabled={locked || !canEnter} placeholder="e.g. IV contrast given; no known allergy" value={d.contrastNote ?? ''} onChange={(e) => patch({ contrastNote: e.target.value })} /></div>
+          </FormSection>
+          <FormSection title="Study details">
+            <FieldGrid min={240}>
+              <div className="rd-field"><label htmlFor="rd-body">Body part</label><Input id="rd-body" disabled={locked || !canEnter} value={d.bodyPart ?? ''} onChange={(e) => patch({ bodyPart: e.target.value })} /></div>
+              <div className="rd-field"><label htmlFor="rd-contrast">Contrast / allergy note</label><Input id="rd-contrast" disabled={locked || !canEnter} placeholder="e.g. IV contrast given; no known allergy" value={d.contrastNote ?? ''} onChange={(e) => patch({ contrastNote: e.target.value })} /></div>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Report">
           {ta('technique', 'Technique', 50)}
           {ta('findings', 'Findings', 220)}
           {ta('impression', 'Impression', 90)}
+          </FormSection>
 
+          <FormSection title="Viewer and images">
           <div className="rd-field">
             <label htmlFor="rd-dicom">DICOM viewer link</label>
             <div className="rd-actions">
@@ -486,6 +496,7 @@ export default function RadiologyReportPage() {
               </div>
             )}
           </div>
+          </FormSection>
         </Card>
 
         <div style={{ display: 'grid', gap: 'var(--s-4)' }}>
@@ -540,9 +551,11 @@ export default function RadiologyReportPage() {
       {sendOpen && <SendReportModal order={order} open onClose={() => setSendOpen(false)} tests={[{ id: test.id, name: test.name }]} defaultTestIds={[test.id]} />}
       <Modal open={extOpen} title="Ask an outside consultant" okText="Send by email" onOk={requestExternal} onCancel={() => setExtOpen(false)} destroyOnHidden>
         <p className="rd-muted">The consultant gets a private link (valid 7 days) showing this study with initials, age and sex only. They can reply and co-sign.</p>
+        <FieldGrid min={220}>
         <div className="rd-field"><label htmlFor="ex-name">Consultant name</label><Input id="ex-name" value={extName} onChange={(e) => setExtName(e.target.value)} list="ex-readers" /></div>
         <datalist id="ex-readers">{radCfg.externalReaders.filter((r) => r.active !== false).map((r) => <option key={r.id} value={r.name} />)}</datalist>
         <div className="rd-field"><label htmlFor="ex-mail">Email</label><Input id="ex-mail" type="email" value={extEmail} onChange={(e) => setExtEmail(e.target.value)} /></div>
+        </FieldGrid>
         <div className="rd-field"><label htmlFor="ex-note">Note</label><Input.TextArea id="ex-note" rows={3} value={soNote} onChange={(e) => setSoNote(e.target.value)} /></div>
       </Modal>
       <Modal open={soOpen} title="Request second opinion" okText="Send request" onOk={requestOpinion} onCancel={() => setSoOpen(false)} destroyOnHidden>

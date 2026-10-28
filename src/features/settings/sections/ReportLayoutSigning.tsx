@@ -1,10 +1,10 @@
-import { InputNumber, Select, Switch } from 'antd'
+import { InputNumber, Select } from 'antd'
 import { col, paths } from '../../../lib/db'
 import { useLiveQuery } from '../../../hooks/useLive'
 import { Card } from '../../../design/Card'
 import { EmptyState } from '../../../design/EmptyState'
 import type { Signatory, UserProfile } from '../../../types'
-import { Field, ImagePicker, SectionCard, SwitchRow, useDraft } from '../ui'
+import { Field, Group, ImagePicker, SectionCard, SwitchRow, useDraft } from '../ui'
 import { useLayoutDraft } from './ReportLayout'
 
 // Signatory rules (SET-14, PRO-08): fixed vs "by user" signing, the user behind each signatory, auto-sign,
@@ -24,26 +24,25 @@ export function ReportLayoutSigning() {
           </Field>
           <Field label="Most signatures on one report"><InputNumber min={1} max={6} style={{ width: '100%' }} value={L.maxSignatures} onChange={(v) => put('maxSignatures', v ?? 3)} /></Field>
         </div>
-        <SwitchRow title="Print the stamp image beside the signature" checked={L.showStamp} onChange={(v) => put('showStamp', v)} />
+        <SwitchRow title="Print the stamp image beside the signature" description="Uses the stamp uploaded for each doctor below." checked={L.showStamp} onChange={(v) => put('showStamp', v)} />
       </SectionCard>
       <SectionCard title="Signatory users, auto-sign and stamp">
         {list.length === 0 ? (
           <EmptyState title="No signing doctors yet" description="Add them under Lab profile, Doctor details." />
         ) : (
-          <div style={{ display: 'grid', gap: 'var(--s-4)' }}>
+          <div className="st-sublist">
             {list.map((s) => (
-              <Card key={s.id} padding="var(--s-4)">
-                <div style={{ fontWeight: 600, marginBottom: 'var(--s-2)' }}>{s.name || 'Unnamed doctor'}</div>
+              <Card key={s.id} padding="var(--s-5)">
+                <Group title={s.name || 'Unnamed doctor'}>
                 <div className="st-grid">
                   <Field label="Linked user" hint="Used by the by-user rule.">
                     <Select allowClear showSearch optionFilterProp="label" disabled={!canEdit} value={s.userId || undefined} onChange={(v) => update(s.id, { userId: v ?? '' })}
                       options={users.map((u) => ({ value: u.uid, label: `${u.name} (${u.role})` }))} placeholder="No linked user" />
                   </Field>
-                  <Field label="Auto-sign" hint="Signs when no other rule picks a signatory.">
-                    <Switch disabled={!canEdit} checked={!!s.autoSign} onChange={(v) => set(['signatories'], list.map((x) => ({ ...x, autoSign: x.id === s.id ? v : v ? false : x.autoSign })))} aria-label={`Auto-sign ${s.name}`} />
-                  </Field>
                   <Field label="Stamp" wide><ImagePicker label="stamp" value={s.stampDataUrl ?? ''} onChange={(v) => update(s.id, { stampDataUrl: v })} /></Field>
                 </div>
+                <SwitchRow title="Auto-sign" description="Signs when no other rule picks a signatory." disabled={!canEdit} checked={!!s.autoSign} onChange={(v) => set(['signatories'], list.map((x) => ({ ...x, autoSign: x.id === s.id ? v : v ? false : x.autoSign })))} />
+                </Group>
               </Card>
             ))}
           </div>

@@ -1,7 +1,7 @@
 import { Input } from 'antd'
 import { fillTemplate } from '../../../lib/messaging'
 import { PREVIEW_VARS } from '../constants'
-import { Field, SectionCard, useDraft } from '../ui'
+import { Field, Group, SectionCard, useDraft } from '../ui'
 
 const MAIN = [
   { name: 'reportReady', label: 'Report to patient (WhatsApp / SMS)', vars: ['patientName', 'labName', 'billNo', 'link'] },
@@ -26,6 +26,17 @@ export function Templates() {
   const chips = (vars: readonly string[]) => (
     <span className="st-field__hint">Variables: {vars.map((v) => `{${v}}`).join(' ')}</span>
   )
+  const extra = (t: (typeof EXTRA)[number]) => (
+    <Field key={t.name} label={t.label}>
+      {'single' in t ? (
+        <Input value={draft.extraTemplates[t.name]} onChange={(e) => set(['extraTemplates', t.name], e.target.value)} />
+      ) : (
+        <Input.TextArea rows={3} value={draft.extraTemplates[t.name]} onChange={(e) => set(['extraTemplates', t.name], e.target.value)} />
+      )}
+      {chips(t.vars)}
+      <Preview text={draft.extraTemplates[t.name]} />
+    </Field>
+  )
   return (
     <>
       <SectionCard title="WhatsApp business templates" description="Names of the templates approved in WhatsApp Manager (Meta requires these for business-initiated messages).">
@@ -35,26 +46,23 @@ export function Templates() {
         </div>
       </SectionCard>
       <SectionCard title="Messages" description="Message bodies with {placeholders}. The preview uses sample data.">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-4)' }}>
-          {MAIN.map((t) => (
-            <Field key={t.name} label={t.label} hint={undefined}>
-              <Input.TextArea rows={2} value={draft.templates[t.name]} onChange={(e) => set(['templates', t.name], e.target.value)} />
-              {chips(t.vars)}
-              <Preview text={draft.templates[t.name]} />
-            </Field>
-          ))}
-          {EXTRA.map((t) => (
-            <Field key={t.name} label={t.label}>
-              {'single' in t ? (
-                <Input value={draft.extraTemplates[t.name]} onChange={(e) => set(['extraTemplates', t.name], e.target.value)} />
-              ) : (
-                <Input.TextArea rows={3} value={draft.extraTemplates[t.name]} onChange={(e) => set(['extraTemplates', t.name], e.target.value)} />
-              )}
-              {chips(t.vars)}
-              <Preview text={draft.extraTemplates[t.name]} />
-            </Field>
-          ))}
-        </div>
+        <Group title="Patient messages">
+          <div className="st-sublist">
+            {MAIN.map((t) => (
+              <Field key={t.name} label={t.label}>
+                <Input.TextArea rows={2} value={draft.templates[t.name]} onChange={(e) => set(['templates', t.name], e.target.value)} />
+                {chips(t.vars)}
+                <Preview text={draft.templates[t.name]} />
+              </Field>
+            ))}
+          </div>
+        </Group>
+        <Group title="SMS and email">
+          <div className="st-sublist">{EXTRA.filter((t) => !t.name.startsWith('wa')).map(extra)}</div>
+        </Group>
+        <Group title="WhatsApp with B2B and collection centres">
+          <div className="st-sublist">{EXTRA.filter((t) => t.name.startsWith('wa')).map(extra)}</div>
+        </Group>
       </SectionCard>
     </>
   )

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { App, Button, Checkbox, Modal, Space, Typography } from 'antd'
+import { App, Button, Checkbox, Modal, Space } from 'antd'
 import { shareAiDashboard } from '../../lib/aiAnalyst'
+import { FormSection } from '../../design/FormLayout'
 
-const { Text } = Typography
 const ROLES = [
   { value: 'manager', label: 'Managers' },
   { value: 'admin', label: 'Admins (always can open)' },
@@ -48,14 +48,15 @@ export default function ShareDashboardModal({
 
   return (
     <Modal open={open} onCancel={onClose} title={`Share "${title}"`} footer={null} destroyOnClose>
-      <Text type="secondary">Pick the roles that may open this dashboard. Only the owner and lab admins can change sharing.</Text>
+      <FormSection title="Who can open it" description="Pick the roles that may open this dashboard. Only the owner and lab admins can change sharing.">
       <Checkbox.Group
-        style={{ display: 'grid', gap: 8, margin: '12px 0' }}
+        style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 'var(--s-2) var(--s-4)' }}
         options={ROLES.map((r) => ({ ...r, disabled: r.value !== 'manager' }))}
         value={[...new Set([...value, 'admin', 'labAdmin'])]}
         onChange={(v) => setValue((v as string[]).filter((x) => x === 'manager'))}
       />
-      <Space style={{ justifyContent: 'flex-end', width: '100%' }}>
+      </FormSection>
+      <Space style={{ justifyContent: 'flex-end', width: '100%', marginTop: 'var(--s-4)' }}>
         <Button onClick={() => navigator.clipboard?.writeText(`${window.location.origin}/ai?tab=dashboards&d=${dashboardId}`).then(() => message.success('Link copied'))}>Copy link</Button>
         <Button type="primary" loading={saving} onClick={save}>
           Save

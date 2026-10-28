@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { FieldGrid } from '../../design/FormLayout'
+import '../billing/billing.css'
 import { App, DatePicker, Dropdown, Input, Modal, Select } from 'antd'
 import dayjs, { type Dayjs } from 'dayjs'
 import { query, Timestamp } from 'firebase/firestore'
@@ -124,13 +126,19 @@ export default function BulkActions({ rows, onDone }: { rows: BookingX[]; onDone
           />
         )}
         {mode === 'reschedule' && (
-          <div style={{ display: 'grid', gap: 8 }}>
-            <DatePicker value={date} onChange={setDate} disabledDate={(d) => d.isBefore(dayjs(), 'day')} style={{ width: '100%' }} />
-            <Select placeholder="Slot" value={slot} onChange={setSlot} options={SLOTS.map((s) => ({ value: s, label: s }))} />
-          </div>
+          <FieldGrid min={200}>
+            <div>
+              <label className="bill-field-label" htmlFor="bulk-date">Date</label>
+              <DatePicker id="bulk-date" value={date} onChange={setDate} disabledDate={(d) => d.isBefore(dayjs(), 'day')} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label className="bill-field-label" htmlFor="bulk-slot">Slot</label>
+              <Select id="bulk-slot" style={{ width: '100%' }} placeholder="Slot" value={slot} onChange={setSlot} options={SLOTS.map((s) => ({ value: s, label: s }))} />
+            </div>
+          </FieldGrid>
         )}
         {(mode === 'reschedule' || mode === 'cancelled') && (
-          <Input.TextArea style={{ marginTop: 8 }} rows={2} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
+          <Input.TextArea aria-label="Reason" style={{ marginTop: 12 }} rows={2} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
         )}
       </Modal>
     </>

@@ -63,9 +63,9 @@ export function TatInput({
   const set = (nd: number | null, nh: number | null, nm: number | null) => onChange?.(joinTat(nd, nh, nm))
   return (
     <span className="cat-tat">
-      <InputNumber size="small" min={0} aria-label={`${label} days`} disabled={disabled} value={d} suffix="d" style={{ width: 72 }} onChange={(v) => set(v, h, m)} />
-      <InputNumber size="small" min={0} max={23} aria-label={`${label} hours`} disabled={disabled} value={h} suffix="h" style={{ width: 72 }} onChange={(v) => set(d, v, m)} />
-      <InputNumber size="small" min={0} max={59} aria-label={`${label} minutes`} disabled={disabled} value={m} suffix="m" style={{ width: 72 }} onChange={(v) => set(d, h, v)} />
+      <InputNumber size="small" min={0} aria-label={`${label} days`} disabled={disabled} value={d} suffix="d" style={{ width: 84 }} onChange={(v) => set(v, h, m)} />
+      <InputNumber size="small" min={0} max={23} aria-label={`${label} hours`} disabled={disabled} value={h} suffix="h" style={{ width: 84 }} onChange={(v) => set(d, v, m)} />
+      <InputNumber size="small" min={0} max={59} aria-label={`${label} minutes`} disabled={disabled} value={m} suffix="m" style={{ width: 84 }} onChange={(v) => set(d, h, v)} />
     </span>
   )
 }

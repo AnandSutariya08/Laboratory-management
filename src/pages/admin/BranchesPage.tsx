@@ -4,6 +4,8 @@ import { Panel } from '../../features/qc/ui'
 import { PageHeader } from '../../design/PageHeader'
 import { Button as DsButton } from '../../design/Button'
 import { StatusChip } from '../../design/StatusChip'
+import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { PlusOutlined } from '@ant-design/icons'
 import { orderBy, query, setDoc } from 'firebase/firestore'
 import { useLiveQuery } from '../../hooks/useLive'
@@ -150,34 +152,45 @@ export default function BranchesPage() {
         confirmLoading={saving}
         onCancel={() => setEditing(null)}
         destroyOnHidden
+        width={dialogWidth(640)}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="code"
-            label="Code"
-            rules={[{ required: true }]}
-            extra={editing === 'new' ? 'Short code used in bill numbers. The branch id is derived from it and cannot change.' : 'Short code used in bill numbers.'}
-          >
-            <Input style={{ textTransform: 'uppercase' }} maxLength={10} />
-          </Form.Item>
-          <Form.Item name="billPrefix" label="Bill prefix (optional)" extra="Replaces the lab prefix + branch code, e.g. CITY-">
-            <Input />
-          </Form.Item>
-          <Form.Item name="address" label="Address">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-          <Form.Item name="phone" label="Phone">
-            <Input />
-          </Form.Item>
-          <Form.Item name="email" label="Email">
-            <Input />
-          </Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+          <FormSection title="Branch" description="How this branch is named and numbered.">
+            <FieldGrid min={240}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item
+                name="code"
+                label="Code"
+                rules={[{ required: true }]}
+                extra={editing === 'new' ? 'Short code used in bill numbers. The branch id is derived from it and cannot change.' : 'Short code used in bill numbers.'}
+              >
+                <Input style={{ textTransform: 'uppercase' }} maxLength={10} />
+              </Form.Item>
+              <Form.Item name="billPrefix" label="Bill prefix (optional)" extra="Replaces the lab prefix + branch code, e.g. CITY-">
+                <Input />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Contact" description="Shown on this branch's papers when no override is set.">
+            <FieldGrid min={240}>
+              <Form.Item name="phone" label="Phone">
+                <Input inputMode="tel" />
+              </Form.Item>
+              <Form.Item name="email" label="Email">
+                <Input type="email" />
+              </Form.Item>
+            </FieldGrid>
+            <Form.Item name="address" label="Address">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </FormSection>
+          <FormSection title="Status">
+            <SettingRow label="Active" help="Inactive branches cannot be picked for new work." htmlFor="bf-active">
+              <Form.Item name="active" valuePropName="checked" noStyle><Switch id="bf-active" /></Form.Item>
+            </SettingRow>
+          </FormSection>
         </Form>
       </Modal>
       </Panel>

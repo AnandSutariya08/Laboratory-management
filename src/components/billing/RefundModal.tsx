@@ -12,6 +12,7 @@ import { formatINR } from '../../lib/money'
 import { refundLines } from '../../lib/orders'
 import type { LedgerEntry, Order, OrderItem, PaymentMode } from '../../types'
 import './billing.css'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 
 export default function RefundModal({ order, open, onClose }: { order: Order; open: boolean; onClose: () => void }) {
@@ -86,6 +87,7 @@ export default function RefundModal({ order, open, onClose }: { order: Order; op
       okButtonProps={{ disabled: !ready, loading: saving, danger: true }}
     >
       {!allowed && <Alert type="error" showIcon message="Your role is not permitted to refund." style={{ marginBottom: 8 }} />}
+      <FormSection title="Lines to refund" description="Tick the lines to return money for.">
       <Table<OrderItem>
         size="small"
         rowKey="lineId"
@@ -115,10 +117,12 @@ export default function RefundModal({ order, open, onClose }: { order: Order; op
           { title: 'Net', align: 'right', render: (_, r) => formatINR(lineNet(r)) },
         ]}
       />
-      <div style={{ margin: '12px 0' }}>
+      <div style={{ marginTop: 'var(--s-3)' }}>
         Refund amount: <b>{formatINR(amount)}</b>
         <span className="bill-muted"> (collected so far {formatINR(order.paid)})</span>
       </div>
+      </FormSection>
+      <FormSection title="Refund details">
       {order.refundPendingApproval && <Alert type="warning" showIcon message="A refund is already waiting for approval on this bill. Approve or reject it in Payment history first." style={{ marginBottom: 8 }} />}
       {needsApproval && <Alert type="info" showIcon message={`Refunds above ${formatINR(threshold)} need a manager or admin to approve. This will be sent as a request.`} style={{ marginBottom: 8 }} />}
       {tooMuch && <Alert type="error" showIcon message="Refund is more than the money collected. Collect the due first or refund fewer lines." style={{ marginBottom: 8 }} />}
@@ -130,20 +134,30 @@ export default function RefundModal({ order, open, onClose }: { order: Order; op
           style={{ marginBottom: 8 }}
         />
       )}
-      <Select
-        aria-label="Refund mode"
-        placeholder="Refund mode (required)"
-        style={{ width: 200, marginRight: 8 }}
-        value={mode}
-        onChange={setMode}
-        options={mode === 'wallet' || paidMode === 'wallet' ? [...payModes, { value: 'wallet', label: 'Wallet' }] : payModes}
-      />
-      <Input
-        placeholder="Reason (required)"
-        style={{ width: 'calc(100% - 210px)' }}
-        value={reason}
-        onChange={(e) => setReason(e.target.value)}
-      />
+      <FieldGrid min={240}>
+        <div>
+          <label className="bill-field-label" htmlFor="refund-mode">Refund mode</label>
+          <Select
+            id="refund-mode"
+            aria-label="Refund mode"
+            placeholder="Refund mode (required)"
+            style={{ width: '100%' }}
+            value={mode}
+            onChange={setMode}
+            options={mode === 'wallet' || paidMode === 'wallet' ? [...payModes, { value: 'wallet', label: 'Wallet' }] : payModes}
+          />
+        </div>
+        <div>
+          <label className="bill-field-label" htmlFor="refund-reason">Reason</label>
+          <Input
+            id="refund-reason"
+            placeholder="Reason (required)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </div>
+      </FieldGrid>
+      </FormSection>
     </Modal>
   )
 }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Alert, App, Button, Checkbox, Divider, Input, Modal, Radio, Select, Space, Table, Tag, Typography } from 'antd'
+import { Alert, App, Button, Checkbox, Input, Modal, Radio, Select, Space, Table, Tag, Typography } from 'antd'
 import { MailOutlined, MessageOutlined, SendOutlined, WhatsAppOutlined, ReloadOutlined, StopOutlined } from '@ant-design/icons'
 import { addDoc, getDoc, orderBy, query, serverTimestamp } from 'firebase/firestore'
 import { can, useAuth } from '../../auth/AuthProvider'
@@ -16,6 +16,7 @@ import type { Channel, Delivery, Order, Patient } from '../../types'
 import type { Referrer } from '../../features/partners/types'
 import { fmtDateTime } from '../results/common'
 import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 
 const CHANNEL_LABEL: Record<string, string> = {
   whatsapp: 'WhatsApp',
@@ -289,43 +290,46 @@ export default function SendReportModal({ order, open, onClose, tests = [], defa
       {blockers.map((b) => <Alert key={b} type="warning" showIcon message={b} style={{ marginBottom: 8 }} />)}
       {provisional && !blockers.length && <Alert type="info" showIcon message="This is a provisional report; it is sent with a PROVISIONAL banner." style={{ marginBottom: 8 }} />}
 
-      <Radio.Group value={recipient} onChange={(e) => switchRecipient(e.target.value)} style={{ marginBottom: 12 }}>
-        <Radio.Button value="patient">Patient</Radio.Button>
-        <Radio.Button value="doctor" disabled={!order.referrerId}>Referring doctor{referrer ? ` (${referrer.name})` : ''}</Radio.Button>
-        {(Object.keys(PARTNER) as ReportRecipient[]).map((r) => {
-          const pc = PARTNER[r]!
-          return pc.id(order) ? <Radio.Button key={r} value={r}>{pc.label}{pc.name(order) ? ` (${pc.name(order)})` : ''}</Radio.Button> : null
-        })}
-      </Radio.Group>
+      <FormSection title="Who gets the report">
+        <Radio.Group value={recipient} onChange={(e) => switchRecipient(e.target.value)} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+          <Radio.Button value="patient">Patient</Radio.Button>
+          <Radio.Button value="doctor" disabled={!order.referrerId}>Referring doctor{referrer ? ` (${referrer.name})` : ''}</Radio.Button>
+          {(Object.keys(PARTNER) as ReportRecipient[]).map((r) => {
+            const pc = PARTNER[r]!
+            return pc.id(order) ? <Radio.Button key={r} value={r}>{pc.label}{pc.name(order) ? ` (${pc.name(order)})` : ''}</Radio.Button> : null
+          })}
+        </Radio.Group>
+      </FormSection>
 
-      {restricted && <Alert type="warning" showIcon style={{ marginBottom: 8 }} message="This bill has a restricted test: it can only be sent by email." />}
-      <Checkbox.Group
-        value={channels}
-        onChange={(v) => setChannels(v as Channel[])}
-        options={[
-          { value: 'whatsapp', disabled: restricted, label: <span><WhatsAppOutlined /> WhatsApp</span> },
-          { value: 'sms', disabled: restricted, label: <span><MessageOutlined /> SMS</span> },
-          { value: 'email', label: <span><MailOutlined /> Email</span> },
-        ]}
-      />
-      <Space direction="vertical" style={{ width: '100%', marginTop: 12 }}>
-        <Input addonBefore="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" />
-        <Input addonBefore="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+      <FormSection title="How to send" description="Choose the channels, then check the contact details.">
+        {restricted && <Alert type="warning" showIcon message="This bill has a restricted test: it can only be sent by email." />}
+        <Checkbox.Group
+          value={channels}
+          onChange={(v) => setChannels(v as Channel[])}
+          options={[
+            { value: 'whatsapp', disabled: restricted, label: <span><WhatsAppOutlined /> WhatsApp</span> },
+            { value: 'sms', disabled: restricted, label: <span><MessageOutlined /> SMS</span> },
+            { value: 'email', label: <span><MailOutlined /> Email</span> },
+          ]}
+        />
+        <FieldGrid min={240}>
+          <Input aria-label="Phone" addonBefore="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" />
+          <Input aria-label="Email" addonBefore="Email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" />
+        </FieldGrid>
         {recipient === 'patient' && patient && !patient.phone && !patient.email && (
           <Typography.Text type="secondary">No contact details saved for this patient; type them above.</Typography.Text>
         )}
-      </Space>
+        {channels.includes('email') && (
+          <Typography.Text type="secondary">
+            {settings.emailSender?.status === 'verified'
+              ? <>Email goes out as <b>{settings.emailSender.fromName || settings.name}</b>, replies to {settings.emailSender.fromEmail} <Tag color="green">Verified sender</Tag></>
+              : <>Email goes out from the lab's shared address. <Tag color={settings.emailSender?.status === 'pending' ? 'gold' : 'default'}>{settings.emailSender?.status === 'pending' ? 'Sender verification pending' : 'Sender not verified'}</Tag> Verify your own sender in Lab profile, Report layout.</>}
+            {' '}The report PDF is attached.
+          </Typography.Text>
+        )}
+      </FormSection>
 
-      {channels.includes('email') && (
-        <Typography.Text type="secondary" style={{ display: 'block', marginTop: 6 }}>
-          {settings.emailSender?.status === 'verified'
-            ? <>Email goes out as <b>{settings.emailSender.fromName || settings.name}</b>, replies to {settings.emailSender.fromEmail} <Tag color="green">Verified sender</Tag></>
-            : <>Email goes out from the lab's shared address. <Tag color={settings.emailSender?.status === 'pending' ? 'gold' : 'default'}>{settings.emailSender?.status === 'pending' ? 'Sender verification pending' : 'Sender not verified'}</Tag> Verify your own sender in Lab profile, Report layout.</>}
-          {' '}The report PDF is attached.
-        </Typography.Text>
-      )}
-      <Divider titlePlacement="start">Options</Divider>
-      <Space direction="vertical" style={{ width: '100%' }}>
+      <FormSection title="Options">
         <Checkbox checked={withLetterhead} onChange={(e) => setWithLetterhead(e.target.checked)}>Send with letterhead (hide the lab header and footer, for pre-printed stationery)</Checkbox>
         {layout.letterheads.some((l) => l.active !== false) && (
           <Select allowClear style={{ width: '100%' }} placeholder="Letterhead from the library (optional)" value={letterheadId || undefined} onChange={(v) => setLetterheadId(v ?? '')}
@@ -336,7 +340,7 @@ export default function SendReportModal({ order, open, onClose, tests = [], defa
           <Select mode="multiple" allowClear style={{ width: '100%' }} placeholder="All tests" value={testIds} onChange={setTestIds} maxTagCount="responsive"
             options={tests.map((t) => ({ value: t.id, label: t.name }))} aria-label="Tests to include" />
         )}
-      </Space>
+      </FormSection>
 
       {results.length > 0 && (
         <div style={{ marginTop: 12 }}>
@@ -355,15 +359,16 @@ export default function SendReportModal({ order, open, onClose, tests = [], defa
         </div>
       )}
 
-      <Divider />
+      <FormSection title="Other ways to deliver">
       <Space wrap>
         <Button icon={<WhatsAppOutlined />} onClick={openManual} disabled={!phone.trim() || blockers.length > 0 || restricted}>Send from my WhatsApp</Button>
         <Button icon={<MailOutlined />} onClick={() => void openMail()} disabled={!email.trim() || blockers.length > 0}>Send from my email</Button>
         <Button icon={<SendOutlined />} disabled={channels.length === 0 || missing || recipient !== 'patient'} onClick={sendBillNow}>Send bill instead</Button>
         <Button icon={<StopOutlined />} danger onClick={revoke}>Revoke links</Button>
       </Space>
+      </FormSection>
 
-      <Divider titlePlacement="start">Delivery history</Divider>
+      <FormSection title="Delivery history">
       <Table<Delivery>
         size="small"
         rowKey="id"
@@ -390,6 +395,7 @@ export default function SendReportModal({ order, open, onClose, tests = [], defa
           { title: 'By', dataIndex: 'sentByName' },
         ]}
       />
+      </FormSection>
 
       <Modal open={!!waPrompt} title="Did you send the WhatsApp message?" okText="Yes, mark as sent" cancelText="Not yet" onOk={confirmManual} onCancel={() => setWaPrompt(null)}>
         WhatsApp opened with the message ready. Press send there, then confirm here so the report is recorded as delivered.

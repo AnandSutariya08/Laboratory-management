@@ -1,5 +1,6 @@
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { useMemo, useState } from 'react'
-import { DatePicker, Modal, Popconfirm, Select, Table, message } from 'antd'
+import { DatePicker, Form, Modal, Popconfirm, Select, Table, message } from 'antd'
 import { addDoc, deleteDoc, query, serverTimestamp, setDoc } from 'firebase/firestore'
 import dayjs from 'dayjs'
 import { Button } from '../../design/Button'
@@ -210,17 +211,24 @@ function CreateModal({ open, bulk, onClose, kind, parties, orders, invoiced }: {
   const preview = party && !bulk ? billsFor(party) : []
   return (
     <Modal open={open} onCancel={onClose} title={bulk ? 'Bulk invoice' : 'Create invoice'} okText={bulk ? 'Create invoices' : 'Create'} onOk={run} okButtonProps={{ loading: busy, disabled: !bulk && !party }} destroyOnHidden>
+      <Form layout="vertical" component="div">
+        <FormSection title="Invoice for" description={bulk ? 'One draft per partner that has un-invoiced bills in the period.' : 'Pick the partner and the billing period.'}>
+          {!bulk && <Form.Item label="Partner"><Select aria-label="Partner" placeholder="Select partner" showSearch optionFilterProp="label" value={party} onChange={setParty} options={parties.map((p) => ({ value: p.id, label: p.name }))} /></Form.Item>}
+          <Form.Item label="Billing period"><RangeField value={range} onChange={setRange} /></Form.Item>
+        </FormSection>
+        <FormSection title="Invoice settings">
+          <FieldGrid min={200}>
+            <Form.Item label="Due date"><DatePicker aria-label="Invoice due date" value={due} onChange={(d) => d && setDue(d)} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item label="Initial status"><Select aria-label="Initial status" value={status} onChange={setStatus} options={[{ value: 'draft', label: 'Draft' }, { value: 'sent', label: 'Sent' }]} /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+      </Form>
       <div className="pt-stack">
-        {!bulk && <Select aria-label="Partner" placeholder="Select partner" showSearch optionFilterProp="label" value={party} onChange={setParty} options={parties.map((p) => ({ value: p.id, label: p.name }))} />}
-        <RangeField value={range} onChange={setRange} />
-        <DatePicker aria-label="Invoice due date" value={due} onChange={(d) => d && setDue(d)} />
-        <Select aria-label="Initial status" value={status} onChange={setStatus} options={[{ value: 'draft', label: 'Draft' }, { value: 'sent', label: 'Sent' }]} />
         {!bulk && party && <p className="pt-muted">{preview.length} un-invoiced bill(s), {formatINR(preview.reduce((s, o) => s + o.net, 0))}{parties.find((p) => p.id === party)?.creditDays ? `. Due date follows the client's ${parties.find((p) => p.id === party)?.creditDays}-day credit period.` : ''}</p>}
         {!bulk && party && preview.length > 0 && (
           <Table size="small" rowKey="id" pagination={{ pageSize: 5, hideOnSinglePage: true }} dataSource={preview}
             columns={[{ title: 'Bill', dataIndex: 'billNo' }, { title: 'Date', render: (_, o) => fmtDate(orderDate(o)) }, { title: 'Patient', dataIndex: 'patientName' }, { title: 'Net', align: 'right', render: (_, o) => formatINR(o.net) }]} />
         )}
-        {bulk && <p className="pt-muted">One draft per partner that has un-invoiced bills in the period.</p>}
       </div>
     </Modal>
   )

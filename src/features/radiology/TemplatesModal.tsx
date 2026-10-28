@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { App, Input, Modal, Select, Table } from 'antd'
+import { App, Input, Modal, Select, Switch, Table } from 'antd'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { addDoc, deleteDoc, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { col, docRef } from '../../lib/db'
 import { useLiveQuery } from '../../hooks/useLive'
@@ -84,13 +85,21 @@ export default function TemplatesModal({ open, onClose, canEdit }: { open: boole
       <Modal open={!!editing} onCancel={() => setEditing(null)} title={editing?.id ? 'Edit template' : 'New template'} okText="Save" onOk={save} width={dialogWidth(640)} destroyOnHidden>
         {editing && (
           <>
+            <FormSection title="Template details">
+              <FieldGrid min={180}>
             <div className="rd-field"><label htmlFor="tp-name">Name</label><Input id="tp-name" value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
             <div className="rd-field"><label htmlFor="tp-mod">Modality</label><Select id="tp-mod" value={editing.modality} onChange={(v) => setEditing({ ...editing, modality: v })} options={MODALITIES.map((m) => ({ value: m, label: m }))} /></div>
             <div className="rd-field"><label htmlFor="tp-var">Variant</label><Select id="tp-var" value={editing.variant ?? 'normal'} onChange={(v) => setEditing({ ...editing, variant: v })} options={[{ value: 'normal', label: 'Normal' }, { value: 'abnormal', label: 'Abnormal' }]} /></div>
+              </FieldGrid>
+            </FormSection>
+            <FormSection title="Report text" description="Shown when the template is applied to a report.">
             <RichText id="tp-tech" label="Technique" minHeight={50} value={editing.technique} onChange={(v) => setEditing({ ...editing, technique: v })} />
             <RichText id="tp-find" label="Findings" minHeight={120} value={editing.findings} onChange={(v) => setEditing({ ...editing, findings: v })} />
             <RichText id="tp-imp" label="Impression" minHeight={70} value={editing.impression} onChange={(v) => setEditing({ ...editing, impression: v })} />
-            <label><input type="checkbox" checked={editing.active !== false} onChange={(e) => setEditing({ ...editing, active: e.target.checked })} /> Active</label>
+            </FormSection>
+            <FormSection title="Availability">
+              <SettingRow label="Active" help="Inactive templates are hidden from the report editor."><Switch aria-label="Active" checked={editing.active !== false} onChange={(v) => setEditing({ ...editing, active: v })} /></SettingRow>
+            </FormSection>
           </>
         )}
       </Modal>

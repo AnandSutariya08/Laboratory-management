@@ -13,6 +13,7 @@ import { Segmented } from '../../design/Segmented'
 import { StatusChip } from '../../design/StatusChip'
 import { EmptyState } from '../../design/EmptyState'
 import { downloadText } from '../../pages/catalogue/helpers'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { CsvUpload, TatInput, commitBatch, csvLine, headerIndex, mergeOp } from '../../pages/catalogue/shared'
 import { fmtTat, type OutsourceEntry, type TestExt } from '../../pages/catalogue/ext'
 import { useOutsourceData } from './lib'
@@ -204,26 +205,35 @@ export default function OutsourcePage() {
 
       <Modal title={editing ? `Outsource: ${editing.name}` : ''} open={!!editing} onCancel={() => setEditing(null)} onOk={save} okText="Save" width={dialogWidth(680)} destroyOnHidden>
         <Form form={form} layout="vertical">
+          <FormSection title="Processing labs" description="Labs that can process this test, what they charge us and how long they take. The default lab is chosen on bills unless changed.">
           <Form.List name="rows">
             {(fields, { add, remove }) => (
               <>
                 {fields.map(({ key, name }) => (
-                  <div key={key} className="cat-toolbar" style={{ alignItems: 'flex-start' }}>
-                    <Form.Item name={[name, 'labId']} label="Lab" rules={[{ required: true, message: 'Pick a lab' }]} style={{ width: 200 }}>
-                      <Select showSearch optionFilterProp="label" options={labList.map((l) => ({ value: l.id, label: l.name }))} />
-                    </Form.Item>
-                    <Form.Item name={[name, 'cost']} label="Our cost (₹)"><InputNumber min={0} precision={2} style={{ width: 110 }} /></Form.Item>
-                    <Form.Item name={[name, 'tatMinutes']} label="Lab TAT"><TatInput label="Lab TAT" /></Form.Item>
-                    <Form.Item name={[name, 'isDefault']} label="Default" valuePropName="checked">
-                      <Switch onChange={(on) => on && form.setFieldValue('rows', (form.getFieldValue('rows') as RowForm[]).map((r, i) => ({ ...r, isDefault: i === name })))} />
-                    </Form.Item>
-                    <Button variant="text" icon={<MinusCircleOutlined />} aria-label="Remove lab row" style={{ marginTop: 30 }} onClick={() => remove(name)} />
+                  <div key={key} className="cat-agerange">
+                    <FieldGrid min={200}>
+                      <Form.Item name={[name, 'labId']} label="Lab" rules={[{ required: true, message: 'Pick a lab' }]}>
+                        <Select showSearch optionFilterProp="label" options={labList.map((l) => ({ value: l.id, label: l.name }))} />
+                      </Form.Item>
+                      <Form.Item name={[name, 'cost']} label="Our cost"><InputNumber min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+                      <Form.Item name={[name, 'tatMinutes']} label="Lab TAT"><TatInput label="Lab TAT" /></Form.Item>
+                    </FieldGrid>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--s-3)', width: '100%' }}>
+                      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--s-2)' }}>
+                        <Form.Item name={[name, 'isDefault']} valuePropName="checked" noStyle>
+                          <Switch onChange={(on) => on && form.setFieldValue('rows', (form.getFieldValue('rows') as RowForm[]).map((r, i) => ({ ...r, isDefault: i === name })))} />
+                        </Form.Item>
+                        Default lab for this test
+                      </label>
+                      <Button variant="text" icon={<MinusCircleOutlined />} aria-label="Remove lab row" onClick={() => remove(name)}>Remove</Button>
+                    </div>
                   </div>
                 ))}
                 <Button icon={<PlusOutlined />} onClick={() => add({ labId: '', cost: 0, tatMinutes: null, isDefault: fields.length === 0 })}>Add lab</Button>
               </>
             )}
           </Form.List>
+          </FormSection>
         </Form>
       </Modal>
     </div>

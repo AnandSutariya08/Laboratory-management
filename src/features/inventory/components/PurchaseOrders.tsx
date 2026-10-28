@@ -1,5 +1,6 @@
+import { FieldGrid } from '../../../design/FormLayout'
 import { useEffect, useMemo, useState } from 'react'
-import { App, Button, DatePicker, Descriptions, Drawer, Empty, Input, InputNumber, Modal, Popconfirm, Select, Space, Table } from 'antd'
+import { App, Button, DatePicker, Descriptions, Drawer, Empty, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table } from 'antd'
 import dayjs from 'dayjs'
 import { useLabSettings } from '../../../hooks/useCatalogue'
 import { formatINR, toPaise } from '../../../lib/money'
@@ -123,7 +124,7 @@ function Cart({ inv, onCreated }: { inv: InventoryData; onCreated: () => void })
         <Select
           showSearch
           placeholder="Add item to cart"
-          style={{ width: 280 }}
+          style={{ width: 280, maxWidth: '100%' }}
           optionFilterProp="label"
           value={null}
           onChange={(v: string) => addItem(v)}
@@ -136,6 +137,7 @@ function Cart({ inv, onCreated }: { inv: InventoryData; onCreated: () => void })
         size="small"
         rowKey="itemId"
         pagination={false}
+        scroll={{ x: 860 }}
         dataSource={lines}
         locale={{ emptyText: <Empty description="Cart is empty" /> }}
         columns={[
@@ -156,7 +158,7 @@ function Cart({ inv, onCreated }: { inv: InventoryData; onCreated: () => void })
               </Space.Compact>
             ),
           },
-          { title: 'Unit cost (INR)', render: (_, l) => <InputNumber min={0} value={l.unitCostRs} onChange={(v) => patch(l.itemId, { unitCostRs: v ?? 0 })} style={{ width: 100 }} /> },
+          { title: 'Unit cost', render: (_, l) => <InputNumber aria-label="Unit cost" addonBefore="₹" min={0} value={l.unitCostRs} onChange={(v) => patch(l.itemId, { unitCostRs: v ?? 0 })} style={{ width: 130 }} /> },
           {
             title: 'Supplier',
             render: (_, l) => (
@@ -226,23 +228,30 @@ function ReceiveModal({ po, inv, onClose }: { po: PurchaseOrder | null; inv: Inv
 
   return (
     <Modal open={!!po} title={`Receive goods - ${po?.poNo ?? ''}`} width={dialogWidth(980)} onCancel={onClose} onOk={submit} okText="Receive" confirmLoading={busy} destroyOnHidden>
-      <p className="qc-muted">Enter what arrived. Leave quantity 0 for lines not delivered. Lot number and expiry are required for received lines.</p>
-      <Table
-        size="small"
-        rowKey="lineIndex"
-        pagination={false}
-        dataSource={rows}
-        scroll={{ x: 880 }}
-        columns={[
-          { title: 'Item', render: (_, r) => inv.itemById.get(po!.lines[r.lineIndex].itemId)?.name },
-          { title: 'Pending', align: 'right', render: (_, r) => po!.lines[r.lineIndex].qty - po!.lines[r.lineIndex].receivedQty },
-          { title: 'Received qty', render: (_, r) => <InputNumber min={0} value={r.qty} onChange={(v) => patch(r.lineIndex, { qty: v ?? 0 })} style={{ width: 90 }} /> },
-          { title: 'Lot no', render: (_, r) => <Input value={r.lotNo} onChange={(e) => patch(r.lineIndex, { lotNo: e.target.value })} style={{ width: 120 }} /> },
-          { title: 'Expiry', render: (_, r) => <DatePicker value={r.expiry ? dayjs(r.expiry) : null} onChange={(d) => patch(r.lineIndex, { expiry: d ? d.format('YYYY-MM-DD') : '' })} style={{ width: 130 }} /> },
-          { title: 'Unit cost', render: (_, r) => <InputNumber min={0} value={r.unitCostRs} onChange={(v) => patch(r.lineIndex, { unitCostRs: v ?? 0 })} style={{ width: 90 }} /> },
-          { title: 'Location', render: (_, r) => <Input value={r.location} onChange={(e) => patch(r.lineIndex, { location: e.target.value })} style={{ width: 110 }} /> },
-        ]}
-      />
+      <p className="qc-muted" style={{ marginTop: 0 }}>Enter what arrived. Leave quantity 0 for lines not delivered. Lot number and expiry are required for received lines.</p>
+      <div style={{ display: 'grid', gap: 'var(--s-3)' }}>
+        {rows.map((r) => {
+          const line = po!.lines[r.lineIndex]
+          const it = inv.itemById.get(line.itemId)
+          return (
+            <div key={r.lineIndex} style={{ background: 'var(--c-surface-container)', borderRadius: 'var(--r-section)', padding: 'var(--s-3) var(--s-4)' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}>
+                <b>{it?.name}</b>
+                <span className="qc-muted">Pending {Math.round((line.qty - line.receivedQty) * 10000) / 10000} {it?.unit}</span>
+              </div>
+              <Form layout="vertical" component="div">
+                <FieldGrid min={160}>
+                  <Form.Item label="Received qty"><InputNumber aria-label={`Received qty for ${it?.name}`} min={0} value={r.qty} onChange={(v) => patch(r.lineIndex, { qty: v ?? 0 })} addonAfter={it?.unit} style={{ width: '100%' }} /></Form.Item>
+                  <Form.Item label="Lot no" required><Input aria-label={`Lot no for ${it?.name}`} value={r.lotNo} onChange={(e) => patch(r.lineIndex, { lotNo: e.target.value })} /></Form.Item>
+                  <Form.Item label="Expiry" required><DatePicker aria-label={`Expiry for ${it?.name}`} value={r.expiry ? dayjs(r.expiry) : null} onChange={(d) => patch(r.lineIndex, { expiry: d ? d.format('YYYY-MM-DD') : '' })} style={{ width: '100%' }} /></Form.Item>
+                  <Form.Item label="Unit cost"><InputNumber aria-label={`Unit cost for ${it?.name}`} min={0} value={r.unitCostRs} onChange={(v) => patch(r.lineIndex, { unitCostRs: v ?? 0 })} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+                  <Form.Item label="Location"><Input aria-label={`Location for ${it?.name}`} value={r.location} onChange={(e) => patch(r.lineIndex, { location: e.target.value })} /></Form.Item>
+                </FieldGrid>
+              </Form>
+            </div>
+          )
+        })}
+      </div>
     </Modal>
   )
 }
@@ -318,6 +327,7 @@ function PODetail({ po, inv, onClose }: { po: PurchaseOrder | null; inv: Invento
         size="small"
         rowKey={(_, i) => String(i)}
         pagination={false}
+        scroll={{ x: 860 }}
         dataSource={lines}
         columns={[
           { title: 'Item', render: (_, l) => inv.itemById.get(l.itemId)?.name },

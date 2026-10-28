@@ -11,6 +11,7 @@ import { EXTRACT_MIN_SCORE, nameScore } from '../../lib/fuzzy'
 import type { Parameter } from '../../types'
 import type { TestExt } from './ext'
 import { dialogWidth } from '../../design/dialog'
+import { FormSection } from '../../design/FormLayout'
 
 // "Create test with AI / from text" (CAT-15). Two inputs: just a test name, or pasted text / CSV rows
 // describing the test (or attach a PDF). The catalogue is searched
@@ -80,7 +81,8 @@ export default function AiTestModal({ open, onClose }: { open: boolean; onClose:
 
   return (
     <Modal title="Create test with AI" open={open} onCancel={onClose} width={dialogWidth(720)} destroyOnHidden okText="Create draft test" onOk={create} okButtonProps={{ disabled: !draft }}>
-      <Radio.Group optionType="button" value={mode} onChange={(e) => { setMode(e.target.value); setDraft(null) }} options={[{ value: 'name', label: 'From a test name' }, { value: 'text', label: 'From pasted text or CSV' }, { value: 'pdf', label: 'From a PDF' }]} style={{ marginBottom: 12 }} />
+      <FormSection title="Source" description="Pick how to describe the test. The AI drafts it as a disabled test you review before use.">
+      <Radio.Group optionType="button" value={mode} onChange={(e) => { setMode(e.target.value); setDraft(null) }} options={[{ value: 'name', label: 'From a test name' }, { value: 'text', label: 'From pasted text or CSV' }, { value: 'pdf', label: 'From a PDF' }]} style={{ marginBottom: 12, flexWrap: 'wrap' }} />
       {mode === 'pdf' ? (
         <div style={{ display: 'grid', gap: 8 }}>
           <input type="file" accept="application/pdf" aria-label="PDF file" onChange={(e) => {
@@ -100,15 +102,16 @@ export default function AiTestModal({ open, onClose }: { open: boolean; onClose:
       <p style={{ margin: '12px 0' }}>
         <button type="button" className="dbtn press dbtn--default" onClick={() => void run()} disabled={busy || (mode === 'pdf' ? !pdf : !text.trim())}><span>{busy ? 'Reading...' : 'Draft with AI'}</span></button>
       </p>
+      </FormSection>
       {similar.length > 0 && <Alert type="warning" showIcon style={{ marginBottom: 12 }} message="Similar tests already exist" description={similar.map((x) => `${x.t.name} (${x.t.code}, ${x.score})`).join(' | ')} />}
       {draft && (
-        <>
+        <FormSection title="Review the draft" description="Check every parameter, unit and range before creating the test.">
           <Alert type="info" showIcon style={{ marginBottom: 8 }} message={`${draft.name} (${draft.code || 'no code'})`} description="AI draft: check every parameter, unit and range before enabling. It is created disabled and marked as AI-created." />
           <Table size="small" rowKey="name" pagination={false} dataSource={draft.parameters} columns={[
             { title: 'Parameter', dataIndex: 'name' }, { title: 'Unit', dataIndex: 'unit' },
             { title: 'Range', render: (_: unknown, p: TestDraft['parameters'][number]) => p.displayRange || (p.low != null || p.high != null ? `${p.low ?? ''} - ${p.high ?? ''}` : '') },
           ]} />
-        </>
+        </FormSection>
       )}
     </Modal>
   )

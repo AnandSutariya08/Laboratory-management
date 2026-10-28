@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { FieldGrid, SettingRow } from '../../design/FormLayout'
 import { App, Form, Input, InputNumber, Modal, Select, Switch } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import { addDoc, serverTimestamp } from 'firebase/firestore'
@@ -166,19 +167,23 @@ function QuickAddReferrer({
             <Input maxLength={80} />
           </Form.Item>
         )}
-        <Form.Item name="phone" label="Phone" rules={[{ pattern: /^\d{10}$/, message: 'Enter a 10 digit number' }]}>
-          <Input maxLength={10} addonBefore="+91" />
-        </Form.Item>
-        <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Invalid email' }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="commission" label="Commission %">
-          <InputNumber min={0} max={100} precision={2} style={{ width: 160 }} />
-        </Form.Item>
-        {kind === 'doctor' && (
-          <Form.Item name="autoSend" label="Send reports to this doctor automatically (paid bills only)" valuePropName="checked">
-            <Switch />
+        <FieldGrid min={200}>
+          <Form.Item name="phone" label="Phone" rules={[{ pattern: /^\d{10}$/, message: 'Enter a 10 digit number' }]}>
+            <Input maxLength={10} addonBefore="+91" />
           </Form.Item>
+          <Form.Item name="email" label="Email" rules={[{ type: 'email', message: 'Invalid email' }]}>
+            <Input />
+          </Form.Item>
+          <Form.Item name="commission" label="Commission">
+            <InputNumber min={0} max={100} precision={2} addonAfter="%" style={{ width: '100%' }} />
+          </Form.Item>
+        </FieldGrid>
+        {kind === 'doctor' && (
+          <SettingRow label="Send reports automatically" help="Reports go to this doctor automatically (paid bills only).">
+            <Form.Item name="autoSend" valuePropName="checked" noStyle>
+              <Switch aria-label="Send reports to this doctor automatically" />
+            </Form.Item>
+          </SettingRow>
         )}
       </Form>
     </Modal>

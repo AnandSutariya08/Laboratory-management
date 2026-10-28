@@ -1,5 +1,6 @@
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { useMemo, useState } from 'react'
-import { DatePicker, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Tag, message } from 'antd'
+import { DatePicker, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, Tag, message } from 'antd'
 import dayjs from 'dayjs'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, MinusCircleOutlined, PlusOutlined, ProfileOutlined, UploadOutlined } from '@ant-design/icons'
 import { Button } from '../../design/Button'
@@ -179,30 +180,31 @@ function ClientDrawer({ value, onClose }: { value: Partial<CorporateClient> | nu
     <Drawer open={!!value} onClose={onClose} size="large" destroyOnHidden title={value?.id ? 'Edit corporate client' : 'Add corporate client'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={{ ...value, creditLimitRs: (value?.creditLimit ?? 0) / 100, plans: (value?.plans ?? []).map(planToForm) }}>
-        <div className="pt-grid2">
-          <Form.Item name="name" label="Company name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="type" label="Type"><Select options={TYPES} /></Form.Item>
-          <Form.Item name="contactPerson" label="Contact person"><Input /></Form.Item>
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
-          <Form.Item name="loginEmail" label="Login email (future portal)" rules={[{ type: 'email' }]}><Input /></Form.Item>
-        </div>
-        <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+        <FormSection title="Company details" description="Who the corporate client is and how to reach them.">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Company name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="type" label="Type"><Select options={TYPES} /></Form.Item>
+            <Form.Item name="contactPerson" label="Contact person"><Input /></Form.Item>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
+            <Form.Item name="loginEmail" label="Login email (future portal)" rules={[{ type: 'email' }]}><Input /></Form.Item>
+          </FieldGrid>
+          <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+        </FormSection>
+        <FormSection title="Plans for employees" description="A plan is a set of packages at one price per employee, valid for a period. Registration offers only plans that are active and in date.">
         <Form.List name="plans">
           {(fields, { add, remove }) => (
-            <div style={{ marginBottom: 12 }}>
-              <div style={{ fontWeight: 600, marginBottom: 4 }}>Plans for employees</div>
-              <div className="pt-muted" style={{ marginBottom: 8 }}>A plan is a set of packages at one price per employee, valid for a period. Registration offers only plans that are active and in date.</div>
+            <div>
               {fields.map((f) => (
-                <div key={f.key} style={{ border: '1px solid var(--c-border, #ddd)', borderRadius: 8, padding: 8, marginBottom: 8 }}>
-                  <Space align="baseline" wrap style={{ display: 'flex' }}>
+                <div key={f.key} className="pt-rule" style={{ gridTemplateColumns: '1fr', gap: 'var(--s-2)' }}>
+                  <FieldGrid min={200}>
                     <Form.Item name={[f.name, 'id']} hidden><Input /></Form.Item>
-                    <Form.Item name={[f.name, 'name']} rules={[{ required: true, message: 'Plan name' }]}><Input aria-label="Plan name" placeholder="Plan name" style={{ width: 180 }} /></Form.Item>
-                    <Form.Item name={[f.name, 'priceRs']}><InputNumber aria-label="Price per employee" addonBefore="₹" min={0} precision={2} placeholder="Per employee" style={{ width: 160 }} /></Form.Item>
-                    <Form.Item name={[f.name, 'valid']}><DatePicker.RangePicker aria-label="Plan validity" allowEmpty={[true, true]} /></Form.Item>
+                    <Form.Item name={[f.name, 'name']} rules={[{ required: true, message: 'Plan name' }]}><Input aria-label="Plan name" placeholder="Plan name" /></Form.Item>
+                    <Form.Item name={[f.name, 'priceRs']}><InputNumber aria-label="Price per employee" addonBefore="₹" addonAfter="per employee" min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+                    <Form.Item name={[f.name, 'valid']}><DatePicker.RangePicker aria-label="Plan validity" allowEmpty={[true, true]} style={{ width: '100%' }} /></Form.Item>
                     <Form.Item name={[f.name, 'active']} valuePropName="checked" initialValue><Switch checkedChildren="Active" unCheckedChildren="Off" /></Form.Item>
                     <Button variant="text" aria-label="Remove plan" icon={<MinusCircleOutlined />} onClick={() => remove(f.name)} />
-                  </Space>
+                  </FieldGrid>
                   <Form.Item name={[f.name, 'packageIds']} style={{ marginBottom: 0 }}>
                     <Select mode="multiple" aria-label="Plan packages" placeholder="Packages in this plan" optionFilterProp="label" options={pk.filter((p) => !p.disabled).map((p) => ({ value: p.id, label: p.name }))} />
                   </Form.Item>
@@ -212,20 +214,23 @@ function ClientDrawer({ value, onClose }: { value: Partial<CorporateClient> | nu
             </div>
           )}
         </Form.List>
-        <Form.Item name="planPackageIds" label="Legacy package mapping" extra="Older clients only: packages offered without a priced plan.">
-          <Select mode="multiple" optionFilterProp="label" options={pk.filter((p) => !p.disabled).map((p) => ({ value: p.id, label: p.name }))} />
-        </Form.Item>
-        <div className="pt-grid3">
-          <Form.Item name="creditDays" label="Credit period (days)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="creditLimitRs" label="Credit limit (Rs)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-        </div>
-        <Form.Item name="creditTerms" label="Credit terms"><Input.TextArea rows={2} /></Form.Item>
-        <div className="pt-grid3">
-          <Form.Item name="employeeIdRequired" label="Employee ID required" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="disableLetterhead" label="Disable letterhead" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="hidePlan" label="Hide corporate plan" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
-        </div>
+          <Form.Item name="planPackageIds" label="Legacy package mapping" extra="Older clients only: packages offered without a priced plan." style={{ marginTop: 'var(--s-4)' }}>
+            <Select mode="multiple" optionFilterProp="label" options={pk.filter((p) => !p.disabled).map((p) => ({ value: p.id, label: p.name }))} />
+          </Form.Item>
+        </FormSection>
+        <FormSection title="Credit" description="Payment terms for this client's invoices.">
+          <FieldGrid min={220}>
+            <Form.Item name="creditDays" label="Credit period"><InputNumber min={0} addonAfter="days" style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="creditLimitRs" label="Credit limit"><InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+          </FieldGrid>
+          <Form.Item name="creditTerms" label="Credit terms"><Input.TextArea rows={2} /></Form.Item>
+        </FormSection>
+        <FormSection title="Registration and report options">
+          <SettingRow label="Employee ID required" help="Registration must record the employee ID." htmlFor="cc2-eid"><Form.Item name="employeeIdRequired" valuePropName="checked" noStyle><Switch id="cc2-eid" /></Form.Item></SettingRow>
+          <SettingRow label="Disable letterhead" help="Print this client's reports without the lab letterhead." htmlFor="cc2-lh"><Form.Item name="disableLetterhead" valuePropName="checked" noStyle><Switch id="cc2-lh" /></Form.Item></SettingRow>
+          <SettingRow label="Hide corporate plan" help="Do not show the plan name on bills." htmlFor="cc2-hp"><Form.Item name="hidePlan" valuePropName="checked" noStyle><Switch id="cc2-hp" /></Form.Item></SettingRow>
+          <SettingRow label="Active" help="Inactive clients are hidden when billing." htmlFor="cc2-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="cc2-active" /></Form.Item></SettingRow>
+        </FormSection>
       </Form>
     </Drawer>
   )

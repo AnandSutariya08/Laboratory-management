@@ -10,6 +10,7 @@ import { useQcSettings } from '../lib/useQcSettings'
 import { CAPA_STATUS, INVESTIGATION_CHECKLIST, OUTLIER_NATURE, ROOT_CAUSE_CATEGORIES } from '../lib/capaOptions'
 import { stripUndefined } from '../lib/clean'
 import { useCapas, useRecentRuns } from './shared'
+import { FieldGrid, FormSection, SettingRow } from '../../../design/FormLayout'
 import { dialogWidth } from '../../../design/dialog'
 
 type FormVals = Omit<Capa, 'dueDate'> & { dueDate: dayjs.Dayjs }
@@ -72,66 +73,80 @@ export default function CapaModal({ open, initial, onClose }: { open: boolean; i
   return (
     <Modal title={initial?.id ? `Edit CAPA ${initial.capaNo ?? ''}` : 'New CAPA'} open={open} onOk={save} onCancel={onClose} destroyOnHidden okText="Save CAPA" width={dialogWidth(640)}>
       <Form form={form} layout="vertical">
-        {settings.outlierNature && (
-          <Form.Item name="outlierNature" label="Nature of QC outlier">
-            <Select allowClear options={OUTLIER_NATURE} />
-          </Form.Item>
+        {(settings.outlierNature || settings.investigationChecklist) && (
+          <FormSection title="What happened" description="Describe the outlier and what was checked.">
+            {settings.outlierNature && (
+              <Form.Item name="outlierNature" label="Nature of QC outlier">
+                <Select allowClear options={OUTLIER_NATURE} />
+              </Form.Item>
+            )}
+            {settings.investigationChecklist && (
+              <Form.Item name="investigation" label="Investigation checklist" extra="Tick what was checked.">
+                <Checkbox.Group style={{ display: 'grid', gap: 6 }} options={INVESTIGATION_CHECKLIST} />
+              </Form.Item>
+            )}
+          </FormSection>
         )}
-        {settings.investigationChecklist && (
-          <Form.Item name="investigation" label="Investigation checklist (tick what was checked)">
-            <Checkbox.Group style={{ display: 'grid', gap: 4 }} options={INVESTIGATION_CHECKLIST} />
-          </Form.Item>
-        )}
-        <Form.Item name="cause" label="Cause (root cause)" rules={[{ required: settings.rootCauseAnalysis }]}>
-          <Input.TextArea rows={2} />
-        </Form.Item>
-        <Form.Item name="rootCauseCategory" label="Root cause category">
-          <Select allowClear options={ROOT_CAUSE_CATEGORIES} />
-        </Form.Item>
-        <Form.Item name="correctiveAction" label="Corrective action" rules={[{ required: true }]}>
-          <Input.TextArea rows={2} />
-        </Form.Item>
-        {settings.remedialAction && (
-          <Form.Item name="remedialAction" label="Remedial action taken">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        )}
-        <Form.Item name="preventiveAction" label="Preventive action">
-          <Input.TextArea rows={2} />
-        </Form.Item>
-        {settings.patientResultManagement && (
-          <Form.Item name="patientImpactAssessed" label="Patient results since the last good QC reviewed" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        )}
-        {settings.followUp && (
-          <Form.Item name="followUp" label="Follow-up steps">
-            <Input.TextArea rows={2} />
-          </Form.Item>
-        )}
-        <Form.Item name="owner" label="Owner" rules={[{ required: true }]}>
-          <Input />
-        </Form.Item>
-        <Form.Item name="dueDate" label="Due date">
-          <DatePicker />
-        </Form.Item>
-        <Form.Item name="status" label="Status">
-          <Select options={CAPA_STATUS} />
-        </Form.Item>
-        {(status === 'verified' || status === 'closed') && (
-          <>
-            <Form.Item name="repeatRunId" label="Passing repeat run" rules={[{ required: true }]} extra="Closing needs a QC run that passed after the corrective action.">
-              <Select
-                showSearch
-                optionFilterProp="label"
-                options={repeatRuns.map((r) => ({ value: r.id, label: `${r.runNo ?? r.id.slice(0, 6)} - ${r.machineName} - ${r.runAt ? dayjs(r.runAt.toMillis()).format('DD MMM HH:mm') : ''}` }))}
-              />
+        <FormSection title="Cause and actions" description="Why it happened and what was done to fix and prevent it.">
+          <FieldGrid min={260}>
+            <Form.Item name="rootCauseCategory" label="Root cause category">
+              <Select allowClear options={ROOT_CAUSE_CATEGORIES} />
             </Form.Item>
-            <Form.Item name="closeRemark" label="Closing remark">
+          </FieldGrid>
+          <Form.Item name="cause" label="Cause (root cause)" rules={[{ required: settings.rootCauseAnalysis }]}>
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          <Form.Item name="correctiveAction" label="Corrective action" rules={[{ required: true }]}>
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          {settings.remedialAction && (
+            <Form.Item name="remedialAction" label="Remedial action taken">
               <Input.TextArea rows={2} />
             </Form.Item>
-          </>
-        )}
+          )}
+          <Form.Item name="preventiveAction" label="Preventive action">
+            <Input.TextArea rows={2} />
+          </Form.Item>
+          {settings.followUp && (
+            <Form.Item name="followUp" label="Follow-up steps">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          )}
+          {settings.patientResultManagement && (
+            <SettingRow label="Patient results reviewed" help="Patient results since the last good QC have been reviewed.">
+              <Form.Item name="patientImpactAssessed" valuePropName="checked" noStyle>
+                <Switch aria-label="Patient results since the last good QC reviewed" />
+              </Form.Item>
+            </SettingRow>
+          )}
+        </FormSection>
+        <FormSection title="Ownership and status">
+          <FieldGrid min={180}>
+            <Form.Item name="owner" label="Owner" rules={[{ required: true }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="dueDate" label="Due date">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="status" label="Status">
+              <Select options={CAPA_STATUS} />
+            </Form.Item>
+          </FieldGrid>
+          {(status === 'verified' || status === 'closed') && (
+            <>
+              <Form.Item name="repeatRunId" label="Passing repeat run" rules={[{ required: true }]} extra="Closing needs a QC run that passed after the corrective action.">
+                <Select
+                  showSearch
+                  optionFilterProp="label"
+                  options={repeatRuns.map((r) => ({ value: r.id, label: `${r.runNo ?? r.id.slice(0, 6)} - ${r.machineName} - ${r.runAt ? dayjs(r.runAt.toMillis()).format('DD MMM HH:mm') : ''}` }))}
+                />
+              </Form.Item>
+              <Form.Item name="closeRemark" label="Closing remark">
+                <Input.TextArea rows={2} />
+              </Form.Item>
+            </>
+          )}
+        </FormSection>
       </Form>
     </Modal>
   )

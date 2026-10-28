@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { App, Button, InputNumber, Input, Popconfirm, Select, Space, Table } from 'antd'
+import { App, Button, Form, InputNumber, Input, Popconfirm, Select, Space, Table } from 'antd'
 import { deleteDoc, setDoc } from 'firebase/firestore'
 import { docRef } from '../../../lib/db'
 import { useTests } from '../../../hooks/useCatalogue'
@@ -7,6 +7,7 @@ import type { InventoryData } from '../lib/useInventory'
 import type { StockMapping as Mapping } from '../types'
 import { INV } from '../lib/stock'
 import { useActor } from './useActor'
+import { FieldGrid } from '../../../design/FormLayout'
 import { Panel } from '../../qc/ui'
 
 export default function StockMapping({ inv }: { inv: InventoryData }) {
@@ -39,12 +40,14 @@ export default function StockMapping({ inv }: { inv: InventoryData }) {
     <Space vertical size="middle" style={{ width: '100%' }}>
       {actor.canMapping && (
         <Panel size="small" title="Map a test to a consumable">
-          <Space wrap>
-            <Select showSearch optionFilterProp="label" placeholder="Test" value={testId} onChange={setTestId} style={{ width: 260 }} options={tests.filter((t) => !t.disabled).map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} />
-            <Select showSearch optionFilterProp="label" placeholder="Item" value={itemId} onChange={setItemId} style={{ width: 260 }} options={inv.items.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))} />
-            <InputNumber min={0} value={qty} onChange={setQty} addonAfter={itemId ? `${inv.itemById.get(itemId)?.unit} / test` : 'per test'} />
+          <Form layout="vertical" component="div">
+            <FieldGrid min={240}>
+              <Form.Item label="Test"><Select aria-label="Test" showSearch optionFilterProp="label" placeholder="Choose a test" value={testId} onChange={setTestId} options={tests.filter((t) => !t.disabled).map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} /></Form.Item>
+              <Form.Item label="Consumable item"><Select aria-label="Item" showSearch optionFilterProp="label" placeholder="Choose an item" value={itemId} onChange={setItemId} options={inv.items.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name} (${i.unit})` }))} /></Form.Item>
+              <Form.Item label="Quantity used per test"><InputNumber aria-label="Quantity per test" min={0} value={qty} onChange={setQty} addonAfter={itemId ? `${inv.itemById.get(itemId)?.unit} / test` : 'per test'} style={{ width: '100%' }} /></Form.Item>
+            </FieldGrid>
             <Button type="primary" disabled={!testId || !itemId || !qty || qty <= 0} onClick={() => testId && itemId && qty && save({ testId, itemId, qtyPerTest: qty })}>Save mapping</Button>
-          </Space>
+          </Form>
           <div style={{ color: 'var(--c-on-surface-variant)', marginTop: 8, fontSize: 12 }}>
             When a sample is received, mapped quantities are consumed from stock automatically (earliest expiry first). A test can use several items.
           </div>
@@ -64,7 +67,7 @@ export default function StockMapping({ inv }: { inv: InventoryData }) {
             render: (_, m) => {
               const unit = inv.itemById.get(m.itemId)?.unit
               return actor.canMapping ? (
-                <InputNumber min={0} defaultValue={m.qtyPerTest} addonAfter={unit} style={{ width: 150 }} onBlur={(e) => {
+                <InputNumber min={0} defaultValue={m.qtyPerTest} addonAfter={unit} style={{ width: 170 }} onBlur={(e) => {
                   const v = Number(e.target.value)
                   if (v > 0 && v !== m.qtyPerTest) save({ ...m, qtyPerTest: v })
                 }} />

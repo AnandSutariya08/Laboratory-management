@@ -1,3 +1,4 @@
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { auditWalletChange } from '../settings/audit'
 import { useMemo, useState } from 'react'
 import { Checkbox, Drawer, Form, Input, InputNumber, Modal, Popconfirm, Select, Switch, message } from 'antd'
@@ -274,14 +275,20 @@ function AddMoney({ open, onClose, centres, profile, canApprove }: { open: boole
   return (
     <Modal open={open} onCancel={onClose} onOk={run} okText="Add money" title="Add money to wallet" destroyOnHidden>
       <Form form={form} layout="vertical" initialValues={{ mode: 'upi' }}>
+        <FormSection title="Payment" description="Which lab is paying, how much and how.">
         <Form.Item name="centreId" label="B2B lab" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
         <div className="pt-grid2">
-          <Form.Item name="amount" label="Amount (Rs)" rules={[{ required: true }, { type: 'number', min: 1, message: 'Enter an amount' }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+          <Form.Item name="amount" label="Amount" rules={[{ required: true }, { type: 'number', min: 1, message: 'Enter an amount' }]}><InputNumber min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
           <Form.Item name="mode" label="Mode"><Select options={MODES} /></Form.Item>
         </div>
-        <Form.Item name="reference" label="Transaction ID / reference"><Input /></Form.Item>
-        <Form.Item name="remark" label="Remark"><Input /></Form.Item>
-        {canApprove && <Form.Item name="approveNow" valuePropName="checked"><Checkbox>I verified this payment: approve now</Checkbox></Form.Item>}
+        </FormSection>
+        <FormSection title="Reference" description="Used to match this top-up with the bank or UPI statement.">
+          <FieldGrid min={220}>
+            <Form.Item name="reference" label="Transaction ID / reference"><Input /></Form.Item>
+            <Form.Item name="remark" label="Remark"><Input /></Form.Item>
+          </FieldGrid>
+          {canApprove && <Form.Item name="approveNow" valuePropName="checked"><Checkbox>I verified this payment: approve now</Checkbox></Form.Item>}
+        </FormSection>
       </Form>
     </Modal>
   )
@@ -384,13 +391,17 @@ function NotesTab({ centres, notes, loading, profile, range, setRange }: { centr
       />
       <Modal open={open} onCancel={() => setOpen(false)} onOk={run} okText="Post note" title="Credit / debit note" destroyOnHidden>
         <Form form={form} layout="vertical" initialValues={{ kind: 'credit' }}>
+          <FormSection title="Note" description="A credit adds to the wallet; a debit reduces it.">
           <Form.Item name="centreId" label="B2B lab" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
           <div className="pt-grid2">
             <Form.Item name="kind" label="Type"><Select options={[{ value: 'credit', label: 'Credit (adds to wallet)' }, { value: 'debit', label: 'Debit (reduces wallet)' }]} /></Form.Item>
-            <Form.Item name="amount" label="Amount (Rs)" rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="amount" label="Amount" rules={[{ required: true }]}><InputNumber min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
           </div>
-          <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'A reason is required' }]}><Input /></Form.Item>
-          <Form.Item name="remark" label="Remark"><Input /></Form.Item>
+          </FormSection>
+          <FormSection title="Why">
+            <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'A reason is required' }]}><Input /></Form.Item>
+            <Form.Item name="remark" label="Remark"><Input /></Form.Item>
+          </FormSection>
         </Form>
       </Modal>
     </>
@@ -481,13 +492,15 @@ function DiscountTab({ centres, txns, profile, rates, orders }: { centres: B2BCe
   return (
     <div className="pt-stack">
       <Section title="Percentage discount on a price list">
-        <Toolbar>
-          <Select aria-label="B2B lab" placeholder="B2B lab" style={{ minWidth: 220 }} value={cid} onChange={setCid} showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} />
-          <Select aria-label="Department scope" style={{ width: 200 }} value={dept} onChange={setDept} options={[{ value: 'all', label: 'All departments' }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} />
-          <Select aria-label="Discount base" style={{ width: 200 }} value={base} onChange={setBase} options={[{ value: 'mrp', label: 'Off MRP' }, { value: 'current', label: 'Off current list price' }]} />
-          <InputNumber aria-label="Discount percent" placeholder="Discount %" min={0} max={100} value={pct} onChange={setPct} />
-          <Button variant="primary" onClick={apply} disabled={!cid || pct === null}>Apply discount</Button>
-        </Toolbar>
+        <Form layout="vertical" component="div">
+          <FieldGrid min={200}>
+            <Form.Item label="B2B lab"><Select aria-label="B2B lab" placeholder="Choose a lab" value={cid} onChange={setCid} showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
+            <Form.Item label="Department scope"><Select aria-label="Department scope" value={dept} onChange={setDept} options={[{ value: 'all', label: 'All departments' }, ...departments.map((d) => ({ value: d.id, label: d.name }))]} /></Form.Item>
+            <Form.Item label="Discount base"><Select aria-label="Discount base" value={base} onChange={setBase} options={[{ value: 'mrp', label: 'Off MRP' }, { value: 'current', label: 'Off current list price' }]} /></Form.Item>
+            <Form.Item label="Discount"><InputNumber aria-label="Discount percent" min={0} max={100} value={pct} onChange={setPct} addonAfter="%" style={{ width: '100%' }} /></Form.Item>
+          </FieldGrid>
+        </Form>
+        <Toolbar><Button variant="primary" onClick={apply} disabled={!cid || pct === null}>Apply discount</Button></Toolbar>
         <p className="pt-muted" style={{ margin: 0 }}>Rewrites every test and package price in the lab's list. Review it afterwards in Price list.</p>
       </Section>
       <Section title="Discount on due bills (credit note)">
@@ -510,11 +523,13 @@ function DiscountTab({ centres, txns, profile, rates, orders }: { centres: B2BCe
         />
       </Section>
       <Section title="Record a discount against dues">
-        <Form form={form} layout="inline" initialValues={{ mode: 'cash' }} style={{ rowGap: 12 }}>
-          <Form.Item name="centreId" rules={[{ required: true }]}><Select aria-label="B2B lab" placeholder="B2B lab" style={{ minWidth: 200 }} showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
-          <Form.Item name="amount" rules={[{ required: true }]}><InputNumber aria-label="Discount amount in rupees" placeholder="Amount (Rs)" min={0} precision={2} /></Form.Item>
-          <Form.Item name="mode"><Select aria-label="Mode" style={{ width: 130 }} options={MODES.filter((m) => m.value !== 'online')} /></Form.Item>
-          <Form.Item name="reason" rules={[{ required: true, message: 'Reason required' }]}><Input aria-label="Reason" placeholder="Reason" style={{ width: 220 }} /></Form.Item>
+        <Form form={form} layout="vertical" initialValues={{ mode: 'cash' }}>
+          <FieldGrid min={200}>
+            <Form.Item name="centreId" label="B2B lab" rules={[{ required: true }]}><Select aria-label="B2B lab" placeholder="Choose a lab" showSearch optionFilterProp="label" options={centres.map((c) => ({ value: c.id, label: c.name }))} /></Form.Item>
+            <Form.Item name="amount" label="Amount" rules={[{ required: true }]}><InputNumber aria-label="Discount amount in rupees" min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="mode" label="Mode"><Select aria-label="Mode" options={MODES.filter((m) => m.value !== 'online')} /></Form.Item>
+            <Form.Item name="reason" label="Reason" rules={[{ required: true, message: 'Reason required' }]}><Input aria-label="Reason" /></Form.Item>
+          </FieldGrid>
           <Button onClick={record}>Record discount</Button>
         </Form>
       </Section>
@@ -557,39 +572,39 @@ function CentreDrawer({ value, onClose }: { value: Partial<B2BCentre> | null; on
   }
   const init: Record<string, unknown> = { paymentMethod: 'manual', creditType: 'creditLimit', ...value, securityRs: (value?.securityAmount ?? 0) / 100, creditLimitRs: (value?.creditLimit ?? 0) / 100, lowRs: (value?.lowBalanceAlert ?? 0) / 100 }
   for (const k of Object.keys(SETTING_LABELS) as (keyof B2BSettings)[]) init[`s_${k}`] = !!value?.settings?.[k]
-  const sw = (k: keyof B2BSettings) => <Form.Item key={k} name={`s_${k}`} label={SETTING_LABELS[k]} valuePropName="checked"><Switch /></Form.Item>
+  const sw = (k: keyof B2BSettings) => <SettingRow key={k} label={SETTING_LABELS[k]} htmlFor={`b2b-s-${k}`}><Form.Item name={`s_${k}`} valuePropName="checked" noStyle><Switch id={`b2b-s-${k}`} /></Form.Item></SettingRow>
   return (
     <Drawer open={!!value} onClose={onClose} size="large" destroyOnHidden title={value?.id ? 'Edit B2B lab' : 'New B2B lab'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={init}>
-        <Section title="Lab details">
+        <Section title="Lab details" description="Who the B2B lab is and the email it signs in with.">
           <div className="pt-grid2">
             <Form.Item name="name" label="Lab name" rules={[{ required: true }]}><Input /></Form.Item>
             <Form.Item name="code" label="Centre code"><Input /></Form.Item>
             <Form.Item name="city" label="City"><Input /></Form.Item>
             <Form.Item name="phone" label="Phone"><Input /></Form.Item>
             <Form.Item name="email" label="Login email (portal)" rules={[{ required: true, type: 'email', message: 'A valid email is required' }]}><Input /></Form.Item>
-            <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
           </div>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+          <SettingRow label="Active" help="Inactive labs cannot place new bookings." htmlFor="b2b-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="b2b-active" /></Form.Item></SettingRow>
         </Section>
-        <Section title="Financial management">
+        <Section title="Financial management" description="Credit, wallet limits, invoicing and bank details for billing this lab.">
           <div className="pt-grid2">
             <Form.Item name="creditType" label="Credit type" style={{ gridColumn: "1 / -1" }}><Select options={[{ value: 'prepaid', label: 'Prepaid wallet (bills must be covered by the balance)' }, { value: 'creditLimit', label: 'Credit limit (balance may go negative to the limit)' }, { value: 'rollingAdvance', label: 'Rolling advance (limit is the advance kept in the wallet)' }]} /></Form.Item>
-            <Form.Item name="creditLimitRs" label="Credit limit (Rs)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="securityRs" label="Security amount (Rs)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="lowRs" label="Low balance alert (Rs)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="creditLimitRs" label="Credit limit"><InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="securityRs" label="Security amount"><InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="lowRs" label="Low balance alert"><InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
             <Form.Item name="gstin" label="GSTIN"><Input /></Form.Item>
             <Form.Item name="invoiceCycle" label="Invoice cycle" tooltip="Blank uses the lab default (Lab settings > B2B)"><Select allowClear options={[{ value: 'perBill', label: 'Per bill' }, { value: 'weekly', label: 'Weekly' }, { value: 'fortnightly', label: 'Fortnightly' }, { value: 'monthly', label: 'Monthly' }]} /></Form.Item>
             <Form.Item name="paymentMethod" label="Payment method"><Select options={[{ value: 'manual', label: 'Manual' }, { value: 'online', label: 'Pay online' }]} /></Form.Item>
           </div>
           <Form.Item name="paymentTerms" label="Payment terms"><Input.TextArea rows={2} /></Form.Item>
         </Section>
-        <Section title="Tab access">
-          <div className="pt-grid3">{TAB_SETTINGS.map(sw)}</div>
+        <Section title="Tab access" description="Pages the B2B lab can open in its portal.">
+          <div>{TAB_SETTINGS.map(sw)}</div>
         </Section>
-        <Section title="Permissions and security">
-          <div className="pt-grid2">{(Object.keys(SETTING_LABELS) as (keyof B2BSettings)[]).filter((k) => !TAB_SETTINGS.includes(k)).map(sw)}</div>
+        <Section title="Permissions and security" description="What the B2B lab may do and which limits apply to it.">
+          <div>{(Object.keys(SETTING_LABELS) as (keyof B2BSettings)[]).filter((k) => !TAB_SETTINGS.includes(k)).map(sw)}</div>
         </Section>
         <Section title="Bank details">
           <div className="pt-grid2">
@@ -628,10 +643,11 @@ function BulkPriceEdit({ open, onClose }: { open: boolean; onClose: () => void }
   return (
     <Modal open={open} onCancel={onClose} onOk={run} okText="Apply" okButtonProps={{ disabled: !ids.length || pct === null }} title="Bulk price edit" destroyOnHidden>
       <div className="pt-stack">
+        <FormSection title="Bulk price edit" description="Changes every price already in the chosen lists by the percentage.">
         <Select mode="multiple" aria-label="Price lists" placeholder="Choose price lists" optionFilterProp="label" value={ids} onChange={setIds}
           options={rates.data.map((r) => ({ value: r.id, label: `${r.name} (${r.kind})` }))} />
-        <InputNumber aria-label="Percent change" placeholder="Change in % (negative to reduce)" value={pct} onChange={setPct} style={{ width: '100%' }} />
-        <p className="pt-muted" style={{ margin: 0 }}>Changes every price already in the chosen lists by the percentage.</p>
+        <InputNumber aria-label="Percent change" placeholder="Change (negative to reduce)" addonAfter="%" value={pct} onChange={setPct} style={{ width: '100%' }} />
+        </FormSection>
       </div>
     </Modal>
   )

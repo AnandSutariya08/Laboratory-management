@@ -36,6 +36,7 @@ import InterpretationDrawer from '../../components/ai/InterpretationDrawer'
 import { PageHeader } from '../../design/PageHeader'
 import { Card } from '../../design/Card'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { Glass } from '../../design/Glass'
 import { StatusChip } from '../../design/StatusChip'
 import { EmptyState } from '../../design/EmptyState'
@@ -1227,19 +1228,26 @@ function ResultEntry() {
         onCancel={() => setMachineFor(null)}
         onApply={(p, mic) => applyMachine(machineFor!, p, mic)}
       />
-      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} title="Patient and bill details" width={420}>
-        <div className="re-field"><label>Patient</label><div>{order.patientName}, {ageText(order)} / {genderText(order.gender)}</div></div>
-        <div className="re-field"><label>Patient no</label><div>{displayId(order, settings.registration.idDisplay)}</div></div>
-        <div className="re-field"><label>Bill and barcode</label><div>{order.billNo} / {order.barcode}</div></div>
-        <div className="re-field"><label>Registered</label><div>{fmtDateTime(order.createdAt)}</div></div>
-        <div className="re-field"><label>Collected</label><div>{fmtDateTime(order.collectedAt)}</div></div>
-        <div className="re-field"><label>Received</label><div>{fmtDateTime(order.receivedAt)}</div></div>
-        {order.note && <div className="re-field"><label>Bill note</label><div>{order.note}</div></div>}
-        <div className="re-field"><label>Age at collection</label><div>{Math.floor(ageDays / 365.25) >= 1 ? `${Math.floor(ageDays / 365.25)} years` : `${ageDays} days`}</div></div>
-        <div className="re-field">
-          <label>Collection photos</label>
+      <Drawer open={moreOpen} onClose={() => setMoreOpen(false)} title="Patient and bill details" width="min(480px, 100vw)">
+        <FormSection title="Patient">
+          <FieldGrid min={170}>
+            <div className="re-field"><label>Patient</label><div>{order.patientName}, {ageText(order)} / {genderText(order.gender)}</div></div>
+            <div className="re-field"><label>Patient no</label><div>{displayId(order, settings.registration.idDisplay)}</div></div>
+            <div className="re-field"><label>Age at collection</label><div>{Math.floor(ageDays / 365.25) >= 1 ? `${Math.floor(ageDays / 365.25)} years` : `${ageDays} days`}</div></div>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Bill and sample">
+          <FieldGrid min={170}>
+            <div className="re-field"><label>Bill and barcode</label><div>{order.billNo} / {order.barcode}</div></div>
+            <div className="re-field"><label>Registered</label><div>{fmtDateTime(order.createdAt)}</div></div>
+            <div className="re-field"><label>Collected</label><div>{fmtDateTime(order.collectedAt)}</div></div>
+            <div className="re-field"><label>Received</label><div>{fmtDateTime(order.receivedAt)}</div></div>
+          </FieldGrid>
+          {order.note && <div className="re-field"><label>Bill note</label><div>{order.note}</div></div>}
+        </FormSection>
+        <FormSection title="Collection photos">
           <CollectionPhotos orderId={orderId} files={order.collectionPhotoFiles} legacy={order.collectionPhotos} canAdd={canEnter} who={who} />
-        </div>
+        </FormSection>
       </Drawer>
     </div>
   )

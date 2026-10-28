@@ -1,6 +1,6 @@
 import { lazy, Suspense, useMemo, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { Alert, App as AntApp, DatePicker, Form, Input, InputNumber, Modal, Result, Select, Spin, Table } from 'antd'
+import { Alert, App as AntApp, DatePicker, Form, Input, InputNumber, Modal, Result, Select, Space, Spin, Table } from 'antd'
 import { addDoc, serverTimestamp } from 'firebase/firestore'
 import { col } from '../../lib/db'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -11,6 +11,7 @@ import { PaymentStatusChip } from '../../components/billing/PaymentStatusChip'
 import { tatDue } from '../patient/lib'
 import { useCatalogueMaps, useLabSettings } from '../../hooks/useCatalogue'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { PageHeader } from '../../design/PageHeader'
 import { StatusChip } from '../../design/StatusChip'
 import { formatINR, toPaise } from '../../lib/money'
@@ -239,19 +240,31 @@ function NewBill() {
       <PageHeader title="New bill" subtitle="Register a patient and bill tests at your agreed rates." />
       <Panel>
         <Form form={form} layout="vertical" initialValues={{ gender: 'male', ageUnit: 'year', items: [] }} disabled={saving}>
-          <div className="portal__row">
-            <Form.Item name="firstName" label="First name" rules={[{ required: true }]}><Input /></Form.Item>
-            <Form.Item name="lastName" label="Last name"><Input /></Form.Item>
-            <Form.Item name="gender" label="Gender"><Select style={{ width: 120 }} options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} /></Form.Item>
-            <Form.Item name="ageValue" label="Age" rules={[{ required: true, type: 'number', min: 0 }]}><InputNumber min={0} /></Form.Item>
-            <Form.Item name="ageUnit" label="Unit"><Select style={{ width: 110 }} options={[{ value: 'year', label: 'Years' }, { value: 'month', label: 'Months' }, { value: 'day', label: 'Days' }]} /></Form.Item>
-            <Form.Item name="phone" label="Phone" rules={[{ required: true, pattern: /^\d{10}$/, message: '10 digit mobile' }]}><Input inputMode="tel" maxLength={10} /></Form.Item>
-            <Form.Item name="email" label="Email (report delivery)" rules={[{ type: 'email' }]}><Input /></Form.Item>
-            {(p.role !== 'b2b' || canB2B(p.flags, 'addReferral')) && <Form.Item name="referrer" label="Referring doctor (name)"><Input maxLength={80} /></Form.Item>}
-          </div>
-          <Form.Item name="items" label="Tests and packages" rules={[{ required: true, type: 'array', min: 1, message: 'Pick at least one test' }]}>
-            <Select mode="multiple" showSearch optionFilterProp="label" placeholder="Search tests" options={options.map((o) => ({ value: o.value, label: o.label }))} />
-          </Form.Item>
+          <FormSection title="Patient details">
+            <FieldGrid min={200}>
+              <Form.Item name="firstName" label="First name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="lastName" label="Last name"><Input /></Form.Item>
+              <Form.Item name="gender" label="Gender"><Select options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} /></Form.Item>
+              <Form.Item label="Age" required style={{ marginBottom: 0 }}>
+                <Space.Compact style={{ width: '100%' }}>
+                  <Form.Item name="ageValue" noStyle rules={[{ required: true, type: 'number', min: 0 }]}><InputNumber min={0} style={{ width: '60%' }} aria-label="Age" /></Form.Item>
+                  <Form.Item name="ageUnit" noStyle><Select style={{ width: '40%' }} aria-label="Age unit" options={[{ value: 'year', label: 'Years' }, { value: 'month', label: 'Months' }, { value: 'day', label: 'Days' }]} /></Form.Item>
+                </Space.Compact>
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Contact" description="Used to deliver the report.">
+            <FieldGrid min={220}>
+              <Form.Item name="phone" label="Phone" rules={[{ required: true, pattern: /^\d{10}$/, message: '10 digit mobile' }]}><Input inputMode="tel" maxLength={10} /></Form.Item>
+              <Form.Item name="email" label="Email (report delivery)" rules={[{ type: 'email' }]}><Input /></Form.Item>
+              {(p.role !== 'b2b' || canB2B(p.flags, 'addReferral')) && <Form.Item name="referrer" label="Referring doctor (name)"><Input maxLength={80} /></Form.Item>}
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Tests and packages" description="Pick everything to bill; the total shows below.">
+            <Form.Item name="items" label="Tests and packages" rules={[{ required: true, type: 'array', min: 1, message: 'Pick at least one test' }]}>
+              <Select mode="multiple" showSearch optionFilterProp="label" placeholder="Search tests" options={options.map((o) => ({ value: o.value, label: o.label }))} />
+            </Form.Item>
+          </FormSection>
         </Form>
         <div className="portal__lines">
           {picked.map((k) => {
@@ -379,14 +392,16 @@ function TopUpRequest({ open, onClose, centre }: { open: boolean; onClose: () =>
     }
   }
   return (
-    <Modal title="Request a top-up" open={open} onCancel={onClose} onOk={submit} okText="Send request" confirmLoading={saving} destroyOnHidden>
+    <Modal title="Request a top-up" width="min(520px, calc(100vw - 32px))" open={open} onCancel={onClose} onOk={submit} okText="Send request" confirmLoading={saving} destroyOnHidden>
       <Form form={form} layout="vertical" initialValues={{ mode: 'upi' }}>
-        <Form.Item name="amount" label="Amount paid (₹)" rules={[{ required: true, message: 'Enter the amount' }, { type: 'number', min: 1, message: 'Must be at least ₹1' }]}>
-          <InputNumber min={1} precision={2} style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="mode" label="Paid by" rules={[{ required: true }]}>
-          <Select options={['upi', 'bank', 'cheque', 'cash'].map((m) => ({ value: m, label: MODE_LABEL[m] }))} />
-        </Form.Item>
+        <FieldGrid min={180}>
+          <Form.Item name="amount" label="Amount paid" rules={[{ required: true, message: 'Enter the amount' }, { type: 'number', min: 1, message: 'Must be at least ₹1' }]}>
+            <InputNumber min={1} precision={2} addonBefore="₹" style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="mode" label="Paid by" rules={[{ required: true }]}>
+            <Select options={['upi', 'bank', 'cheque', 'cash'].map((m) => ({ value: m, label: MODE_LABEL[m] }))} />
+          </Form.Item>
+        </FieldGrid>
         <Form.Item name="reference" label="Transaction ID / cheque number" rules={[{ required: mode !== 'cash', whitespace: true, message: 'Needed so the lab can match your payment' }]}>
           <Input />
         </Form.Item>

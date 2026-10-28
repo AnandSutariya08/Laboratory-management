@@ -9,6 +9,7 @@ import { useLabSettings } from '../../hooks/useCatalogue'
 import { PageHeader } from '../../design/PageHeader'
 import { Card } from '../../design/Card'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { Segmented } from '../../design/Segmented'
 import { SkeletonCard } from '../../design/Skeletons'
 import SmartPages, { type SmartModel } from './SmartPages'
@@ -146,7 +147,7 @@ export default function SmartReportPage() {
   }
 
   const Toggle = ({ label, k }: { label: string; k: 'showHistoryGraph' | 'showDoctorNote' | 'showAiTag' | 'showWellness' | 'smartReportLink' | 'includeOriginal' | 'showSummaryCounts' | 'showRangeBar' | 'showHealthScore' | 'showAllResults' | 'showPageHeader' }) => (
-    <div className="sr-toggle"><span id={`sr-${k}`}>{label}</span><Switch aria-labelledby={`sr-${k}`} checked={s[k]} onChange={(v) => set(k, v)} /></div>
+    <SettingRow label={<span id={`sr-${k}`}>{label}</span>}><Switch aria-labelledby={`sr-${k}`} checked={s[k]} onChange={(v) => set(k, v)} /></SettingRow>
   )
 
   return (
@@ -166,19 +167,33 @@ export default function SmartReportPage() {
           <div className="sr-form">
             {tab === 'cover' ? (
               <>
-                <div className="sr-field">
-                  <label htmlFor="sr-logo">Logo (about 595 x 80 px, up to 200 KB)</label>
-                  <input id="sr-logo" type="file" accept="image/*" onChange={(e) => onLogo(e.target.files?.[0])} />
-                  {s.logoDataUrl && <Button onClick={() => set('logoDataUrl', '')}>Remove logo</Button>}
-                </div>
+                <FormSection title="Branding" description="Your lab details shown on the cover and page headers.">
+                <FieldGrid min={220}>
                 <div className="sr-field">
                   <label htmlFor="sr-lab">Lab name</label>
                   <Input id="sr-lab" value={s.labName} onChange={(e) => set('labName', e.target.value)} />
                 </div>
                 <div className="sr-field">
                   <label htmlFor="sr-addr">Lab address</label>
-                  <Input.TextArea id="sr-addr" rows={3} value={s.labAddress} onChange={(e) => set('labAddress', e.target.value)} />
+                  <Input.TextArea id="sr-addr" rows={2} value={s.labAddress} onChange={(e) => set('labAddress', e.target.value)} />
                 </div>
+                </FieldGrid>
+                <div className="sr-field">
+                  <label htmlFor="sr-logo">Logo (about 595 x 80 px, up to 200 KB)</label>
+                  <input id="sr-logo" type="file" accept="image/*" onChange={(e) => onLogo(e.target.files?.[0])} />
+                  {s.logoDataUrl && <Button onClick={() => set('logoDataUrl', '')}>Remove logo</Button>}
+                </div>
+                <div className="sr-field">
+                  <label htmlFor="sr-lh">Letterhead image (compressed to 300 KB, used behind the cover and page headers)</label>
+                  <input id="sr-lh" type="file" accept="image/*" onChange={(e) => onLetterhead(e.target.files?.[0])} />
+                  {s.letterheadDataUrl && <Button onClick={() => set('letterheadDataUrl', '')}>Remove letterhead</Button>}
+                </div>
+                <div className="sr-field">
+                  <small>The doctor signature on the original report comes from <Link to="/settings">Signatories in Settings</Link>.</small>
+                </div>
+                </FormSection>
+                <FormSection title="Cover" description="What the first page says and how it looks.">
+                <FieldGrid min={220}>
                 <div className="sr-field">
                   <label htmlFor="sr-title">Cover title</label>
                   <Input id="sr-title" maxLength={40} value={s.coverTitle} onChange={(e) => set('coverTitle', e.target.value)} />
@@ -187,6 +202,7 @@ export default function SmartReportPage() {
                   <label htmlFor="sr-sub">Cover subtitle</label>
                   <Input id="sr-sub" maxLength={90} value={s.coverSubtitle} onChange={(e) => set('coverSubtitle', e.target.value)} />
                 </div>
+                </FieldGrid>
                 <div className="sr-field">
                   <label id="sr-style-l">Cover design</label>
                   <div className="sr-styles" role="group" aria-labelledby="sr-style-l">
@@ -199,6 +215,19 @@ export default function SmartReportPage() {
                     ))}
                   </div>
                 </div>
+                <div className="sr-field">
+                  <label id="sr-fields-l">Fields on the cover</label>
+                  <Checkbox.Group
+                    aria-labelledby="sr-fields-l"
+                    value={s.coverFields}
+                    onChange={(v) => set('coverFields', v as CoverField[])}
+                    options={(Object.keys(COVER_FIELD_LABEL) as CoverField[]).map((k) => ({ value: k, label: COVER_FIELD_LABEL[k] }))}
+                    style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 'var(--s-2) var(--s-3)' }}
+                  />
+                </div>
+                <Toggle label="Show the AI generated tag on the cover" k="showAiTag" />
+                </FormSection>
+                <FormSection title="Look and feel" description="Colours, type and card style across every page.">
                 <div className="sr-field">
                   <label id="sr-theme-l">Theme colour</label>
                   <div className="sr-swatches" role="group" aria-labelledby="sr-theme-l">
@@ -217,36 +246,11 @@ export default function SmartReportPage() {
                   <span className="sr-field__label">Card style</span>
                   <Segmented aria-label="Card style" value={s.cardStyle} onChange={(v) => set('cardStyle', v)} options={CARD_STYLES.map((f) => ({ value: f.value, label: f.label }))} />
                 </div>
-                <div className="sr-field">
-                  <label htmlFor="sr-lh">Letterhead image (compressed to 300 KB, used behind the cover and page headers)</label>
-                  <input id="sr-lh" type="file" accept="image/*" onChange={(e) => onLetterhead(e.target.files?.[0])} />
-                  {s.letterheadDataUrl && <Button onClick={() => set('letterheadDataUrl', '')}>Remove letterhead</Button>}
-                </div>
-                <div className="sr-field">
-                  <small>The doctor signature on the original report comes from <Link to="/settings">Signatories in Settings</Link>.</small>
-                </div>
-                <Toggle label="Show the AI generated tag on the cover" k="showAiTag" />
-                <div className="sr-field">
-                  <label id="sr-fields-l">Fields on the cover</label>
-                  <Checkbox.Group
-                    aria-labelledby="sr-fields-l"
-                    value={s.coverFields}
-                    onChange={(v) => set('coverFields', v as CoverField[])}
-                    options={(Object.keys(COVER_FIELD_LABEL) as CoverField[]).map((k) => ({ value: k, label: COVER_FIELD_LABEL[k] }))}
-                    style={{ display: 'grid', gap: 6 }}
-                  />
-                </div>
+                </FormSection>
               </>
             ) : (
               <>
-                <div className="sr-field">
-                  <label htmlFor="sr-email">Email address shown on each page</label>
-                  <Input id="sr-email" type="email" value={s.email} onChange={(e) => set('email', e.target.value)} />
-                </div>
-                <div className="sr-field">
-                  <label htmlFor="sr-foot">Footer text (80 characters)</label>
-                  <Input id="sr-foot" maxLength={80} showCount value={s.footerText} onChange={(e) => set('footerText', e.target.value)} />
-                </div>
+                <FormSection title="Page content" description="Choose which sections appear in the smart report.">
                 <Toggle label="Page header with lab name on every page" k="showPageHeader" />
                 <Toggle label="Health score ring" k="showHealthScore" />
                 <Toggle label="Body systems overview" k="showWellness" />
@@ -255,12 +259,29 @@ export default function SmartReportPage() {
                 <Toggle label="Doctor's note" k="showDoctorNote" />
                 <Toggle label="Summary counts (normal, abnormal, critical)" k="showSummaryCounts" />
                 <Toggle label="Range bar for numeric values" k="showRangeBar" />
+                </FormSection>
+                <FormSection title="Footer and contact" description="Shown on every page.">
+                <FieldGrid min={220}>
+                <div className="sr-field">
+                  <label htmlFor="sr-email">Email address shown on each page</label>
+                  <Input id="sr-email" type="email" value={s.email} onChange={(e) => set('email', e.target.value)} />
+                </div>
+                <div className="sr-field">
+                  <label htmlFor="sr-foot">Footer text (80 characters)</label>
+                  <Input id="sr-foot" maxLength={80} showCount value={s.footerText} onChange={(e) => set('footerText', e.target.value)} />
+                </div>
+                </FieldGrid>
+                </FormSection>
+                <FormSection title="Original report and sending">
                 <Toggle label="Append the original signed report" k="includeOriginal" />
                 <Toggle label="Offer the smart report link by default when sending" k="smartReportLink" />
+                </FormSection>
+                <FormSection title="Disclaimer">
                 <div className="sr-field">
                   <label htmlFor="sr-disc">Disclaimer</label>
                   <Input.TextArea id="sr-disc" rows={5} value={s.disclaimer} onChange={(e) => set('disclaimer', e.target.value)} />
                 </div>
+                </FormSection>
               </>
             )}
           </div>

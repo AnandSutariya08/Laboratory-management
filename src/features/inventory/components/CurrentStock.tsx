@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { App, Button, DatePicker, Input, Modal, Popconfirm, Select, Space, Table } from 'antd'
+import { App, Button, DatePicker, Form, Input, Modal, Popconfirm, Select, Space, Table } from 'antd'
 import dayjs from 'dayjs'
 import { DownloadOutlined } from '@ant-design/icons'
 import type { InventoryData } from '../lib/useInventory'
@@ -7,6 +7,7 @@ import { CATEGORIES, type InventoryItem, type StockBatch } from '../types'
 import { daysToExpiry, deleteBatch, editBatch, EXPIRY_WARN_DAYS, isExpired, markExpired, nextLot } from '../lib/stock'
 import { downloadCsv } from '../lib/csv'
 import { formatINR } from '../../../lib/money'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import { AdjustModal, ConsumeModal } from './StockModals'
 import MovementDrawer from './MovementDrawer'
 import { useActor } from './useActor'
@@ -186,12 +187,15 @@ export default function CurrentStock({ inv }: { inv: InventoryData }) {
         }}
       />
       <Modal open={!!lotEdit} title={`Edit lot ${lotEdit?.b.lotNo ?? ''}`} onCancel={() => setLotEdit(null)} onOk={saveLot} okText="Save" destroyOnHidden>
-        <Space direction="vertical" style={{ width: '100%' }}>
-          <Input aria-label="Lot number" value={lotEdit?.lotNo} onChange={(e) => lotEdit && setLotEdit({ ...lotEdit, lotNo: e.target.value })} />
-          <DatePicker aria-label="Expiry date" style={{ width: '100%' }} value={lotEdit?.expiry ? dayjs(lotEdit.expiry) : null} onChange={(d) => lotEdit && setLotEdit({ ...lotEdit, expiry: d ? d.format('YYYY-MM-DD') : '' })} />
-          <Input aria-label="Location" placeholder="Location" value={lotEdit?.location} onChange={(e) => lotEdit && setLotEdit({ ...lotEdit, location: e.target.value })} />
-          <span className="qc-muted">The quantity cannot be edited here; use Adjust. The change is logged in the item's history.</span>
-        </Space>
+        <FormSection title="Lot details" description="The quantity cannot be edited here; use Adjust. The change is logged in the item's history.">
+          <Form layout="vertical" component="div">
+            <FieldGrid min={200}>
+              <Form.Item label="Lot number"><Input aria-label="Lot number" value={lotEdit?.lotNo} onChange={(e) => lotEdit && setLotEdit({ ...lotEdit, lotNo: e.target.value })} /></Form.Item>
+              <Form.Item label="Expiry date"><DatePicker aria-label="Expiry date" style={{ width: '100%' }} value={lotEdit?.expiry ? dayjs(lotEdit.expiry) : null} onChange={(d) => lotEdit && setLotEdit({ ...lotEdit, expiry: d ? d.format('YYYY-MM-DD') : '' })} /></Form.Item>
+              <Form.Item label="Location"><Input aria-label="Location" value={lotEdit?.location} onChange={(e) => lotEdit && setLotEdit({ ...lotEdit, location: e.target.value })} /></Form.Item>
+            </FieldGrid>
+          </Form>
+        </FormSection>
       </Modal>
       <Modal open={!!lotDel} title={`Remove lot ${lotDel?.b.lotNo ?? ''}`} onCancel={() => setLotDel(null)} onOk={removeLot} okText="Remove lot" okButtonProps={{ danger: true }} destroyOnHidden>
         <p>{lotDel?.b.qtyRemaining} left in this lot will be written off. The history is kept.</p>

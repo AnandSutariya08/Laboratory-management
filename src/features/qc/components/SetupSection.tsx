@@ -22,6 +22,7 @@ import { ConnectAnalyserButton } from './ConnectAnalyser'
 import { QcSettingsTab, SchedulesTab } from './SetupExtras'
 import { downloadCsv } from '../../../components/billing/helpers'
 import { dialogWidth } from '../../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../../design/FormLayout'
 
 const { Text } = Typography
 
@@ -158,31 +159,37 @@ function Machines() {
           },
         ]}
       />
-      <Modal title={editing?.id ? 'Edit machine' : 'Add machine'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(560)}>
+      <Modal title={editing?.id ? 'Edit machine' : 'Add machine'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(680)}>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Machine name" rules={[{ required: true }]}>
-            <Input />
-          </Form.Item>
-          <Space size="middle" wrap>
-            <Form.Item name="departmentId" label="Department">
-              <Select style={{ width: 240 }} allowClear options={maps.departments.map((d) => ({ value: d.id, label: d.name }))} />
+          <FormSection title="Machine details">
+            <FieldGrid min={220}>
+              <Form.Item name="name" label="Machine name" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="departmentId" label="Department">
+                <Select allowClear options={maps.departments.map((d) => ({ value: d.id, label: d.name }))} />
+              </Form.Item>
+              <Form.Item name="model" label="Model">
+                <Input />
+              </Form.Item>
+              <Form.Item name="serial" label="Serial number">
+                <Input />
+              </Form.Item>
+              <Form.Item name="machineCode" label="Machine ID">
+                <Input />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Tests and status">
+            <Form.Item name="testIds" label="Tests this machine runs" extra="Used to link QC status to result approval.">
+              <Select mode="multiple" optionFilterProp="label" options={maps.tests.map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} />
             </Form.Item>
-            <Form.Item name="serial" label="Serial number">
-              <Input style={{ width: 240 }} />
-            </Form.Item>
-            <Form.Item name="machineCode" label="Machine ID">
-              <Input style={{ width: 240 }} />
-            </Form.Item>
-            <Form.Item name="model" label="Model">
-              <Input style={{ width: 240 }} />
-            </Form.Item>
-          </Space>
-          <Form.Item name="testIds" label="Tests this machine runs" extra="Used to link QC status to result approval.">
-            <Select mode="multiple" optionFilterProp="label" options={maps.tests.map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} />
-          </Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked">
-            <Switch />
-          </Form.Item>
+            <SettingRow label="Active" help="Inactive machines are hidden from QC entry.">
+              <Form.Item name="active" valuePropName="checked" noStyle>
+                <Switch aria-label="Active" />
+              </Form.Item>
+            </SettingRow>
+          </FormSection>
         </Form>
       </Modal>
     </>
@@ -456,9 +463,15 @@ function Materials() {
         }}
         destroyOnHidden
       >
-        <p>Runs recorded before the reset are ignored by the 2-2s, 4-1s and 10x rules (they stay in the history). The reset is recorded with your name and reason.</p>
-        <Select style={{ width: '100%', marginBottom: 12 }} allowClear placeholder="All machines running this lot" value={resetMachine || undefined} onChange={(v) => setResetMachine(v ?? '')} options={machineList.map((m) => ({ value: m.id, label: m.name }))} aria-label="Machine to reset" />
-        <Input.TextArea rows={2} placeholder="Reason (required)" value={resetReason} onChange={(e) => setResetReason(e.target.value)} />
+        <p className="qc-note">Runs recorded before the reset are ignored by the 2-2s, 4-1s and 10x rules (they stay in the history). The reset is recorded with your name and reason.</p>
+        <FormSection title="Reset details">
+          <SettingRow label="Machine" help="Leave empty to reset every machine running this lot." align="start">
+            <Select style={{ width: 260, maxWidth: '100%' }} allowClear placeholder="All machines running this lot" value={resetMachine || undefined} onChange={(v) => setResetMachine(v ?? '')} options={machineList.map((m) => ({ value: m.id, label: m.name }))} aria-label="Machine to reset" />
+          </SettingRow>
+          <SettingRow label="Reason" help="Calibration, reagent or lot change. Required." htmlFor="qc-reset-reason" align="start">
+            <Input.TextArea id="qc-reset-reason" rows={2} style={{ width: 320, maxWidth: '100%' }} placeholder="Reason (required)" value={resetReason} onChange={(e) => setResetReason(e.target.value)} />
+          </SettingRow>
+        </FormSection>
         {(reset?.seriesResets ?? []).length > 0 && <ul style={{ marginTop: 12 }}>{(reset?.seriesResets ?? []).map((r) => <li key={r.id}>{dayjs(r.at).format('DD MMM YYYY HH:mm')}: {r.reason} ({r.byName})</li>)}</ul>}
       </Modal>
       <Modal
@@ -470,59 +483,70 @@ function Materials() {
         width={dialogWidth(920)}
       >
         <Form form={form} layout="vertical">
-          <Space size="middle" wrap align="start">
-            <Form.Item name="name" label="Material name" rules={[{ required: true }]}>
-              <Input style={{ width: 220 }} placeholder="e.g. Bio-Rad Multiqual" />
+          <FormSection title="Material and lot">
+            <FieldGrid min={200}>
+              <Form.Item name="name" label="Material name" rules={[{ required: true }]}>
+                <Input placeholder="e.g. Bio-Rad Multiqual" />
+              </Form.Item>
+              <Form.Item name="manufacturer" label="Manufacturer">
+                <Input />
+              </Form.Item>
+              <Form.Item name="lotNo" label="Lot no" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="lifecycle" label="Lot status" tooltip="Expired is automatic from the expiry date">
+                <Select options={[{ value: 'planned', label: 'Planned' }, { value: 'active', label: 'Active' }, { value: 'retired', label: 'Retired' }]} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Dates">
+            <FieldGrid min={200}>
+              <Form.Item name="expiry" label="Expiry" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="startDate" label="In use from" tooltip="Before this date the lot is Planned and cannot be used for QC">
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="openedDate" label="Opened on">
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Levels and rules">
+            <FieldGrid min={240}>
+              <Form.Item name="levels" label="Levels" rules={[{ required: true }]}>
+                <Checkbox.Group className="qc-checkgrid" options={QC_LEVELS} />
+              </Form.Item>
+              <Form.Item name="targetSource" label="Target source">
+                <Select options={(Object.keys(SOURCE_LABEL) as TargetSource[]).map((k) => ({ value: k, label: SOURCE_LABEL[k] }))} />
+              </Form.Item>
+            </FieldGrid>
+            <Form.Item
+              name="rules"
+              label="Westgard rules enabled"
+              extra="1-2s is a warning only; the others reject the run."
+            >
+              <Checkbox.Group
+                className="qc-checkgrid"
+                options={WESTGARD_RULES.map((r) => ({ value: r, label: `${r}${DEFAULT_SEVERITY[r] === 'warning' ? ' (warning)' : ''}` }))}
+              />
             </Form.Item>
-            <Form.Item name="manufacturer" label="Manufacturer">
-              <Input style={{ width: 200 }} />
-            </Form.Item>
-            <Form.Item name="lotNo" label="Lot no" rules={[{ required: true }]}>
-              <Input style={{ width: 160 }} />
-            </Form.Item>
-            <Form.Item name="expiry" label="Expiry" rules={[{ required: true }]}>
-              <DatePicker />
-            </Form.Item>
-            <Form.Item name="startDate" label="In use from" tooltip="Before this date the lot is Planned and cannot be used for QC">
-              <DatePicker />
-            </Form.Item>
-            <Form.Item name="openedDate" label="Opened on">
-              <DatePicker />
-            </Form.Item>
-            <Form.Item name="lifecycle" label="Lot status" tooltip="Expired is automatic from the expiry date">
-              <Select style={{ width: 140 }} options={[{ value: 'planned', label: 'Planned' }, { value: 'active', label: 'Active' }, { value: 'retired', label: 'Retired' }]} />
-            </Form.Item>
-            <Form.Item name="targetSource" label="Target source">
-              <Select style={{ width: 220 }} options={(Object.keys(SOURCE_LABEL) as TargetSource[]).map((k) => ({ value: k, label: SOURCE_LABEL[k] }))} />
-            </Form.Item>
-          </Space>
-          <Form.Item name="levels" label="Levels" rules={[{ required: true }]}>
-            <Checkbox.Group options={QC_LEVELS} />
-          </Form.Item>
-          <Form.Item
-            name="rules"
-            label="Westgard rules enabled"
-            extra="1-2s is a warning only; the others reject the run."
-          >
-            <Checkbox.Group
-              options={WESTGARD_RULES.map((r) => ({ value: r, label: `${r}${DEFAULT_SEVERITY[r] === 'warning' ? ' (warning)' : ''}` }))}
-            />
-          </Form.Item>
-          {!!editing?.id && (
-            <Form.Item name="changeReason" label="Reason for changing targets (needed once QC results exist for this lot)">
-              <Input placeholder="e.g. new lab-established mean after 20 runs" />
-            </Form.Item>
-          )}
+            {!!editing?.id && (
+              <Form.Item name="changeReason" label="Reason for changing targets" extra="Needed once QC results exist for this lot.">
+                <Input placeholder="e.g. new lab-established mean after 20 runs" />
+              </Form.Item>
+            )}
+          </FormSection>
         </Form>
 
-        <Text strong>Target mean and SD per parameter</Text>
-        <div style={{ margin: '8px 0', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <InputNumber min={2} max={200} value={estimateN} onChange={(v) => setEstimateN(v ?? 20)} aria-label="Runs to establish targets from" addonAfter="runs" style={{ width: 120 }} />
+        <FormSection title="Target mean and SD per parameter" description="Enter the lot's assigned mean and SD for each level, or fill them from your own data or a CSV file.">
+        <div className="qc-addbar">
+          <InputNumber min={2} max={200} value={estimateN} onChange={(v) => setEstimateN(v ?? 20)} aria-label="Runs to establish targets from" addonAfter="runs" style={{ width: 140 }} />
           <Button onClick={establish} disabled={!editing?.id}>Establish targets from data</Button>
           <Button onClick={() => csvRef.current?.click()}>Import targets (CSV)</Button>
           <input ref={csvRef} type="file" accept=".csv,text/csv" hidden aria-label="Targets CSV" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importCsv(f) }} />
         </div>
-        <div style={{ margin: '8px 0', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="qc-addbar">
           <Select
             style={{ width: 220 }}
             aria-label="Machine for the targets"
@@ -532,7 +556,8 @@ function Materials() {
           />
           <Select
             showSearch
-            style={{ width: 340 }}
+            style={{ width: 340, maxWidth: '100%' }}
+            aria-label="Add all parameters of a test"
             placeholder="Add all parameters of a test..."
             optionFilterProp="label"
             value={null}
@@ -552,13 +577,13 @@ function Materials() {
             { title: 'Parameter', width: 160, render: (_, r) => paramName(maps.testById.get(r.testId), r.paramKey) },
             ...levels.map((lv) => ({
               title: lv,
-              width: 200,
+              width: 230,
               render: (_: unknown, r: TargetRow) => {
                 const i = rows.indexOf(r)
                 return (
                   <Space size={4}>
-                    <InputNumber size="small" style={{ width: 80 }} placeholder="mean" value={r.byLevel[lv]?.mean ?? null} onChange={(v) => setCell(i, lv, 'mean', v)} />
-                    <InputNumber size="small" style={{ width: 70 }} placeholder="SD" min={0} value={r.byLevel[lv]?.sd ?? null} onChange={(v) => setCell(i, lv, 'sd', v)} />
+                    <InputNumber size="small" style={{ width: 100 }} aria-label={`${lv} mean`} placeholder="mean" value={r.byLevel[lv]?.mean ?? null} onChange={(v) => setCell(i, lv, 'mean', v)} />
+                    <InputNumber size="small" style={{ width: 90 }} aria-label={`${lv} SD`} placeholder="SD" min={0} value={r.byLevel[lv]?.sd ?? null} onChange={(v) => setCell(i, lv, 'sd', v)} />
                   </Space>
                 )
               },
@@ -576,6 +601,7 @@ function Materials() {
           ]}
         />
         {usedTestIds.length === 0 && <Text type="secondary">Pick a test to add its parameters, then enter the lot's assigned mean and SD for each level.</Text>}
+        </FormSection>
       </Modal>
     </>
   )

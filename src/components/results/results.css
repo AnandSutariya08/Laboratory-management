@@ -49,3 +49,5 @@
 .re-keys { display: grid; grid-template-columns: auto 1fr; gap: var(--s-1) var(--s-3); font-size: var(--fs-dense); }
 .re-keys kbd { font-family: var(--font-mono, monospace); border: var(--outline-w) solid var(--c-outline); border-radius: var(--r-control); padding: 0 var(--s-1); background: var(--c-surface-container, transparent); }
 .re-batch th, .re-batch td { white-space: nowrap; }
+.re-field > .ant-select, .re-field > .ant-picker, .re-field > .ant-input-number, .re-field > .ant-input-number-group-wrapper { width: 100%; }
+.re-field > .ant-checkbox-group { display: grid; }

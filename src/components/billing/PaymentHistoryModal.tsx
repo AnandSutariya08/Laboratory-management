@@ -99,7 +99,7 @@ export default function PaymentHistoryModal({ order, open, onClose }: { order: O
         title={`Payment history · ${order.billNo}`}
         destroyOnHidden
       >
-        <div style={{ marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ marginBottom: 'var(--s-3)', display: 'flex', flexWrap: 'wrap', gap: 'var(--s-2) var(--s-3)', alignItems: 'center' }}>
           <PaymentStatusChip order={order} />
           <span className="bill-muted">Net {formatINR(order.net)} · paid {formatINR(order.paid)} · due {formatINR(order.due)}</span>
         </div>
@@ -124,6 +124,7 @@ export default function PaymentHistoryModal({ order, open, onClose }: { order: O
           loading={loading}
           pagination={false}
           dataSource={data}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'No payments recorded' }}
           columns={[
             { title: '#', width: 40, render: (_, __, i) => i + 1 },
@@ -182,7 +183,8 @@ export default function PaymentHistoryModal({ order, open, onClose }: { order: O
         <p>
           {reversing && `${modeLabel(reversing.mode)} ${formatINR(reversing.amount)} will be undone with a reversal entry. The original stays in the history.`}
         </p>
-        <Input.TextArea rows={2} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
+        <label className="bill-field-label" htmlFor="reverse-reason">Reason</label>
+        <Input.TextArea id="reverse-reason" rows={2} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} />
       </Modal>
       <ClearDueModal order={order} open={adding} onClose={() => setAdding(false)} />
     </>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { FormSection } from '../../design/FormLayout'
 import { Alert, Button, Col, DatePicker, Descriptions, Input, InputNumber, Radio, Row, Select, Space, Tag, TimePicker, Typography } from 'antd'
 import { DeleteOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
@@ -307,10 +308,10 @@ interface SectionProps {
 }
 
 const Field = ({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) => (
-  <div style={{ marginBottom: 12 }}>
-    <div style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>
+  <div style={{ marginBottom: 'var(--s-4)' }}>
+    <div style={{ fontSize: 'var(--fs-dense)', fontWeight: 600, color: 'var(--c-on-surface-variant)', marginBottom: 4 }}>
       {label}
-      {required && <span style={{ color: '#ef4444' }}> *</span>}
+      {required && <span style={{ color: 'var(--c-urgent)' }}> *</span>}
     </div>
     {children}
   </div>
@@ -366,6 +367,7 @@ export function PatientFields({ value: v, onChange }: SectionProps) {
 
   return (
     <>
+      <FormSection title="Contact">
       <Row gutter={12}>
         <Col xs={24} md={12}>
           <Field label="Phone" required>
@@ -410,7 +412,9 @@ export function PatientFields({ value: v, onChange }: SectionProps) {
           }
         />
       )}
-      {v.patientId && <Tag color="blue" style={{ marginBottom: 12 }}>Linked to existing patient</Tag>}
+      {v.patientId && <Tag color="blue" style={{ marginBottom: 12, width: 'fit-content' }}>Linked to existing patient</Tag>}
+      </FormSection>
+      <FormSection title="Patient">
       <Row gutter={12}>
         <Col xs={24} md={12}>
           <Field label="First name" required>
@@ -456,6 +460,10 @@ export function PatientFields({ value: v, onChange }: SectionProps) {
             />
           </Field>
         </Col>
+      </Row>
+      </FormSection>
+      <FormSection title="Address">
+      <Row gutter={12}>
         <Col xs={24}>
           <Field label="Address" required={v.type === 'homeCollection'}>
             <Input.TextArea rows={2} value={v.address} onChange={(e) => onChange({ address: e.target.value })} />
@@ -479,6 +487,7 @@ export function PatientFields({ value: v, onChange }: SectionProps) {
           </Field>
         </Col>
       </Row>
+      </FormSection>
     </>
   )
 }
@@ -494,6 +503,7 @@ export function ReferrerFields({ value: v, onChange }: SectionProps) {
   }
   return (
     <>
+      <FormSection title="Referral">
       <Row gutter={12}>
         <Col xs={24} md={12}>
           <Field label="Referring doctor">
@@ -524,6 +534,10 @@ export function ReferrerFields({ value: v, onChange }: SectionProps) {
             />
           </Field>
         </Col>
+      </Row>
+      </FormSection>
+      <FormSection title="Corporate">
+      <Row gutter={12}>
         <Col xs={24} md={12}>
           <Field label="Corporate client">
             <Select
@@ -546,6 +560,12 @@ export function ReferrerFields({ value: v, onChange }: SectionProps) {
             <Input value={v.companyName} onChange={(e) => onChange({ companyName: e.target.value })} />
           </Field>
         </Col>
+      </Row>
+      </FormSection>
+      <FormSection title="Pricing" description={rl
+          ? `Rate list from the referrer chain: ${rl.name}. You can override it below.`
+          : 'Rate list precedence: doctor, then hospital, then corporate client, then catalogue price.'}>
+      <Row gutter={12}>
         <Col xs={24}>
           <Field label="Rate list">
             <Select
@@ -559,11 +579,7 @@ export function ReferrerFields({ value: v, onChange }: SectionProps) {
           </Field>
         </Col>
       </Row>
-      <Typography.Text type="secondary">
-        {rl
-          ? `Rate list from the referrer chain: ${rl.name}. You can override it above.`
-          : 'Rate list precedence: doctor, then hospital, then corporate client, then catalogue price.'}
-      </Typography.Text>
+      </FormSection>
     </>
   )
 }
@@ -624,7 +640,8 @@ export function TestsFields({ value: v, onChange }: SectionProps) {
 
   return (
     <>
-      {list && <Tag color="blue" style={{ marginBottom: 8 }}>Rate list: {list.name}</Tag>}
+      <FormSection title="Tests and packages" description="Search the catalogue, or describe the tests in free text.">
+      {list && <Tag color="blue" style={{ marginBottom: 8, width: 'fit-content' }}>Rate list: {list.name}</Tag>}
       <Field label="Search tests / packages">
         <Select
           showSearch
@@ -665,6 +682,8 @@ export function TestsFields({ value: v, onChange }: SectionProps) {
         />
       </Field>
 
+      </FormSection>
+      <FormSection title="Other charges" description="Add a charge from the master, or a one-off charge.">
       <Field label="Other charges">
         <Select
           value={null}
@@ -681,7 +700,7 @@ export function TestsFields({ value: v, onChange }: SectionProps) {
       </Field>
       <Space.Compact style={{ width: '100%', marginBottom: 8 }}>
         <Input placeholder="New charge name" value={newName} onChange={(e) => setNewName(e.target.value)} aria-label="New charge name" />
-        <InputNumber min={0} placeholder="Amount (₹)" value={newPrice} onChange={setNewPrice} aria-label="New charge amount" style={{ width: 140 }} />
+        <InputNumber min={0} placeholder="Amount (₹)" value={newPrice} onChange={setNewPrice} aria-label="New charge amount" style={{ width: 160 }} />
         <Button
           disabled={!newName.trim() || !newPrice}
           onClick={() => {
@@ -706,6 +725,7 @@ export function TestsFields({ value: v, onChange }: SectionProps) {
           />
         </div>
       ))}
+      </FormSection>
     </>
   )
 }
@@ -714,6 +734,7 @@ export function ScheduleFields({ value: v, onChange }: SectionProps) {
   const custom = v.slot !== '' && !SLOT_GROUPS.some((g) => g.slots.includes(v.slot))
   return (
     <>
+      <FormSection title="When" description="Scheduling is optional; unscheduled bookings stay in the list.">
       <Field label="Type">
         <Radio.Group
           value={v.type}
@@ -768,6 +789,8 @@ export function ScheduleFields({ value: v, onChange }: SectionProps) {
           </div>
         ))}
       </Field>
+      </FormSection>
+      <FormSection title="Where">
       <Row gutter={12}>
         <Col xs={24} md={12}>
           <Field label="Locality / area">
@@ -796,7 +819,7 @@ export function ScheduleFields({ value: v, onChange }: SectionProps) {
           </Field>
         </Col>
       </Row>
-      <Typography.Text type="secondary">Scheduling is optional; unscheduled bookings stay in the list.</Typography.Text>
+      </FormSection>
     </>
   )
 }
@@ -805,6 +828,8 @@ export function ExtraFields({ value: v, onChange }: SectionProps) {
   const defs = useLabSettings().frontDesk?.bookingFields ?? []
   const setTyped = (k: string, val: string) => onChange({ typedFields: { ...v.typedFields, [k]: val } })
   return (
+    <>
+    <FormSection title="Booking details">
     <Row gutter={12}>
       {defs.map((f) => (
         <Col xs={24} md={12} key={f.key}>
@@ -842,16 +867,24 @@ export function ExtraFields({ value: v, onChange }: SectionProps) {
           <Input value={v.crmId} onChange={(e) => onChange({ crmId: e.target.value })} />
         </Field>
       </Col>
+    </Row>
+    </FormSection>
+    <FormSection title="Charges" description="Applied on top of the tests total.">
+    <Row gutter={12}>
       <Col xs={24} md={12}>
-        <Field label="Collection charge (₹)">
-          <InputNumber min={0} style={{ width: '100%' }} value={v.collectionCharge} onChange={(n) => onChange({ collectionCharge: n ?? 0 })} />
+        <Field label="Collection charge">
+          <InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} value={v.collectionCharge} onChange={(n) => onChange({ collectionCharge: n ?? 0 })} />
         </Field>
       </Col>
       <Col xs={24} md={12}>
-        <Field label="Discount (₹)">
-          <InputNumber min={0} style={{ width: '100%' }} value={v.discount} onChange={(n) => onChange({ discount: n ?? 0 })} />
+        <Field label="Discount">
+          <InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} value={v.discount} onChange={(n) => onChange({ discount: n ?? 0 })} />
         </Field>
       </Col>
+    </Row>
+    </FormSection>
+    <FormSection title="Custom fields and notes">
+    <Row gutter={12}>
       <Col xs={24}>
         <Field label="Custom fields">
           {v.customFields.map((f, k) => (
@@ -882,6 +915,8 @@ export function ExtraFields({ value: v, onChange }: SectionProps) {
         </Field>
       </Col>
     </Row>
+    </FormSection>
+    </>
   )
 }
 
@@ -889,6 +924,7 @@ export function PaymentFields({ value: v, onChange }: SectionProps) {
   const t = draftTotals(v)
   return (
     <>
+      <FormSection title="Payment">
       <Field label="Payment">
         <Radio.Group
           value={v.paymentChannel}
@@ -901,8 +937,8 @@ export function PaymentFields({ value: v, onChange }: SectionProps) {
       </Field>
       <Row gutter={12}>
         <Col xs={24} md={8}>
-          <Field label="Prepaid amount (₹)">
-            <InputNumber min={0} style={{ width: '100%' }} value={v.prepaid} onChange={(n) => onChange({ prepaid: n ?? 0 })} />
+          <Field label="Prepaid amount">
+            <InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} value={v.prepaid} onChange={(n) => onChange({ prepaid: n ?? 0 })} />
           </Field>
         </Col>
         <Col xs={24} md={8}>
@@ -935,6 +971,8 @@ export function PaymentFields({ value: v, onChange }: SectionProps) {
           message={v.paymentRef.trim() ? 'Recorded as paid online.' : 'Save the booking, then open it and use Pay online to take the payment through the gateway. If you already have a transaction ID you can paste it here instead.'}
         />
       )}
+      </FormSection>
+      <FormSection title="Summary">
       <Descriptions size="small" bordered column={1}>
         <Descriptions.Item label="Tests">{formatINR(t.tests)}</Descriptions.Item>
         <Descriptions.Item label="Collection charge">{formatINR(t.charge)}</Descriptions.Item>
@@ -947,6 +985,7 @@ export function PaymentFields({ value: v, onChange }: SectionProps) {
           <b>{formatINR(t.balance)}</b>
         </Descriptions.Item>
       </Descriptions>
+      </FormSection>
     </>
   )
 }

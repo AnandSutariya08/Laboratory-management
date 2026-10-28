@@ -10,7 +10,7 @@ import { restoreMaster } from '../../partners/lib/master'
 import type { Branch } from '../../../branch/BranchProvider'
 import { REGISTRATION_FIELDS } from '../constants'
 import { planLabel } from '../lib'
-import { Field, SectionCard, SwitchRow, useDraft } from '../ui'
+import { Field, Group, SectionCard, SwitchRow, useDraft } from '../ui'
 
 // ---- Branch overrides (USR-17) -----------------------------------------------------------------------------
 // Per-branch report and bill settings laid over the lab-wide ones (effectiveSettings in settings/lib.ts).
@@ -30,24 +30,34 @@ export function BranchOverrides() {
   return (
     <SectionCard title="Branch overrides" description="Each branch can print its own name, address, header, footer and bill terms. Blank fields use the lab-wide value.">
       <div className="st-grid">
-        <Field label="Branch">
+        <Field label="Branch" hint="Pick the branch whose printed papers you want to customise.">
           <Select value={branch} onChange={setId} placeholder="No branches yet" options={branches.map((b) => ({ value: b.id, label: `${b.name} (${b.code})` }))} />
         </Field>
       </div>
       {branch && (
         <>
-          <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
-            <Field label="Lab name on this branch's papers"><Input value={o.name ?? ''} onChange={(e) => put(['name'], e.target.value)} /></Field>
-            <Field label="Phone"><Input value={o.phone ?? ''} onChange={(e) => put(['phone'], e.target.value)} /></Field>
-            <Field label="Address" wide><Input.TextArea rows={2} value={o.address ?? ''} onChange={(e) => put(['address'], e.target.value)} /></Field>
-            <Field label="Report footer text" wide><Input.TextArea rows={2} value={o.reportDetails?.footerText ?? ''} onChange={(e) => put(['reportDetails', 'footerText'], e.target.value)} /></Field>
-            <Field label="End of report text"><Input value={o.reportDetails?.endOfReportText ?? ''} onChange={(e) => put(['reportDetails', 'endOfReportText'], e.target.value)} /></Field>
-            <Field label="Bill header" wide><Input.TextArea rows={2} value={o.billDetails?.header ?? ''} onChange={(e) => put(['billDetails', 'header'], e.target.value)} /></Field>
-            <Field label="Bill footer" wide><Input.TextArea rows={2} value={o.billDetails?.footer ?? ''} onChange={(e) => put(['billDetails', 'footer'], e.target.value)} /></Field>
-            <Field label="Bill terms" wide><Input.TextArea rows={2} value={o.billDetails?.terms ?? ''} onChange={(e) => put(['billDetails', 'terms'], e.target.value)} /></Field>
-            <Field label="GSTIN for this branch"><Input value={o.billDetails?.gstin ?? ''} onChange={(e) => put(['billDetails', 'gstin'], e.target.value)} /></Field>
-          </div>
-          <div className="st-actions" style={{ marginTop: 'var(--s-3)' }}><Button onClick={reset}>Clear this branch's overrides</Button></div>
+          <Group title="Branch identity" description="Printed in place of the lab-wide name, phone and address.">
+            <div className="st-grid">
+              <Field label="Lab name on this branch's papers"><Input value={o.name ?? ''} onChange={(e) => put(['name'], e.target.value)} /></Field>
+              <Field label="Phone"><Input value={o.phone ?? ''} onChange={(e) => put(['phone'], e.target.value)} /></Field>
+              <Field label="GSTIN for this branch"><Input value={o.billDetails?.gstin ?? ''} onChange={(e) => put(['billDetails', 'gstin'], e.target.value)} /></Field>
+              <Field label="Address" wide><Input.TextArea rows={2} value={o.address ?? ''} onChange={(e) => put(['address'], e.target.value)} /></Field>
+            </div>
+          </Group>
+          <Group title="Report">
+            <div className="st-grid">
+              <Field label="Report footer text" wide><Input.TextArea rows={2} value={o.reportDetails?.footerText ?? ''} onChange={(e) => put(['reportDetails', 'footerText'], e.target.value)} /></Field>
+              <Field label="End of report text" wide><Input value={o.reportDetails?.endOfReportText ?? ''} onChange={(e) => put(['reportDetails', 'endOfReportText'], e.target.value)} /></Field>
+            </div>
+          </Group>
+          <Group title="Bill">
+            <div className="st-grid">
+              <Field label="Bill header" wide><Input.TextArea rows={2} value={o.billDetails?.header ?? ''} onChange={(e) => put(['billDetails', 'header'], e.target.value)} /></Field>
+              <Field label="Bill footer" wide><Input.TextArea rows={2} value={o.billDetails?.footer ?? ''} onChange={(e) => put(['billDetails', 'footer'], e.target.value)} /></Field>
+              <Field label="Bill terms" wide><Input.TextArea rows={2} value={o.billDetails?.terms ?? ''} onChange={(e) => put(['billDetails', 'terms'], e.target.value)} /></Field>
+            </div>
+          </Group>
+          <div className="st-actions"><Button onClick={reset}>Clear this branch's overrides</Button></div>
         </>
       )}
     </SectionCard>
@@ -78,7 +88,7 @@ export function RazorpayCard() {
   const ok = !!cfg && cfg !== 'error' && cfg.configured
   return (
     <SectionCard title="Online payments (Razorpay)" description="Keys are Firebase secrets on the server (RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET, RAZORPAY_WEBHOOK_SECRET). They are never stored or shown here.">
-      <div className="st-actions">
+      <div className="st-actions" style={{ marginBottom: 'var(--s-2)' }}>
         {cfg === null ? <StatusChip>Checking</StatusChip> : cfg === 'error' ? <StatusChip variant="caution">Status unavailable</StatusChip> : <StatusChip variant={ok ? 'success' : 'neutral'}>{ok ? 'Keys configured' : 'Not set up'}</StatusChip>}
         {ok && typeof cfg === 'object' && cfg && <span>Key id ending {cfg.keyId.slice(-4)}</span>}
       </div>
@@ -116,12 +126,12 @@ export function RegistrationFieldsCard() {
   return (
     <SectionCard title="Registration fields" description="Rename a field or hide it from the registration form. Required fields (Registration > Required fields) cannot be hidden.">
       <Table
-        size="small" rowKey="value" pagination={false} dataSource={REGISTRATION_FIELDS}
+        size="small" rowKey="value" pagination={false} dataSource={REGISTRATION_FIELDS} scroll={{ x: 560 }}
         columns={[
-          { title: 'Field', dataIndex: 'label', width: 220 },
+          { title: 'Field', dataIndex: 'label', width: 200 },
           { title: 'Label shown', render: (_, f) => <Input aria-label={`Label for ${f.label}`} placeholder={f.label} value={labels[f.value] ?? ''} onChange={(e) => set(['frontDesk', 'fieldLabels'], { ...labels, [f.value]: e.target.value })} /> },
           {
-            title: 'Shown', width: 100,
+            title: 'Shown', width: 90,
             render: (_, f) => (
               <Switch aria-label={`Show ${f.label}`} disabled={required.includes(f.value)} checked={!hidden.includes(f.value) || required.includes(f.value)}
                 onChange={(on) => set(['frontDesk', 'hiddenFields'], on ? hidden.filter((k) => k !== f.value) : [...hidden, f.value])} />
@@ -149,7 +159,7 @@ export function DeletedMastersCard() {
   const rows = lists.flatMap((l) => l.rows.map((r) => ({ key: `${l.name}/${r.id}`, kind: l.label, coll: l.name, id: r.id, name: r.name ?? r.code ?? r.id })))
   return (
     <SectionCard title="Deleted items" description="Deleting a catalogue item or partner only hides it, so old bills and reports stay correct. Restore it here.">
-      <Table size="small" rowKey="key" dataSource={rows} pagination={{ pageSize: 10, showSizeChanger: false }} locale={{ emptyText: 'Nothing deleted' }}
+      <Table size="small" rowKey="key" scroll={{ x: 420 }} dataSource={rows} pagination={{ pageSize: 10, showSizeChanger: false }} locale={{ emptyText: 'Nothing deleted' }}
         columns={[
           { title: 'Type', dataIndex: 'kind', width: 170 },
           { title: 'Name', dataIndex: 'name' },

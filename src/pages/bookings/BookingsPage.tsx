@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { App, Badge, Button as AButton, Calendar, Checkbox, DatePicker, Drawer, Dropdown, Empty, Form, Input, Modal, Select, Space, Table, Tooltip, Typography } from 'antd'
 import {
   CalendarOutlined,
@@ -459,7 +460,8 @@ export default function BookingsPage() {
             <Segmented aria-label="Booking status" value={status} onChange={setStatus} options={statusOptions} size="small" />
           </div>
 
-          <Space wrap style={{ marginBottom: 'var(--s-3)' }}>
+          <div className="bk-toolbar">
+          <Space wrap>
             <Input.Search
               allowClear
               aria-label="Search bookings"
@@ -503,6 +505,8 @@ export default function BookingsPage() {
                 More Filters
               </AButton>
             </Badge>
+          </Space>
+          <Space wrap>
             {view === 'list' && (
               <AButton
                 icon={<ColumnHeightOutlined rotate={90} />}
@@ -539,6 +543,7 @@ export default function BookingsPage() {
             />
             {isPhlebo && <StatusChip variant="info">My bookings</StatusChip>}
           </Space>
+          </div>
 
           {view === 'list' ? (
             <Table<BookingX>
@@ -693,42 +698,54 @@ export default function BookingsPage() {
         }
       >
         <Form layout="vertical">
-          {(
-            [
+          {([
+            ['People', [
               ['phlebo', 'Phlebotomist', uniq((b) => b.assignedToName)],
               ['doctor', 'Referring Doctor', uniq((b) => b.referrerName)],
               ['hospital', 'Referring Hospital', uniq((b) => b.hospitalName)],
+              ['createdBy', 'Created By', uniq((b) => b.createdByName)],
+            ]],
+            ['Billing', [
               ['corporate', 'Corporate', uniq((b) => b.corporateName)],
               ['rateList', 'Rate List', uniq((b) => b.rateListName)],
-              ['createdBy', 'Created By', uniq((b) => b.createdByName)],
-            ] as [keyof Filters, string, { value: string; label: string }[]][]
-          ).map(([k, label, options]) => (
-            <Form.Item key={k} label={label}>
-              <Select
-                allowClear
-                showSearch
-                value={draftFilters[k] || undefined}
-                onChange={(v) => setDraftFilters((f) => ({ ...f, [k]: v ?? '' }))}
-                options={options}
-                placeholder="Any"
-              />
-            </Form.Item>
+            ]],
+          ] as [string, [keyof Filters, string, { value: string; label: string }[]][]][]).map(([title, fields]) => (
+            <FormSection key={title} title={title}>
+              {fields.map(([k, label, options]) => (
+                <Form.Item key={k} label={label}>
+                  <Select
+                    allowClear
+                    showSearch
+                    value={draftFilters[k] || undefined}
+                    onChange={(v) => setDraftFilters((f) => ({ ...f, [k]: v ?? '' }))}
+                    options={options}
+                    placeholder="Any"
+                  />
+                </Form.Item>
+              ))}
+              {title === 'Billing' && (
+                <Form.Item label="Payment Status">
+                  <Select
+                    allowClear
+                    value={draftFilters.payment || undefined}
+                    onChange={(v) => setDraftFilters((f) => ({ ...f, payment: v ?? '' }))}
+                    options={['Paid', 'Partial', 'Unpaid'].map((v) => ({ value: v, label: v }))}
+                    placeholder="Any"
+                  />
+                </Form.Item>
+              )}
+            </FormSection>
           ))}
-          <Form.Item label="Payment Status">
-            <Select
-              allowClear
-              value={draftFilters.payment || undefined}
-              onChange={(v) => setDraftFilters((f) => ({ ...f, payment: v ?? '' }))}
-              options={['Paid', 'Partial', 'Unpaid'].map((v) => ({ value: v, label: v }))}
-              placeholder="Any"
-            />
-          </Form.Item>
-          <Form.Item label="Pincode">
-            <Input value={draftFilters.pincode} onChange={(e) => setDraftFilters((f) => ({ ...f, pincode: e.target.value }))} />
-          </Form.Item>
-          <Form.Item label="Patient Location">
-            <Input value={draftFilters.location} onChange={(e) => setDraftFilters((f) => ({ ...f, location: e.target.value }))} />
-          </Form.Item>
+          <FormSection title="Location">
+            <FieldGrid min={140}>
+              <Form.Item label="Pincode">
+                <Input value={draftFilters.pincode} onChange={(e) => setDraftFilters((f) => ({ ...f, pincode: e.target.value }))} />
+              </Form.Item>
+              <Form.Item label="Patient Location">
+                <Input value={draftFilters.location} onChange={(e) => setDraftFilters((f) => ({ ...f, location: e.target.value }))} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
         </Form>
       </Drawer>
 
@@ -926,29 +943,35 @@ function PreBookingModal({ open, onClose }: { open: boolean; onClose: () => void
   return (
     <Modal title="New enquiry" open={open} onCancel={onClose} onOk={submit} okText="Save enquiry" confirmLoading={saving} destroyOnHidden>
       <Form form={form} layout="vertical" initialValues={{ source: 'phone' }}>
-        <Space.Compact block>
-          <Form.Item name="firstName" label="First name" rules={[{ required: true, message: 'Required' }]} style={{ flex: 1, marginRight: 8 }}>
-            <Input />
+        <FormSection title="Contact">
+          <FieldGrid min={200}>
+            <Form.Item name="firstName" label="First name" rules={[{ required: true, message: 'Required' }]}>
+              <Input />
+            </Form.Item>
+            <Form.Item name="lastName" label="Last name">
+              <Input />
+            </Form.Item>
+            <Form.Item name="phone" label="Phone" rules={[{ required: true, pattern: /^\d{10}$/, message: '10 digits' }]}>
+              <Input maxLength={10} inputMode="numeric" />
+            </Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Enquiry">
+          <FieldGrid min={200}>
+            <Form.Item name="source" label="Source">
+              <Select options={Object.entries(SOURCE_LABEL).map(([value, label]) => ({ value, label }))} />
+            </Form.Item>
+            <Form.Item name="date" label="Preferred date">
+              <DatePicker style={{ width: '100%' }} />
+            </Form.Item>
+          </FieldGrid>
+          <Form.Item name="tests" label="Tests asked about">
+            <Input.TextArea rows={2} />
           </Form.Item>
-          <Form.Item name="lastName" label="Last name" style={{ flex: 1 }}>
-            <Input />
+          <Form.Item name="notes" label="Notes">
+            <Input.TextArea rows={2} />
           </Form.Item>
-        </Space.Compact>
-        <Form.Item name="phone" label="Phone" rules={[{ required: true, pattern: /^\d{10}$/, message: '10 digits' }]}>
-          <Input maxLength={10} inputMode="numeric" />
-        </Form.Item>
-        <Form.Item name="tests" label="Tests asked about">
-          <Input.TextArea rows={2} />
-        </Form.Item>
-        <Form.Item name="source" label="Source">
-          <Select options={Object.entries(SOURCE_LABEL).map(([value, label]) => ({ value, label }))} />
-        </Form.Item>
-        <Form.Item name="date" label="Preferred date">
-          <DatePicker style={{ width: '100%' }} />
-        </Form.Item>
-        <Form.Item name="notes" label="Notes">
-          <Input.TextArea rows={2} />
-        </Form.Item>
+        </FormSection>
       </Form>
     </Modal>
   )

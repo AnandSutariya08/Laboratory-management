@@ -7,6 +7,7 @@ import { can, useAuth } from '../../auth/AuthProvider'
 import type { Parameter, Test } from '../../types'
 import { ISSUE_LABEL, type MachineRun, type SampleIssue, type Values } from './types'
 import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 
 interface ReasonDoc { id: string; kind: string; text: string }
 interface TemplateDoc { id: string; kind: string; name: string; text?: string; body?: string; content?: string }
@@ -205,7 +206,7 @@ export function RejectModal(p: {
             <Radio value="params" disabled={!list.length}>Selected parameters</Radio>
           </Radio.Group>
           {scope === 'params' && (
-            <Checkbox.Group value={params} onChange={(v) => setParams(v as string[])} style={{ display: 'grid', gap: 4 }} options={list.map((x) => ({ value: x.key, label: x.name }))} />
+            <Checkbox.Group value={params} onChange={(v) => setParams(v as string[])} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 'var(--s-2) var(--s-4)', marginTop: 'var(--s-3)' }} options={list.map((x) => ({ value: x.key, label: x.name }))} />
           )}
         </div>
       }
@@ -315,22 +316,26 @@ export function CriticalAckModal(p: {
       }}
       destroyOnHidden
     >
-      <p><b>{p.summary}</b></p>
-      <div className="re-field">
-        <label htmlFor="crit-who">Person notified (name and role)</label>
-        <Input id="crit-who" value={who} onChange={(e) => setWho(e.target.value)} placeholder="e.g. Dr Rao, ward nurse" />
-      </div>
-      <div className="re-field">
-        <label htmlFor="crit-channel">How were they told</label>
-        <Select id="crit-channel" value={mode} onChange={setMode} options={[{ value: 'phone', label: 'Phone call' }, { value: 'inPerson', label: 'In person' }, { value: 'whatsapp', label: 'WhatsApp / message' }, { value: 'other', label: 'Other' }]} />
-      </div>
-      <div className="re-field">
+      <div className="re-notice re-notice--crit" role="alert"><b>{p.summary}</b></div>
+      <FormSection title="Who was told" description="Record the person and how they were reached.">
+        <FieldGrid min={240}>
+          <div className="re-field">
+            <label htmlFor="crit-who">Person notified (name and role)</label>
+            <Input id="crit-who" value={who} onChange={(e) => setWho(e.target.value)} placeholder="e.g. Dr Rao, ward nurse" />
+          </div>
+          <div className="re-field">
+            <label htmlFor="crit-channel">How were they told</label>
+            <Select id="crit-channel" value={mode} onChange={setMode} options={[{ value: 'phone', label: 'Phone call' }, { value: 'inPerson', label: 'In person' }, { value: 'whatsapp', label: 'WhatsApp / message' }, { value: 'other', label: 'Other' }]} />
+          </div>
+        </FieldGrid>
         <Checkbox checked={readBack} onChange={(e) => setReadBack(e.target.checked)}>The person read the value back to me</Checkbox>
-      </div>
-      <div className="re-field">
-        <label htmlFor="crit-note">Note{p.noteRequired ? " (required)" : ""}</label>
-        <Input.TextArea id="crit-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-      </div>
+      </FormSection>
+      <FormSection title="Remarks">
+        <div className="re-field">
+          <label htmlFor="crit-note">Note{p.noteRequired ? " (required)" : ""}</label>
+          <Input.TextArea id="crit-note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+        </div>
+      </FormSection>
     </Modal>
   )
 }
@@ -378,25 +383,29 @@ export function RangeEditModal(p: {
       destroyOnHidden
     >
       <p className="wl-muted" style={{ marginTop: 0 }}>This changes the range for this one result only. The catalogue stays as it is.</p>
-      <div style={{ display: 'flex', gap: 'var(--s-3)' }}>
-        <div className="re-field" style={{ flex: 1 }}>
-          <label htmlFor="rg-low">Low {p.unit && `(${p.unit})`}</label>
-          <InputNumber id="rg-low" style={{ width: '100%' }} value={low} onChange={setLow} />
+      <FormSection title="Allowed range">
+        <FieldGrid min={180}>
+          <div className="re-field">
+            <label htmlFor="rg-low">Low</label>
+            <InputNumber id="rg-low" style={{ width: '100%' }} value={low} onChange={setLow} addonAfter={p.unit || undefined} />
+          </div>
+          <div className="re-field">
+            <label htmlFor="rg-high">High</label>
+            <InputNumber id="rg-high" style={{ width: '100%' }} value={high} onChange={setHigh} addonAfter={p.unit || undefined} />
+          </div>
+        </FieldGrid>
+        {bad && <div className="re-notice re-notice--crit" role="alert">Low must not be above high.</div>}
+        <div className="re-field">
+          <label htmlFor="rg-text">Text shown on the report (optional)</label>
+          <Input id="rg-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Leave blank to show low - high" />
         </div>
-        <div className="re-field" style={{ flex: 1 }}>
-          <label htmlFor="rg-high">High {p.unit && `(${p.unit})`}</label>
-          <InputNumber id="rg-high" style={{ width: '100%' }} value={high} onChange={setHigh} />
+      </FormSection>
+      <FormSection title="Why">
+        <div className="re-field">
+          <label htmlFor="rg-reason">Reason (required)</label>
+          <Input.TextArea id="rg-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
         </div>
-      </div>
-      {bad && <div className="re-notice re-notice--crit" role="alert">Low must not be above high.</div>}
-      <div className="re-field">
-        <label htmlFor="rg-text">Text shown on the report (optional)</label>
-        <Input id="rg-text" value={text} onChange={(e) => setText(e.target.value)} placeholder="Leave blank to show low - high" />
-      </div>
-      <div className="re-field">
-        <label htmlFor="rg-reason">Reason (required)</label>
-        <Input.TextArea id="rg-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
-      </div>
+      </FormSection>
     </Modal>
   )
 }

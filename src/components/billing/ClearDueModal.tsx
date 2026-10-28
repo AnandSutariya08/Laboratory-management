@@ -14,6 +14,7 @@ import { formatINR, toPaise, toRupees } from '../../lib/money'
 import { clearDue, clearDueBulk, writeOffDue } from '../../lib/orders'
 import type { LedgerEntry, Order, PaymentMode } from '../../types'
 import { tsDate } from './helpers'
+import { FormSection } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 
 interface Row {
@@ -143,6 +144,7 @@ export default function ClearDueModal({
       onOk={submit}
       okButtonProps={{ disabled: invalid, loading: saving }}
     >
+      <FormSection title="Bills" description="Payment is applied to the oldest bill first.">
       <Table<{ o: Order; take: number }>
         size="small"
         rowKey={(r) => r.o.id}
@@ -164,21 +166,23 @@ export default function ClearDueModal({
           Discount {derivedPercent(list[0].items)}% ({formatINR(list[0].discount)}){list[0].discountedBy ? ` by ${list[0].discountedBy}` : ''}
         </p>
       )}
-      <p style={{ marginTop: 8 }}>
+      <p style={{ marginTop: 8, marginBottom: 0 }}>
         Total due <b className="bill-due">{formatINR(totalDue)}</b>
       </p>
-      {prevRemark && (
-        <Alert style={{ marginBottom: 8 }} type="info" message={<>Previous remark: {prevRemark.text} <span className="bill-muted">({prevRemark.by})</span></>} />
-      )}
+      </FormSection>
+      <FormSection title="Receive payment">
       {rows.map((r, idx) => (
-        <div key={r.key} className="bill-row">
+        <div key={r.key} className="bill-payrow">
           <Select
+            aria-label="Payment mode"
             value={r.mode}
-            style={{ width: 90 }}
+            style={{ width: '100%' }}
             options={payModes}
             onChange={(mode) => setRows(rows.map((x) => (x.key === r.key ? { ...x, mode } : x)))}
           />
           <InputNumber
+            aria-label="Payment amount"
+            style={{ width: '100%' }}
             min={0}
             precision={2}
             addonBefore="₹"
@@ -189,7 +193,7 @@ export default function ClearDueModal({
             placeholder={needsRef(r.mode) ? 'Transaction ID (required)' : 'Transaction ID'}
             aria-label="Transaction ID"
             status={needsRef(r.mode) && r.amount > 0 && !r.reference.trim() ? 'error' : undefined}
-            style={{ width: 160 }}
+            style={{ width: '100%' }}
             value={r.reference}
             onChange={(e) => setRows(rows.map((x) => (x.key === r.key ? { ...x, reference: e.target.value } : x)))}
           />
@@ -200,7 +204,7 @@ export default function ClearDueModal({
         Split payment
       </Button>
       {backdateOk && (
-        <div className="bill-row" style={{ marginTop: 8 }}>
+        <div className="bill-row" style={{ marginTop: 'var(--s-3)' }}>
           <label className="bill-muted" htmlFor="paid-at">Payment date (back-dated)</label>
           <DatePicker id="paid-at" value={paidAt} onChange={setPaidAt} allowClear disabledDate={(d) => d.isAfter(dayjs(), 'day')} placeholder="Today" />
         </div>
@@ -211,7 +215,7 @@ export default function ClearDueModal({
             <Button variant="text" onClick={() => { setWoOpen(true); setWoAmt(toRupees(totalDue)) }}>Write off a balance as discount</Button>
           ) : (
             <div className="bill-row">
-              <InputNumber aria-label="Write-off amount" addonBefore="₹" min={0} precision={2} value={woAmt} onChange={(v) => setWoAmt(v ?? 0)} style={{ width: 150 }} />
+              <InputNumber aria-label="Write-off amount" addonBefore="₹" min={0} precision={2} value={woAmt} onChange={(v) => setWoAmt(v ?? 0)} style={{ width: 170 }} />
               <Input aria-label="Write-off reason" placeholder="Reason (required)" style={{ width: 220 }} value={woReason} onChange={(e) => setWoReason(e.target.value)} />
               <Button disabled={saving || !woReason.trim() || woAmt <= 0} onClick={writeOff}>Write off</Button>
               <Button variant="text" onClick={() => setWoOpen(false)}>Cancel</Button>
@@ -219,14 +223,20 @@ export default function ClearDueModal({
           )}
         </div>
       )}
-      <Input.TextArea rows={2} maxLength={500} placeholder={prevRemark ? 'Remark (leave empty to keep the previous remark on the Due list)' : 'Remark (shown on the Due list until the bill is cleared)'} value={remark} onChange={(e) => setRemark(e.target.value)} style={{ marginTop: 8 }} />
-      <div style={{ marginTop: 8 }}>
+      <div style={{ marginTop: 'var(--s-3)' }}>
         Receiving {formatINR(total)} ·{' '}
         <b className={remaining > 0 ? 'bill-due' : 'bill-ok'}>
           {remaining >= 0 ? `${formatINR(remaining)} will remain due` : 'more than the due amount'}
         </b>
       </div>
       {total > totalDue && <Alert style={{ marginTop: 8 }} type="error" showIcon message="Amount exceeds the due balance." />}
+      </FormSection>
+      <FormSection title="Remark">
+      {prevRemark && (
+        <Alert style={{ marginBottom: 8 }} type="info" message={<>Previous remark: {prevRemark.text} <span className="bill-muted">({prevRemark.by})</span></>} />
+      )}
+      <Input.TextArea aria-label="Remark" rows={2} maxLength={500} placeholder={prevRemark ? 'Remark (leave empty to keep the previous remark on the Due list)' : 'Remark (shown on the Due list until the bill is cleared)'} value={remark} onChange={(e) => setRemark(e.target.value)} />
+      </FormSection>
     </Modal>
   )
 }

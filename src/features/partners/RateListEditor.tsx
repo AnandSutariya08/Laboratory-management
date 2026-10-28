@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Drawer, Input, InputNumber, Select, Space, Table, message } from 'antd'
+import { Drawer, Form, Input, InputNumber, Select, Table, message } from 'antd'
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons'
 import { useCatalogueMaps } from '../../hooks/useCatalogue'
 import { formatINR, toPaise } from '../../lib/money'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { Button } from '../../design/Button'
 import { Segmented } from '../../design/Segmented'
 import { SkeletonRows } from '../../design/Skeletons'
@@ -130,8 +131,62 @@ export function RateListEditor({ rateListId, onSaved }: { rateListId: string; on
 
   return (
     <div className="pt-rl-grid">
-      <Space wrap style={{ marginBottom: 'var(--s-3)' }}>
-        <Input aria-label="Price list name" value={name} onChange={(e) => { setName(e.target.value); setDirty(true) }} style={{ width: 240 }} />
+      <Form layout="vertical" component="div">
+        <FormSection title="List settings" description="The list name and what happens to tests it does not price.">
+          <FieldGrid min={240}>
+            <Form.Item label="List name"><Input aria-label="Price list name" value={name} onChange={(e) => { setName(e.target.value); setDirty(true) }} /></Form.Item>
+            <Form.Item label="Parent list" tooltip="Items not priced here fall back to this list first.">
+              <Select
+                aria-label="Parent price list"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="None"
+                value={parentId || undefined}
+                onChange={(v) => { setParentId(v ?? ''); setDirty(true) }}
+                options={lists.data.filter((l) => l.id !== rateListId && l.active !== false).map((l) => ({ value: l.id, label: l.name }))}
+              />
+            </Form.Item>
+            <Form.Item label="When an item is not priced">
+              <Select
+                aria-label="When an item is not priced"
+                value={policy}
+                onChange={(v) => { setPolicy(v); setDirty(true) }}
+                options={[{ value: 'mrp', label: 'Not priced here or in the parent: bill at MRP' }, { value: 'block', label: 'Not priced here or in the parent: cannot be billed' }]}
+              />
+            </Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Bulk tools" description="Adjust many prices at once. Applies to the selected rows, or to every row shown if none are selected.">
+          <FieldGrid min={200}>
+            <Form.Item label="Change from MRP">
+              <InputNumber aria-label="Percent change from MRP" value={pct} onChange={setPct} step={5} addonAfter="%" style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Copy prices from another list">
+              <Select
+                aria-label="Copy from list"
+                allowClear
+                placeholder="Choose a list"
+                value={copyFrom}
+                onChange={setCopyFrom}
+                options={lists.data.filter((l) => l.id !== rateListId).map((l) => ({ value: l.id, label: l.name }))}
+              />
+            </Form.Item>
+          </FieldGrid>
+          <Toolbar>
+            <Button onClick={applyPct} disabled={pct === null}>
+              Apply to {sel.length ? 'selected' : 'shown'}
+            </Button>
+            <Button onClick={copy} disabled={!copyFrom}>Copy prices</Button>
+            <Spacer />
+            <Button icon={<DownloadOutlined />} onClick={exportCsv}>Export CSV</Button>
+            <FileButton label="Import CSV" icon={<UploadOutlined />} onText={importCsv} />
+            <Button variant="text" onClick={() => { setDraft({}); setDirty(true) }}>Clear all</Button>
+          </Toolbar>
+        </FormSection>
+      </Form>
+      <Toolbar>
+        <Input.Search allowClear placeholder="Search code or name" aria-label="Search items" value={q} onChange={(e) => setQ(e.target.value)} className="pt-toolbar__grow" />
         <Segmented
           aria-label="Show"
           size="small"
@@ -144,46 +199,6 @@ export function RateListEditor({ rateListId, onSaved }: { rateListId: string; on
             { value: 'custom', label: 'Priced', count: Object.keys(draft).length },
           ]}
         />
-      </Space>
-      <Space wrap style={{ marginBottom: 'var(--s-3)' }}>
-        <Select
-          aria-label="Parent price list"
-          allowClear
-          showSearch
-          optionFilterProp="label"
-          placeholder="Parent list (fallback)"
-          style={{ width: 240 }}
-          value={parentId || undefined}
-          onChange={(v) => { setParentId(v ?? ''); setDirty(true) }}
-          options={lists.data.filter((l) => l.id !== rateListId && l.active !== false).map((l) => ({ value: l.id, label: l.name }))}
-        />
-        <Select
-          aria-label="When an item is not priced"
-          style={{ width: 280 }}
-          value={policy}
-          onChange={(v) => { setPolicy(v); setDirty(true) }}
-          options={[{ value: 'mrp', label: 'Not priced here or in the parent: bill at MRP' }, { value: 'block', label: 'Not priced here or in the parent: cannot be billed' }]}
-        />
-      </Space>
-      <Toolbar>
-        <Input.Search allowClear placeholder="Search code or name" aria-label="Search items" value={q} onChange={(e) => setQ(e.target.value)} className="pt-toolbar__grow" />
-        <InputNumber aria-label="Percent change from MRP" placeholder="% vs MRP" value={pct} onChange={setPct} step={5} style={{ width: 120 }} />
-        <Button onClick={applyPct} disabled={pct === null}>
-          Apply to {sel.length ? 'selected' : 'shown'}
-        </Button>
-        <Select
-          aria-label="Copy from list"
-          placeholder="Copy from list"
-          style={{ width: 190 }}
-          value={copyFrom}
-          onChange={setCopyFrom}
-          options={lists.data.filter((l) => l.id !== rateListId).map((l) => ({ value: l.id, label: l.name }))}
-        />
-        <Button onClick={copy} disabled={!copyFrom}>Copy</Button>
-        <Spacer />
-        <Button icon={<DownloadOutlined />} onClick={exportCsv}>Export CSV</Button>
-        <FileButton label="Import CSV" icon={<UploadOutlined />} onText={importCsv} />
-        <Button variant="text" onClick={() => { setDraft({}); setDirty(true) }}>Clear all</Button>
       </Toolbar>
       <Table<Row>
         size="small"
@@ -197,11 +212,12 @@ export function RateListEditor({ rateListId, onSaved }: { rateListId: string; on
           { title: 'Type', dataIndex: 'kind', width: 90, render: (k: string) => (k === 'test' ? 'Test' : 'Package') },
           { title: 'MRP', dataIndex: 'mrp', align: 'right', render: (v: number) => <span className="pt-num">{formatINR(v)}</span> },
           {
-            title: 'List price (Rs)',
-            width: 160,
+            title: 'List price',
+            width: 170,
             render: (_: unknown, r) => (
               <InputNumber
                 aria-label={`List price for ${r.name}`}
+                addonBefore="₹"
                 min={0}
                 step={1}
                 precision={2}

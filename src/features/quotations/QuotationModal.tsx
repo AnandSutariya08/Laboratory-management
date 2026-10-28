@@ -22,6 +22,7 @@ import { preCollectionGuidelines } from '../../pages/catalogue/flags'
 import { ItemPicker, useLinePricer } from '../../components/billing/lines'
 import { PartnerFields } from '../../components/billing/PartnerFields'
 import '../../components/billing/billing.css'
+import { FormSection } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 
 export interface QuotationPrefill {
@@ -178,6 +179,7 @@ export default function QuotationModal({
       }
     >
       <Form form={form} layout="vertical" requiredMark disabled={readOnly}>
+        <FormSection title="Prospect details" description="Who the quotation is for and how long it stays valid.">
         <div className="bill-partners">
           <Form.Item name="name" label="Prospect / patient name" rules={[{ required: true, whitespace: true, message: 'Name is required' }]}>
             <Input maxLength={120} autoFocus />
@@ -203,11 +205,12 @@ export default function QuotationModal({
             <DatePicker value={valid} allowClear={false} onChange={(d) => d && setValid(d)} disabledDate={(d) => d.isBefore(dayjs(), 'day')} />
           </Form.Item>
         </div>
+        </FormSection>
       </Form>
-      <div className="bill-section" style={{ marginBottom: 'var(--s-3)' }}>
-        <h3 className="bill-section__title">Rate list (partner)</h3>
+      <FormSection title="Rate list (partner)" description="Pricing follows the partner you pick.">
         <PartnerFields value={partners} onChange={setPartners} only={['referrerId', 'hospitalId', 'b2bCentreId', 'collectionCentreId', 'corporateClientId', 'govPanelId', 'tpaId']} />
-      </div>
+      </FormSection>
+      <FormSection title="Tests and charges">
       {!readOnly && <ItemPicker ctx={partners} gender={watchedGender} onPick={(l) => setItems(spread([...items, l], pct))} />}
       {preCollectionGuidelines(items.flatMap((l) => l.testIds.map((t) => pricer.cat.testById.get(t)))).map((g) => (
         <Alert key={g.text} type="info" showIcon style={{ marginBottom: 6 }} message={`${g.name}: ${g.text}`} />
@@ -229,16 +232,23 @@ export default function QuotationModal({
           },
         ]}
       />
-      <div className="bill-grid2" style={{ marginTop: 'var(--s-3)' }}>
+      </FormSection>
+      <FormSection title="Discount and total">
+      <div className="bill-grid2">
         <div className="bill-section">
           <h3 className="bill-section__title">Discount</h3>
-          <div className="bill-row">
-            <InputNumber aria-label="Discount percent" addonAfter="%" min={0} max={100} precision={2} value={pct === null ? null : Number(pct.toFixed(2))} onChange={setPercent} disabled={readOnly} style={{ width: 130 }} />
-            <InputNumber aria-label="Discount amount" addonBefore="₹" min={0} precision={2} value={toRupees(totals.discount)} onChange={setAmount} disabled={readOnly} style={{ width: 150 }} />
+          <div className="bill-fgrid">
+            <div>
+              <label className="bill-field-label" htmlFor="q-pct">Discount percent</label>
+              <InputNumber id="q-pct" aria-label="Discount percent" addonAfter="%" min={0} max={100} precision={2} value={pct === null ? null : Number(pct.toFixed(2))} onChange={setPercent} disabled={readOnly} style={{ width: '100%' }} />
+            </div>
+            <div>
+              <label className="bill-field-label" htmlFor="q-amt">Discount amount</label>
+              <InputNumber id="q-amt" aria-label="Discount amount" addonBefore="₹" min={0} precision={2} value={toRupees(totals.discount)} onChange={setAmount} disabled={readOnly} style={{ width: '100%' }} />
+            </div>
           </div>
-          <div className="bill-row">
-            <AutoComplete aria-label="Discount reason" style={{ width: 260 }} value={reason} onChange={setReason} options={masters.reasons.map((r) => ({ value: r }))} placeholder="Reason" />
-          </div>
+          <label className="bill-field-label" htmlFor="q-reason" style={{ marginTop: 'var(--s-3)' }}>Reason</label>
+          <AutoComplete id="q-reason" aria-label="Discount reason" style={{ width: '100%' }} value={reason} onChange={setReason} options={masters.reasons.map((r) => ({ value: r }))} placeholder="Reason" />
           <Form form={form} layout="vertical" component={false}>
             <Form.Item name="notes" style={{ marginTop: 8, marginBottom: 0 }}>
               <Input.TextArea rows={2} placeholder="Notes for the quotation" aria-label="Notes" />
@@ -254,6 +264,7 @@ export default function QuotationModal({
           <QuotationAttachments quotationId={editing?.id ?? null} pending={pendingFiles} onPending={setPendingFiles} readOnly={readOnly} />
         </div>
       </div>
+      </FormSection>
     </Modal>
   )
 }

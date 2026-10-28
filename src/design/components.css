@@ -176,3 +176,36 @@ html, body, .sidebar__scroll, .app-shell__main, .ant-modal-wrap, .ant-modal .ant
 /* Scrolling inside any floating list stops at its edge instead of moving the page behind it. */
 .ant-dropdown-menu, .ant-select-dropdown .rc-virtual-list-holder, .ant-popover-inner, .ant-picker-dropdown,
 .ant-drawer-body, .ant-modal-body, .ant-cascader-menu { overscroll-behavior: contain; }
+
+/* ---- Form layout: sections, setting rows, field grids (src/design/FormLayout.tsx) ---- */
+.fsec + .fsec { margin-top: var(--s-6); padding-top: var(--s-6); border-top: 1px solid var(--c-outline-variant); }
+.fsec__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); margin-bottom: var(--s-3); }
+.fsec__titles { min-width: 0; }
+.fsec__title { margin: 0; font-size: 15px; font-weight: 650; color: var(--c-on-surface); }
+.fsec__desc { margin: 4px 0 0; font-size: var(--fs-dense); color: var(--c-on-surface-variant); max-width: 72ch; line-height: 1.5; }
+.fsec__extra { flex: none; display: flex; gap: var(--s-2); }
+.fsec__body { display: grid; grid-template-columns: minmax(0, 1fr); } /* wide tables scroll inside, never stretch the page */
+
+.srow {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(0, 1.4fr);
+  gap: var(--s-2) var(--s-6);
+  padding: 14px 0;
+}
+.srow--center { align-items: center; }
+.srow--start { align-items: start; }
+.srow + .srow { border-top: 1px dashed var(--c-outline-variant); }
+.srow__text { min-width: 0; }
+.srow__label { display: block; font-weight: 600; color: var(--c-on-surface); line-height: 1.4; }
+.srow__help { margin-top: 3px; font-size: var(--fs-dense); color: var(--c-on-surface-variant); line-height: 1.5; max-width: 60ch; }
+.srow__control { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+@media (max-width: 860px) {
+  .srow { grid-template-columns: 1fr; padding: 12px 0; }
+}
+
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--fgrid-min, 220px), 1fr)); gap: 0 var(--s-4); }
+
+/* Antd forms everywhere: a little more air between fields and clearer labels. */
+.ant-form-vertical .ant-form-item { margin-bottom: 18px; }
+.ant-form-vertical .ant-form-item-label > label { font-weight: 600; }
+.ant-form-item-extra { margin-top: 4px; font-size: var(--fs-dense); }

@@ -49,7 +49,7 @@ export default function DataAccessDrawer({ open, onClose }: { open: boolean; onC
     <Drawer
       open={open}
       onClose={onClose}
-      width={560}
+      width="min(600px, 100vw)"
       title="Data access"
       extra={
         <Button type="primary" loading={saving} disabled={!info?.canEdit} onClick={save}>

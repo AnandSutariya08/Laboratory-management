@@ -9,6 +9,7 @@ import { Segmented } from '../design/Segmented'
 import { canChangeOwnPassword } from '../features/settings/lib'
 import { setActivityActor } from './activity'
 import { dialogWidth } from '../design/dialog'
+import { FieldGrid, FormSection } from '../design/FormLayout'
 
 // "My profile": edit name, phone and (doctors) signature; change password with re-authentication.
 // Editing your own profile needs the users rule that lets a user update name, phone, signature.
@@ -77,7 +78,7 @@ export default function ProfileModal({ open, onClose }: { open: boolean; onClose
       open={open}
       onCancel={onClose}
       destroyOnHidden
-      width={dialogWidth(460)}
+      width={dialogWidth(560)}
       okText={tab === 'profile' || !mayChangePassword ? 'Save profile' : 'Change password'}
       onOk={tab === 'profile' || !mayChangePassword ? saveProfile : changePassword}
       confirmLoading={busy}
@@ -88,46 +89,58 @@ export default function ProfileModal({ open, onClose }: { open: boolean; onClose
       <div style={{ marginTop: 'var(--s-4)' }}>
         {tab === 'profile' || !mayChangePassword ? (
           <>
-            <div className="field-row">
-              <label htmlFor="pf-name">Name</label>
-              <input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="field-row">
-              <label htmlFor="pf-phone">Phone</label>
-              <input id="pf-phone" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
-            </div>
-            <div className="field-row">
-              <label htmlFor="pf-email">Email (login)</label>
-              <input id="pf-email" value={profile?.email ?? ''} disabled />
-            </div>
-            {profile?.username && (
-              <div className="field-row">
-                <label htmlFor="pf-user">Username</label>
-                <input id="pf-user" value={profile.username} disabled />
-              </div>
-            )}
+            <FormSection title="Your details" description="Shown to colleagues and on the activity log.">
+              <FieldGrid min={200}>
+                <div className="field-row">
+                  <label htmlFor="pf-name">Name</label>
+                  <input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} />
+                </div>
+                <div className="field-row">
+                  <label htmlFor="pf-phone">Phone</label>
+                  <input id="pf-phone" value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" />
+                </div>
+              </FieldGrid>
+            </FormSection>
+            <FormSection title="Sign-in" description="Set by your lab admin. Ask them if either needs to change.">
+              <FieldGrid min={200}>
+                <div className="field-row">
+                  <label htmlFor="pf-email">Email (login)</label>
+                  <input id="pf-email" value={profile?.email ?? ''} disabled />
+                </div>
+                {profile?.username && (
+                  <div className="field-row">
+                    <label htmlFor="pf-user">Username</label>
+                    <input id="pf-user" value={profile.username} disabled />
+                  </div>
+                )}
+              </FieldGrid>
+            </FormSection>
             {profile?.role === 'doctor' && (
-              <div className="field-row">
-                <label htmlFor="pf-sig">Signature line (name, qualification, registration no.)</label>
-                <textarea id="pf-sig" rows={3} value={signature} onChange={(e) => setSignature(e.target.value)} />
-              </div>
+              <FormSection title="Report signature" description="Printed under reports you sign.">
+                <div className="field-row">
+                  <label htmlFor="pf-sig">Signature line (name, qualification, registration no.)</label>
+                  <textarea id="pf-sig" rows={3} value={signature} onChange={(e) => setSignature(e.target.value)} />
+                </div>
+              </FormSection>
             )}
           </>
         ) : (
-          <>
+          <FormSection title="Change password" description="Enter your current password, then choose a new one of at least 6 characters.">
             <div className="field-row">
               <label htmlFor="pw-cur">Current password</label>
               <input id="pw-cur" type="password" autoComplete="current-password" value={cur} onChange={(e) => setCur(e.target.value)} />
             </div>
-            <div className="field-row">
-              <label htmlFor="pw-new">New password</label>
-              <input id="pw-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
-            </div>
-            <div className="field-row">
-              <label htmlFor="pw-again">Repeat new password</label>
-              <input id="pw-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
-            </div>
-          </>
+            <FieldGrid min={200}>
+              <div className="field-row">
+                <label htmlFor="pw-new">New password</label>
+                <input id="pw-new" type="password" autoComplete="new-password" value={next} onChange={(e) => setNext(e.target.value)} />
+              </div>
+              <div className="field-row">
+                <label htmlFor="pw-again">Repeat new password</label>
+                <input id="pw-again" type="password" autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+              </div>
+            </FieldGrid>
+          </FormSection>
         )}
       </div>
     </Modal>

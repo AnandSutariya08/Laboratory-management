@@ -19,7 +19,7 @@
 .pl-actions { display: flex; gap: var(--s-2); align-items: center; }
 .pl-field { display: flex; flex-direction: column; gap: var(--s-1); }
 .pl-field__label { font-size: var(--fs-min); color: var(--c-on-surface-variant); font-weight: 600; }
-.pl-fields { display: flex; flex-direction: column; gap: var(--s-4); }
+.pl-fields { display: flex; flex-direction: column; }
 .pl-toggle { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); }
 .pl-drawer-foot { display: flex; justify-content: space-between; gap: var(--s-3); }
 .pl-expand { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--s-4); padding: var(--s-2) var(--s-3); }

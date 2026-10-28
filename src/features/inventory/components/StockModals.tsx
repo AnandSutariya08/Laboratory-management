@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { App, Alert, Form, InputNumber, Modal, Radio, Select, Input } from 'antd'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import type { InventoryData } from '../lib/useInventory'
 import { adjustStock, consumeFefo, isExpired } from '../lib/stock'
 import { useActor } from './useActor'
@@ -58,6 +59,7 @@ export function ConsumeModal({
   return (
     <Modal title="Manual consumption" open={open} onCancel={onClose} onOk={submit} okText="Consume" confirmLoading={busy} destroyOnHidden>
       <Form layout="vertical">
+        <FormSection title="What was used" description="Stock is drawn from the earliest-expiry lots first.">
         <Form.Item label="Item" required>
           <Select
             showSearch
@@ -67,15 +69,20 @@ export function ConsumeModal({
             options={inv.items.filter((i) => i.active).map((i) => ({ value: i.id, label: `${i.name} (${inv.levels.get(i.id)?.qty ?? 0} ${i.unit})` }))}
           />
         </Form.Item>
-        <Form.Item label={`Quantity${unit ? ` (${unit})` : ''}`} required extra={item ? `Available: ${avail} ${unit}. Drawn from the earliest-expiry lots first.` : undefined}>
-          <InputNumber min={0} value={qty} onChange={setQty} style={{ width: '100%' }} />
+        <Form.Item label="Quantity" required extra={item ? `Available: ${avail} ${unit}.` : undefined}>
+          <InputNumber min={0} value={qty} onChange={setQty} addonAfter={unit || undefined} style={{ width: '100%' }} />
         </Form.Item>
-        <Form.Item label="Reason">
-          <Select value={reason} onChange={setReason} options={REASONS.map((r) => ({ value: r, label: r }))} />
-        </Form.Item>
-        <Form.Item label="Note">
-          <Input value={note} onChange={(e) => setNote(e.target.value)} />
-        </Form.Item>
+        </FormSection>
+        <FormSection title="Why">
+          <FieldGrid min={220}>
+            <Form.Item label="Reason">
+              <Select value={reason} onChange={setReason} options={REASONS.map((r) => ({ value: r, label: r }))} />
+            </Form.Item>
+            <Form.Item label="Note">
+              <Input value={note} onChange={(e) => setNote(e.target.value)} />
+            </Form.Item>
+          </FieldGrid>
+        </FormSection>
       </Form>
     </Modal>
   )
@@ -131,6 +138,7 @@ export function AdjustModal({
     <Modal title={`Adjust stock${item ? ` - ${item.name}` : ''}`} open={open} onCancel={onClose} onOk={submit} okText="Apply" confirmLoading={busy} destroyOnHidden>
       <Alert type="info" showIcon style={{ marginBottom: 12 }} title="Adjustments are logged in the movement history with your reason." />
       <Form layout="vertical">
+        <FormSection title="Adjustment" description="Choose the lot and how much to add or remove.">
         <Form.Item label="Lot" required>
           <Select
             value={batchId}
@@ -141,18 +149,23 @@ export function AdjustModal({
             }))}
           />
         </Form.Item>
-        <Form.Item label="Direction">
-          <Radio.Group value={dir} onChange={(e) => setDir(e.target.value)}>
-            <Radio.Button value={1}>Add (+)</Radio.Button>
-            <Radio.Button value={-1}>Remove (-)</Radio.Button>
-          </Radio.Group>
-        </Form.Item>
-        <Form.Item label={`Quantity${item ? ` (${item.unit})` : ''}`} required>
-          <InputNumber min={0} value={qty} onChange={setQty} style={{ width: '100%' }} />
-        </Form.Item>
+        <FieldGrid min={220}>
+          <Form.Item label="Direction">
+            <Radio.Group value={dir} onChange={(e) => setDir(e.target.value)}>
+              <Radio.Button value={1}>Add (+)</Radio.Button>
+              <Radio.Button value={-1}>Remove (-)</Radio.Button>
+            </Radio.Group>
+          </Form.Item>
+          <Form.Item label="Quantity" required>
+            <InputNumber min={0} value={qty} onChange={setQty} addonAfter={item?.unit} style={{ width: '100%' }} />
+          </Form.Item>
+        </FieldGrid>
+        </FormSection>
+        <FormSection title="Reason" description="Recorded in the movement history.">
         <Form.Item label="Reason" required>
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Stock count correction, damaged, QC fail..." />
         </Form.Item>
+        </FormSection>
       </Form>
     </Modal>
   )

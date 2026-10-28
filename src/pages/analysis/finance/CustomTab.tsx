@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { App, Checkbox, Input, Modal, Select } from 'antd'
+import { App, Checkbox, Input, Modal, Select, Switch } from 'antd'
 import { addDoc, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { Button } from '../../../design/Button'
 import { Card } from '../../../design/Card'
@@ -14,6 +14,8 @@ import { BASE_LABEL, buildRows, COLUMNS, outsourceCols, type BaseTab, type ColDe
 import { applyFilters, FilterBar, resolveCols, RowsTable, type ExportSettings, type TabFilters } from './RowsTable'
 import { useRequestExport } from './BackgroundExports'
 import { dialogWidth } from '../../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../../design/FormLayout'
+import '../../../components/results/results.css'
 
 // Custom finance tabs, saved to Firestore (labs/{lab}/financeTabs) so they follow the user across browsers and can be
 // shared to roles. The owner (or an admin) edits; people the tab is shared with can open it and filter it.
@@ -172,54 +174,87 @@ function Builder({ def, labs, onSave, onCancel, canShare }: { def: CustomTabDef;
   const colOpts = d.columns.map((k) => ({ value: k, label: title(k) }))
   return (
     <Modal open title={def.id ? 'Edit tab' : 'Add tab'} onCancel={onCancel} width={dialogWidth(760)} onOk={() => d.name.trim() && d.columns.length && onSave({ ...d, name: d.name.trim() })} okText="Save tab" okButtonProps={{ disabled: !d.name.trim() || !d.columns.length }}>
-      <div className="an-stack">
-        <div className="an-pill-row">
-          <Input placeholder="Tab name" aria-label="Tab name" style={{ width: 240 }} value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
-          <Select aria-label="Base tab" style={{ width: 180 }} value={d.base} onChange={(v) => setD({ ...d, base: v })} options={(Object.keys(BASE_LABEL) as BaseTab[]).map((v) => ({ value: v, label: BASE_LABEL[v] }))} />
-        </div>
-        <div className="an-pill-row" style={{ alignItems: 'flex-start' }}>
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <h3 className="an-card-title">Available columns</h3>
-            <div className="an-colpick">
-              {all.map((c) => <Checkbox key={c.key} checked={d.columns.includes(c.key)} onChange={(e) => toggle(c.key, e.target.checked)}>{c.title}</Checkbox>)}
+      <div>
+        <FormSection title="Tab" description="A name for the tab and which finance tab its rows come from.">
+          <FieldGrid min={240}>
+            <div className="re-field">
+              <label htmlFor="ct-name">Tab name</label>
+              <Input id="ct-name" placeholder="Tab name" aria-label="Tab name" value={d.name} onChange={(e) => setD({ ...d, name: e.target.value })} />
             </div>
-          </div>
-          <div style={{ flex: 1, minWidth: 260 }}>
-            <h3 className="an-card-title">Selected, in order</h3>
-            <div className="an-colpick">
-              {d.columns.map((k, i) => (
-                <div className="an-colpick__row" key={k}>
-                  <span>{i + 1}. {title(k)}</span>
-                  <Button aria-label={`Move ${title(k)} up`} onClick={() => move(i, -1)} disabled={i === 0}>Up</Button>
-                  <Button aria-label={`Move ${title(k)} down`} onClick={() => move(i, 1)} disabled={i === d.columns.length - 1}>Down</Button>
-                  <Checkbox checked={d.pinned.includes(k)} onChange={(e) => setD({ ...d, pinned: e.target.checked ? [...d.pinned, k] : d.pinned.filter((p) => p !== k) })} aria-label={`Pin ${title(k)}`}>Pin</Checkbox>
-                </div>
-              ))}
-              {!d.columns.length && <span className="an-note">Choose at least one column.</span>}
+            <div className="re-field">
+              <label htmlFor="ct-base">Base tab</label>
+              <Select id="ct-base" aria-label="Base tab" value={d.base} onChange={(v) => setD({ ...d, base: v })} options={(Object.keys(BASE_LABEL) as BaseTab[]).map((v) => ({ value: v, label: BASE_LABEL[v] }))} />
             </div>
-          </div>
-        </div>
+          </FieldGrid>
+        </FormSection>
 
-        <h3 className="an-card-title">Group and sort</h3>
-        <div className="an-pill-row">
-          <Select allowClear placeholder="Group by" aria-label="Group by column" style={{ width: 200 }} value={d.groupBy || undefined} onChange={(v) => setD({ ...d, groupBy: v ?? '' })} options={colOpts} />
-          <Select allowClear placeholder="Sort by" aria-label="Sort by column" style={{ width: 200 }} value={d.sortBy || undefined} onChange={(v) => setD({ ...d, sortBy: v ?? '' })} options={colOpts} />
-          <Segmented aria-label="Sort direction" size="small" value={d.sortDir ?? 'desc'} onChange={(v) => setD({ ...d, sortDir: v })} options={[{ value: 'desc', label: 'High to low' }, { value: 'asc', label: 'Low to high' }]} />
-        </div>
-        {d.groupBy && <p className="an-note">Grouped rows show the total of every amount column for each {title(d.groupBy)}.</p>}
+        <FormSection title="Columns" description="Tick the columns to show, then put them in order. Pinned columns stay in view when the table scrolls sideways.">
+          <FieldGrid min={280}>
+            <div>
+              <h4 className="an-card-title">Available columns</h4>
+              <div className="an-colpick an-colpick--cols">
+                {all.map((c) => <Checkbox key={c.key} checked={d.columns.includes(c.key)} onChange={(e) => toggle(c.key, e.target.checked)}>{c.title}</Checkbox>)}
+              </div>
+            </div>
+            <div>
+              <h4 className="an-card-title">Selected, in order</h4>
+              <div className="an-colpick">
+                {d.columns.map((k, i) => (
+                  <div className="an-colpick__row" key={k}>
+                    <span>{i + 1}. {title(k)}</span>
+                    <Button aria-label={`Move ${title(k)} up`} onClick={() => move(i, -1)} disabled={i === 0}>Up</Button>
+                    <Button aria-label={`Move ${title(k)} down`} onClick={() => move(i, 1)} disabled={i === d.columns.length - 1}>Down</Button>
+                    <Checkbox checked={d.pinned.includes(k)} onChange={(e) => setD({ ...d, pinned: e.target.checked ? [...d.pinned, k] : d.pinned.filter((p) => p !== k) })} aria-label={`Pin ${title(k)}`}>Pin</Checkbox>
+                  </div>
+                ))}
+                {!d.columns.length && <span className="an-note">Choose at least one column.</span>}
+              </div>
+            </div>
+          </FieldGrid>
+        </FormSection>
 
-        <h3 className="an-card-title">Export settings</h3>
-        <div className="an-pill-row">
-          <Input placeholder="File name (default: tab name)" aria-label="Export file name" style={{ width: 240 }} value={ex.fileName ?? ''} onChange={(e) => setEx({ fileName: e.target.value })} />
-          <Select aria-label="Delimiter" style={{ width: 160 }} value={ex.delimiter ?? ','} onChange={(v) => setEx({ delimiter: v })} options={DELIMS} />
-          <Checkbox checked={ex.includeHeader !== false} onChange={(e) => setEx({ includeHeader: e.target.checked })}>Header row</Checkbox>
-          <Checkbox checked={ex.includeTotals !== false} onChange={(e) => setEx({ includeTotals: e.target.checked })}>Totals row</Checkbox>
-        </div>
+        <FormSection title="Group and sort">
+          <FieldGrid min={200}>
+            <div className="re-field">
+              <label htmlFor="ct-group">Group by</label>
+              <Select id="ct-group" allowClear placeholder="No grouping" aria-label="Group by column" value={d.groupBy || undefined} onChange={(v) => setD({ ...d, groupBy: v ?? '' })} options={colOpts} />
+            </div>
+            <div className="re-field">
+              <label htmlFor="ct-sort">Sort by</label>
+              <Select id="ct-sort" allowClear placeholder="Default order" aria-label="Sort by column" value={d.sortBy || undefined} onChange={(v) => setD({ ...d, sortBy: v ?? '' })} options={colOpts} />
+            </div>
+            <div className="re-field">
+              <label>Sort direction</label>
+              <Segmented aria-label="Sort direction" size="small" value={d.sortDir ?? 'desc'} onChange={(v) => setD({ ...d, sortDir: v })} options={[{ value: 'desc', label: 'High to low' }, { value: 'asc', label: 'Low to high' }]} />
+            </div>
+          </FieldGrid>
+          {d.groupBy && <p className="an-note">Grouped rows show the total of every amount column for each {title(d.groupBy)}.</p>}
+        </FormSection>
 
-        <h3 className="an-card-title">Sharing</h3>
-        {canShare ? (
-          <Select mode="multiple" allowClear placeholder="Share with roles (private if empty)" aria-label="Share with roles" style={{ width: '100%' }} value={d.sharedWithRoles ?? []} onChange={(v) => setD({ ...d, sharedWithRoles: v })} options={SHARE_ROLES} />
-        ) : <p className="an-note">Only the owner or an admin can change sharing.</p>}
+        <FormSection title="Export settings" description="How the downloaded file is named and laid out.">
+          <FieldGrid min={220}>
+            <div className="re-field">
+              <label htmlFor="ct-file">File name</label>
+              <Input id="ct-file" placeholder="Default: tab name" aria-label="Export file name" value={ex.fileName ?? ''} onChange={(e) => setEx({ fileName: e.target.value })} />
+            </div>
+            <div className="re-field">
+              <label htmlFor="ct-delim">Delimiter</label>
+              <Select id="ct-delim" aria-label="Delimiter" value={ex.delimiter ?? ','} onChange={(v) => setEx({ delimiter: v })} options={DELIMS} />
+            </div>
+          </FieldGrid>
+          <SettingRow label="Header row" help="First line of the file lists the column names.">
+            <Switch aria-label="Header row" checked={ex.includeHeader !== false} onChange={(v) => setEx({ includeHeader: v })} />
+          </SettingRow>
+          <SettingRow label="Totals row" help="Last line of the file adds up each amount column.">
+            <Switch aria-label="Totals row" checked={ex.includeTotals !== false} onChange={(v) => setEx({ includeTotals: v })} />
+          </SettingRow>
+        </FormSection>
+
+        <FormSection title="Sharing" description="Who else can open this tab.">
+          {canShare ? (
+            <Select mode="multiple" allowClear placeholder="Share with roles (private if empty)" aria-label="Share with roles" style={{ width: '100%' }} value={d.sharedWithRoles ?? []} onChange={(v) => setD({ ...d, sharedWithRoles: v })} options={SHARE_ROLES} />
+          ) : <p className="an-note">Only the owner or an admin can change sharing.</p>}
+        </FormSection>
       </div>
     </Modal>
   )

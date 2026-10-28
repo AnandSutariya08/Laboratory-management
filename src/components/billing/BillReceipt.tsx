@@ -175,15 +175,6 @@ export default function BillReceipt({ open, orderId, onClose }: Props) {
       destroyOnHidden
       footer={
         <div className="bill-actions" style={{ alignItems: 'center' }}>
-          <Segmented<Layout>
-            size="small"
-            aria-label="Receipt layout"
-            value={thermal ? 'thermal' : 'a4'}
-            onChange={setLayout}
-            options={[{ value: 'a4', label: 'A4' }, { value: 'thermal', label: 'Thermal 80mm' }]}
-          />
-          <Checkbox checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}>Header</Checkbox>
-          <Checkbox checked={showFooter} onChange={(e) => setShowFooter(e.target.checked)}>Footer</Checkbox>
           <Button icon={<BarcodeOutlined />} disabled={!order} onClick={printBarcode}>Barcode</Button>
           <Button icon={<FileTextOutlined />} disabled={!order} onClick={printTrf}>TRF</Button>
           <Button icon={<ExperimentOutlined />} disabled={!order} onClick={() => order && navigate(`/results/${order.id}`)}>Enter results</Button>
@@ -204,6 +195,18 @@ export default function BillReceipt({ open, orderId, onClose }: Props) {
           @page { size: ${thermal ? '80mm auto' : 'A4'}; margin: ${thermal ? '3mm' : '12mm'}; }
         }
       `}</style>
+      <div className="bill-opts">
+        <span className="bill-opts__label">Receipt options</span>
+        <Segmented<Layout>
+          size="small"
+          aria-label="Receipt layout"
+          value={thermal ? 'thermal' : 'a4'}
+          onChange={setLayout}
+          options={[{ value: 'a4', label: 'A4' }, { value: 'thermal', label: 'Thermal 80mm' }]}
+        />
+        <Checkbox checked={showHeader} onChange={(e) => setShowHeader(e.target.checked)}>Header</Checkbox>
+        <Checkbox checked={showFooter} onChange={(e) => setShowFooter(e.target.checked)}>Footer</Checkbox>
+      </div>
       {!order ? (
         <p className="bill-muted">Loading bill...</p>
       ) : (

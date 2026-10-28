@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { App, InputNumber, Modal, Radio, Select, Table } from 'antd'
+import { App, Form, InputNumber, Modal, Radio, Select, Table } from 'antd'
 import { DownloadOutlined } from '@ant-design/icons'
 import { addDoc, deleteField, FieldPath, orderBy, query, serverTimestamp, updateDoc, limit } from 'firebase/firestore'
 import { useCatalogueMaps } from '../../hooks/useCatalogue'
@@ -12,6 +12,7 @@ import { formatINR, toPaise, toRupees } from '../../lib/money'
 import { Button } from '../../design/Button'
 import { StatusChip } from '../../design/StatusChip'
 import { dialogWidth } from '../../design/dialog'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { downloadText } from './helpers'
 import { CsvUpload, commitBatch, csvLine, headerIndex, mergeOp } from './shared'
 
@@ -146,23 +147,40 @@ export function MassPriceModal({ open, onClose }: { open: boolean; onClose: () =
   const now = Date.now()
   return (
     <Modal title="Mass update price" open={open} onCancel={onClose} onOk={apply} okText={`Apply to ${preview.length} test(s)`} okButtonProps={{ disabled: preview.length === 0 }} confirmLoading={busy} width={dialogWidth(780)} destroyOnHidden>
-      <div className="cat-toolbar">
-        <Select aria-label="Price target" style={{ width: 220 }} value={target} onChange={setTarget}
-          options={[{ value: 'mrp', label: 'Test price (MRP)' }, ...lists.filter((l) => l.active !== false).map((l) => ({ value: l.id, label: `Rate list: ${l.name}` }))]} />
-        <Select aria-label="Department" allowClear disabled={!!sheet} placeholder="All departments" style={{ width: 200 }} value={dept} onChange={setDept} options={departments.map((d) => ({ value: d.id, label: d.name }))} />
-      </div>
-      <div className="cat-toolbar">
-        <Radio.Group disabled={!!sheet} value={rule} onChange={(e) => setRule(e.target.value)} optionType="button"
-          options={[{ value: 'percent', label: 'By percent' }, { value: 'flat', label: 'By amount (₹)' }, { value: 'absolute', label: 'Set to amount (₹)' }]} />
-        <InputNumber aria-label="Change value (negative to reduce)" disabled={!!sheet} value={amount} onChange={(v) => setAmount(v ?? 0)} suffix={rule === 'percent' ? '%' : '₹'} />
-        <Select aria-label="Rounding" disabled={!!sheet} style={{ width: 170 }} value={round} onChange={setRound}
-          options={[{ value: 0, label: 'No rounding' }, { value: 1, label: 'Round to ₹1' }, { value: 5, label: 'Round to ₹5' }, { value: 10, label: 'Round to ₹10' }]} />
-      </div>
-      <div className="cat-toolbar">
-        <Button icon={<DownloadOutlined />} onClick={download}>Download price sheet</Button>
-        <CsvUpload onRows={upload}>Upload price sheet</CsvUpload>
-        {sheet && <Button variant="text" onClick={() => setSheet(null)}>Clear sheet</Button>}
-      </div>
+      <Form layout="vertical" component="div">
+        <FormSection title="What to update" description="Choose the price list and, optionally, one department.">
+          <FieldGrid min={240}>
+            <Form.Item label="Price list">
+              <Select aria-label="Price target" value={target} onChange={setTarget}
+                options={[{ value: 'mrp', label: 'Test price (MRP)' }, ...lists.filter((l) => l.active !== false).map((l) => ({ value: l.id, label: `Rate list: ${l.name}` }))]} />
+            </Form.Item>
+            <Form.Item label="Department">
+              <Select aria-label="Department" allowClear disabled={!!sheet} placeholder="All departments" value={dept} onChange={setDept} options={departments.map((d) => ({ value: d.id, label: d.name }))} />
+            </Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="How to change prices" description="Apply a rule to every test in scope, or upload a price sheet instead (the rule is then switched off).">
+          <Form.Item label="Rule">
+            <Radio.Group disabled={!!sheet} value={rule} onChange={(e) => setRule(e.target.value)} optionType="button"
+              options={[{ value: 'percent', label: 'By percent' }, { value: 'flat', label: 'By amount (₹)' }, { value: 'absolute', label: 'Set to amount (₹)' }]} />
+          </Form.Item>
+          <FieldGrid min={220}>
+            <Form.Item label="Value" extra="Use a negative value to reduce prices.">
+              <InputNumber aria-label="Change value (negative to reduce)" disabled={!!sheet} value={amount} onChange={(v) => setAmount(v ?? 0)} addonAfter={rule === 'percent' ? '%' : '₹'} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item label="Rounding">
+              <Select aria-label="Rounding" disabled={!!sheet} value={round} onChange={setRound}
+                options={[{ value: 0, label: 'No rounding' }, { value: 1, label: 'Round to ₹1' }, { value: 5, label: 'Round to ₹5' }, { value: 10, label: 'Round to ₹10' }]} />
+            </Form.Item>
+          </FieldGrid>
+          <div className="cat-toolbar">
+            <Button icon={<DownloadOutlined />} onClick={download}>Download price sheet</Button>
+            <CsvUpload onRows={upload}>Upload price sheet</CsvUpload>
+            {sheet && <Button variant="text" onClick={() => setSheet(null)}>Clear sheet</Button>}
+          </div>
+        </FormSection>
+      </Form>
+      <FormSection title="Preview" description="Prices that would change when you press Apply.">
       <Table
         size="small" rowKey="id" dataSource={preview} pagination={{ pageSize: 8, showSizeChanger: false }}
         locale={{ emptyText: 'No price would change. Enter a change or upload a sheet.' }}
@@ -173,7 +191,8 @@ export function MassPriceModal({ open, onClose }: { open: boolean; onClose: () =
           { title: 'Change', width: 110, render: (_, r) => (r.from === null ? '' : <span className={r.to > r.from ? 'cat-diff-up' : 'cat-diff-down'}>{r.to > r.from ? '+' : '-'}{formatINR(Math.abs(r.to - r.from))}</span>) },
         ]}
       />
-      <h3 className="cat-section-title" style={{ marginTop: 16 }}>Recent updates</h3>
+      </FormSection>
+      <FormSection title="Recent updates" description="Updates can be reverted for 24 hours.">
       <Table
         size="small" rowKey="id" dataSource={batches} pagination={false} locale={{ emptyText: 'No updates yet' }}
         columns={[
@@ -189,6 +208,7 @@ export function MassPriceModal({ open, onClose }: { open: boolean; onClose: () =
           },
         ]}
       />
+      </FormSection>
     </Modal>
   )
 }

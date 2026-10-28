@@ -7,6 +7,7 @@ import { col, docRef } from '../../../lib/db'
 import { can, useAuth } from '../../../auth/AuthProvider'
 import { ApproveModal, DeleteReasonModal } from './StudyActions'
 import CapaModal from './CapaModal'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import { useCapas } from './shared'
 import { useQcSettings } from '../lib/useQcSettings'
 import type { Capa, IlcParam } from '../types'
@@ -189,26 +190,29 @@ export default function IlcSection() {
       />
       <Modal title={editing?.id ? 'Edit ILC study' : 'Add ILC study'} open={!!editing} onOk={save} okButtonProps={{ disabled: locked }} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(900)}>
         <Form form={form} layout="vertical" disabled={locked}>
-          <Space wrap size="middle">
-            <Form.Item name="partnerLab" label="Partner lab" rules={[{ required: true }]}>
-              <Input style={{ width: 220 }} />
-            </Form.Item>
-            <Form.Item name="partnerLabId" label="Partner lab ID">
-              <Input style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="machineId" label="Machine">
-              <Select allowClear style={{ width: 200 }} options={machines.map((m) => ({ value: m.id, label: m.name }))} />
-            </Form.Item>
-            <Form.Item name="sampleType" label="Sample type">
-              <Select allowClear style={{ width: 160 }} options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} />
-            </Form.Item>
-            <Form.Item name="sampleId" label="Sample ID" rules={[{ required: true }]}>
-              <Input style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="date" label="Date" rules={[{ required: true }]}>
-              <DatePicker />
-            </Form.Item>
-          </Space>
+          <FormSection title="Study details" description="The partner lab and the sample that was compared.">
+            <FieldGrid min={200}>
+              <Form.Item name="partnerLab" label="Partner lab" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="partnerLabId" label="Partner lab ID">
+                <Input />
+              </Form.Item>
+              <Form.Item name="machineId" label="Machine">
+                <Select allowClear options={machines.map((m) => ({ value: m.id, label: m.name }))} />
+              </Form.Item>
+              <Form.Item name="sampleType" label="Sample type">
+                <Select allowClear options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} />
+              </Form.Item>
+              <Form.Item name="sampleId" label="Sample ID" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="date" label="Date" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Parameters compared" description="Enter our result and the partner's result for each parameter.">
           <Form.List name="params">
             {(fields, { add, remove }) => (
               <>
@@ -216,28 +220,31 @@ export default function IlcSection() {
                   const p = w?.params?.[f.name]
                   const e = p && p.ourResult != null && p.theirResult != null ? evalIlc(p.ourResult, p.theirResult, p.limitPct ?? limitFor(p.tp?.testId, p.tp?.paramKey), p.peerSd) : null
                   return (
-                    <div key={f.key} style={{ marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--c-outline-variant, #ddd)' }}>
-                      <Space wrap size="middle" align="start">
-                        <Form.Item name={[f.name, 'tp']} label="Test and parameter" rules={[{ required: true }]}>
-                          <TestParamSelect tests={maps.tests} restrictTestIds={machines.find((m) => m.id === w?.machineId)?.testIds} onChange={(tp) => form.setFieldValue(['params', f.name, 'limitPct'], limitFor(tp.testId, tp.paramKey))} />
-                        </Form.Item>
-                        <Form.Item name={[f.name, 'ourResult']} label="Our result" rules={[{ required: true }]}><InputNumber style={{ width: 110 }} /></Form.Item>
-                        <Form.Item name={[f.name, 'theirResult']} label="Partner result" rules={[{ required: true }]}><InputNumber style={{ width: 110 }} /></Form.Item>
-                        <Form.Item name={[f.name, 'peerSd']} label="Group SD (for SDI)"><InputNumber style={{ width: 110 }} min={0} /></Form.Item>
-                        <Form.Item name={[f.name, 'limitPct']} label="Limit (%)"><InputNumber style={{ width: 90 }} min={0} /></Form.Item>
-                        {fields.length > 1 && !locked && <Button onClick={() => remove(f.name)} aria-label="Remove parameter">Remove</Button>}
-                      </Space>
+                    <div key={f.key} className="qc-subcard">
+                      <Form.Item name={[f.name, 'tp']} label="Test and parameter" rules={[{ required: true }]}>
+                        <TestParamSelect tests={maps.tests} restrictTestIds={machines.find((m) => m.id === w?.machineId)?.testIds} onChange={(tp) => form.setFieldValue(['params', f.name, 'limitPct'], limitFor(tp.testId, tp.paramKey))} />
+                      </Form.Item>
+                      <FieldGrid min={140}>
+                        <Form.Item name={[f.name, 'ourResult']} label="Our result" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+                        <Form.Item name={[f.name, 'theirResult']} label="Partner result" rules={[{ required: true }]}><InputNumber style={{ width: '100%' }} /></Form.Item>
+                        <Form.Item name={[f.name, 'peerSd']} label="Group SD (for SDI)"><InputNumber style={{ width: '100%' }} min={0} /></Form.Item>
+                        <Form.Item name={[f.name, 'limitPct']} label="Limit"><InputNumber style={{ width: '100%' }} min={0} addonAfter="%" /></Form.Item>
+                      </FieldGrid>
                       {e && <div><Text>Difference {fmt(e.diffPct)}% | SDI {fmt(e.sdi)} | <Chip status={e.outcome} /></Text></div>}
+                      {fields.length > 1 && !locked && <Button onClick={() => remove(f.name)} aria-label="Remove parameter" style={{ marginTop: 8 }}>Remove</Button>}
                     </div>
                   )
                 })}
-                {!locked && <Button onClick={() => add({ limitPct: limitFor() })} style={{ marginBottom: 12 }}>Add parameter</Button>}
+                {!locked && <Button onClick={() => add({ limitPct: limitFor() })}>Add parameter</Button>}
               </>
             )}
           </Form.List>
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+          </FormSection>
+          <FormSection title="Notes">
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          </FormSection>
         </Form>
       </Modal>
       <ApproveModal

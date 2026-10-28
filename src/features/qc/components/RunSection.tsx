@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Alert, App, Checkbox, DatePicker, Empty, Input, InputNumber, Select, Space, Table, Tag, Typography } from 'antd'
+import { Alert, App, Checkbox, DatePicker, Empty, Form, Input, InputNumber, Select, Space, Table, Tag, Typography } from 'antd'
 import { SaveOutlined } from '@ant-design/icons'
 import dayjs, { type Dayjs } from 'dayjs'
 import { addDoc, serverTimestamp, Timestamp } from 'firebase/firestore'
@@ -13,6 +13,7 @@ import { INVESTIGATION_CHECKLIST, OUTLIER_NATURE, PATIENT_IMPACT } from '../lib/
 import { fmt } from '../lib/stats'
 import { QC, type Capa, type QcRun as QcRunDoc, type QcLevel, type QcMaterial, type QcRun, type QcRunResult } from '../types'
 import CapaModal from './CapaModal'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import { lotUsable } from '../lib/lot'
 import { paramName, StatusTag, useCapas, useMachines, useMaterials, useRecentRuns } from './shared'
 import { occurrenceStatus, slotViews, syncOccurrences, type SlotView } from '../lib/occurrences'
@@ -203,28 +204,34 @@ export default function RunSection() {
   return (
     <>
       <Panel size="small" style={{ marginBottom: 16 }}>
-        <Space wrap size="middle">
-          <Select
-            style={{ width: 260 }}
-            placeholder="Machine"
-            value={machineId}
-            onChange={(v) => {
-              setMachineId(v)
-              reset()
-            }}
-            options={machines.filter((m) => m.active !== false).map((m) => ({ value: m.id, label: m.name }))}
-          />
-          <Select
-            style={{ width: 320 }}
-            placeholder="Material / lot (non-expired)"
-            value={materialId}
-            onChange={(v) => {
-              setMaterialId(v)
-              reset()
-            }}
-            options={usable.map((m) => ({ value: m.id, label: `${m.name} - lot ${m.lotNo}` }))}
-          />
-        </Space>
+        <FieldGrid min={260}>
+          <Form.Item label="Machine" style={{ marginBottom: 0 }}>
+            <Select
+              style={{ width: '100%' }}
+              aria-label="Machine"
+              placeholder="Machine"
+              value={machineId}
+              onChange={(v) => {
+                setMachineId(v)
+                reset()
+              }}
+              options={machines.filter((m) => m.active !== false).map((m) => ({ value: m.id, label: m.name }))}
+            />
+          </Form.Item>
+          <Form.Item label="Material / lot" style={{ marginBottom: 0 }}>
+            <Select
+              style={{ width: '100%' }}
+              aria-label="Material / lot"
+              placeholder="Material / lot (non-expired)"
+              value={materialId}
+              onChange={(v) => {
+                setMaterialId(v)
+                reset()
+              }}
+              options={usable.map((m) => ({ value: m.id, label: `${m.name} - lot ${m.lotNo}` }))}
+            />
+          </Form.Item>
+        </FieldGrid>
         {slotFor && (
           <div style={{ marginTop: 8 }}>
             <Text type="secondary">
@@ -305,22 +312,38 @@ export default function RunSection() {
               </Space>
             )}
             {ev && ev.violations.length > 0 && (settings.outlierNature || settings.investigationChecklist || settings.remedialAction || settings.rootCauseAnalysis || settings.patientResultManagement || settings.followUp) && (
-              <Space vertical style={{ width: '100%', marginTop: 12 }}>
-                <Text strong>Outlier investigation</Text>
-                {settings.outlierNature && <Select allowClear placeholder="Nature of QC outlier" style={{ width: 320 }} value={outlier.nature} onChange={(v) => setOutlier({ ...outlier, nature: v })} options={OUTLIER_NATURE} />}
-                {settings.investigationChecklist && <Checkbox.Group style={{ display: 'grid', gap: 4 }} value={outlier.checklist ?? []} onChange={(v) => setOutlier({ ...outlier, checklist: v as string[] })} options={INVESTIGATION_CHECKLIST} />}
-                {settings.rootCauseAnalysis && <Input.TextArea rows={2} placeholder="Root cause analysis" value={outlier.rca} onChange={(e) => setOutlier({ ...outlier, rca: e.target.value })} />}
-                {settings.remedialAction && <Input.TextArea rows={2} placeholder="Remedial action taken" value={outlier.remedial} onChange={(e) => setOutlier({ ...outlier, remedial: e.target.value })} />}
-                {settings.patientResultManagement && <Select allowClear placeholder="Patient result management" style={{ width: 380 }} value={outlier.patientImpact} onChange={(v) => setOutlier({ ...outlier, patientImpact: v })} options={PATIENT_IMPACT} />}
-                {settings.followUp && <Input.TextArea rows={2} placeholder="Follow-up steps" value={outlier.followUp} onChange={(e) => setOutlier({ ...outlier, followUp: e.target.value })} />}
-              </Space>
+              <FormSection title="Outlier investigation" description="Record what you found for this failed run.">
+                <Form layout="vertical" component="div">
+                  <FieldGrid min={280}>
+                    {settings.outlierNature && <Form.Item label="Nature of QC outlier"><Select allowClear aria-label="Nature of QC outlier" placeholder="Nature of QC outlier" style={{ width: '100%' }} value={outlier.nature} onChange={(v) => setOutlier({ ...outlier, nature: v })} options={OUTLIER_NATURE} /></Form.Item>}
+                    {settings.patientResultManagement && <Form.Item label="Patient result management"><Select allowClear aria-label="Patient result management" placeholder="Patient result management" style={{ width: '100%' }} value={outlier.patientImpact} onChange={(v) => setOutlier({ ...outlier, patientImpact: v })} options={PATIENT_IMPACT} /></Form.Item>}
+                  </FieldGrid>
+                  {settings.investigationChecklist && <Form.Item label="Investigation checklist"><Checkbox.Group className="qc-checkgrid" style={{ minWidth: 0 }} value={outlier.checklist ?? []} onChange={(v) => setOutlier({ ...outlier, checklist: v as string[] })} options={INVESTIGATION_CHECKLIST} /></Form.Item>}
+                  <FieldGrid min={280}>
+                    {settings.rootCauseAnalysis && <Form.Item label="Root cause analysis"><Input.TextArea rows={2} value={outlier.rca} onChange={(e) => setOutlier({ ...outlier, rca: e.target.value })} /></Form.Item>}
+                    {settings.remedialAction && <Form.Item label="Remedial action taken"><Input.TextArea rows={2} value={outlier.remedial} onChange={(e) => setOutlier({ ...outlier, remedial: e.target.value })} /></Form.Item>}
+                    {settings.followUp && <Form.Item label="Follow-up steps"><Input.TextArea rows={2} value={outlier.followUp} onChange={(e) => setOutlier({ ...outlier, followUp: e.target.value })} /></Form.Item>}
+                  </FieldGrid>
+                </Form>
+              </FormSection>
             )}
-            <Space wrap style={{ marginTop: 12 }}>
-              <DatePicker showTime allowClear placeholder="Run date and time (now)" value={when} onChange={setWhen} disabledDate={(d) => d.isAfter(dayjs(), 'day')} aria-label="Run date and time" />
-              {late && <Input style={{ width: 320 }} placeholder="Reason for back-dated entry (required)" value={lateReason} onChange={(e) => setLateReason(e.target.value)} />}
-              {late && <Tag color="gold">Late entry</Tag>}
-            </Space>
-            <Input.TextArea style={{ marginTop: 12 }} rows={2} placeholder="Comment (optional)" value={note} onChange={(e) => setNote(e.target.value)} />
+            <FormSection title="Run details">
+              <Form layout="vertical" component="div">
+                <FieldGrid min={260}>
+                  <Form.Item label="Run date and time" extra="Leave empty to use now.">
+                    <DatePicker showTime allowClear style={{ width: '100%' }} placeholder="Now" value={when} onChange={setWhen} disabledDate={(d) => d.isAfter(dayjs(), 'day')} aria-label="Run date and time" />
+                  </Form.Item>
+                  {late && (
+                    <Form.Item label="Reason for back-dated entry" required extra={<Tag color="gold">Late entry</Tag>}>
+                      <Input aria-label="Reason for back-dated entry" placeholder="Required" value={lateReason} onChange={(e) => setLateReason(e.target.value)} />
+                    </Form.Item>
+                  )}
+                </FieldGrid>
+                <Form.Item label="Comment">
+                  <Input.TextArea rows={2} placeholder="Optional" value={note} onChange={(e) => setNote(e.target.value)} />
+                </Form.Item>
+              </Form>
+            </FormSection>
             <div style={{ marginTop: 12, textAlign: 'right' }}>
               <DsButton variant="primary" icon={<SaveOutlined />} disabled={!entries.length || saving} onClick={save}>
                 Save QC run

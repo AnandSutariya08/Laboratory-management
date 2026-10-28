@@ -8,6 +8,7 @@ import { col } from '../lib/db'
 import { useLiveQuery } from '../hooks/useLive'
 import { Button } from '../design/Button'
 import { StatusChip } from '../design/StatusChip'
+import { FormSection } from '../design/FormLayout'
 
 interface Survey { id: string; title: string; question: string; options: string[]; status: 'open' | 'closed'; createdAt?: Timestamp }
 interface Vote { id: string; option: string }
@@ -129,12 +130,13 @@ export function Surveys() {
         </section>
       ))}
       {isAdmin && (
-        <div style={{ display: 'grid', gap: 'var(--s-2)', marginTop: 'var(--s-4)' }}>
-          <h3 className="panel-title">New survey</h3>
+        <div style={{ marginTop: 'var(--s-5)', paddingTop: 'var(--s-5)', borderTop: '1px solid var(--c-outline-variant)' }}>
+        <FormSection title="New survey" description="Everyone in the lab can vote once and comment.">
           <div className="field-row"><label htmlFor="sv-title">Survey title</label><input id="sv-title" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
           <div className="field-row"><label htmlFor="sv-q">Question</label><input id="sv-q" value={question} onChange={(e) => setQuestion(e.target.value)} /></div>
           <div className="field-row"><label htmlFor="sv-o">Options (one per line)</label><textarea id="sv-o" rows={3} value={opts} onChange={(e) => setOpts(e.target.value)} /></div>
-          <Button variant="primary" disabled={!title.trim() || !question.trim()} onClick={create}>Create survey</Button>
+          <div><Button variant="primary" disabled={!title.trim() || !question.trim()} onClick={create}>Create survey</Button></div>
+        </FormSection>
         </div>
       )}
     </div>

@@ -1,3 +1,4 @@
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { useMemo, useState } from 'react'
 import { Alert, App, Drawer, Form, Input, InputNumber, Modal, Select, Switch, Tree, message } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, LinkOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
@@ -250,29 +251,39 @@ function MemberDrawer({ value, onClose, team }: { value: Partial<MarketingMember
     <Drawer open={!!value} onClose={onClose} destroyOnHidden title={value?.id ? 'Edit team member' : 'Add team member'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={init}>
-        <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-        <Form.Item name="role" label="Role"><Select options={ROLES} /></Form.Item>
-        <Form.Item name="parentId" label="Reports to" tooltip="The manager above this person. Their figures roll up into that manager's team view.">
-          <Select
-            allowClear
-            showSearch
-            optionFilterProp="label"
-            placeholder="Nobody (top of the tree)"
-            options={team.filter((m) => m.id !== value?.id && !descendantsOf(value?.id ?? '', team).has(m.id)).map((m) => ({ value: m.id, label: `${m.name} (${ROLES.find((r) => r.value === m.role)?.label})` }))}
-          />
-        </Form.Item>
-        <div className="pt-grid2">
-          <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
-        </div>
-        <Form.Item name="area" label="Area / territory"><Input /></Form.Item>
-        <div className="pt-grid2">
-          <Form.Item name="targetBills" label="Target bills / month"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="targetRevenueRs" label="Target revenue / month (Rs)"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="commissionType" label="Commission type"><Select options={[{ value: 'none', label: 'None' }, { value: 'percent', label: 'Percent of net' }, { value: 'flat', label: 'Flat per bill' }]} /></Form.Item>
-          {type !== 'none' && <Form.Item name="commissionValue" label={type === 'flat' ? 'Per bill (Rs)' : 'Percent'}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>}
-        </div>
-        <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+        <FormSection title="Team member" description="Who they are, their role and who they report to.">
+          <FieldGrid min={220}>
+            <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="role" label="Role"><Select options={ROLES} /></Form.Item>
+            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+            <Form.Item name="email" label="Email" rules={[{ type: 'email' }]}><Input /></Form.Item>
+            <Form.Item name="area" label="Area / territory"><Input /></Form.Item>
+          </FieldGrid>
+          <Form.Item name="parentId" label="Reports to" tooltip="The manager above this person. Their figures roll up into that manager's team view.">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              placeholder="Nobody (top of the tree)"
+              options={team.filter((m) => m.id !== value?.id && !descendantsOf(value?.id ?? '', team).has(m.id)).map((m) => ({ value: m.id, label: `${m.name} (${ROLES.find((r) => r.value === m.role)?.label})` }))}
+            />
+          </Form.Item>
+        </FormSection>
+        <FormSection title="Targets" description="Monthly goals used in the team performance view.">
+          <FieldGrid min={220}>
+            <Form.Item name="targetBills" label="Target bills / month"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="targetRevenueRs" label="Target revenue / month"><InputNumber min={0} addonBefore="₹" style={{ width: '100%' }} /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Commission" description="What this person earns on the bills they bring in.">
+          <FieldGrid min={220}>
+            <Form.Item name="commissionType" label="Commission type"><Select options={[{ value: 'none', label: 'None' }, { value: 'percent', label: 'Percent of net' }, { value: 'flat', label: 'Flat per bill' }]} /></Form.Item>
+            {type !== 'none' && <Form.Item name="commissionValue" label={type === 'flat' ? 'Per bill' : 'Percent'}><InputNumber min={0} {...(type === 'flat' ? { addonBefore: '₹' } : { addonAfter: '%' })} style={{ width: '100%' }} /></Form.Item>}
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Status">
+          <SettingRow label="Active" help="Inactive members are hidden from assignment lists." htmlFor="mt-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="mt-active" /></Form.Item></SettingRow>
+        </FormSection>
       </Form>
     </Drawer>
   )

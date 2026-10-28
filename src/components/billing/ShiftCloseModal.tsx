@@ -4,6 +4,7 @@ import dayjs, { type Dayjs } from 'dayjs'
 import { addDoc, collectionGroup, getDocs, query, serverTimestamp, Timestamp, where } from 'firebase/firestore'
 import { can, useAuth } from '../../auth/AuthProvider'
 import { useBranch } from '../../branch/BranchProvider'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 import { db, LAB_ID } from '../../firebase'
 import { useLiveQuery } from '../../hooks/useLive'
@@ -152,20 +153,27 @@ export default function ShiftCloseModal({ open, onClose }: { open: boolean; onCl
       onOk={close}
       okButtonProps={{ loading: saving, disabled: alreadyClosed || loading || scoped.length === 0 }}
     >
-      <div className="bill-row">
-        <DatePicker aria-label="Shift date" value={date} allowClear={false} onChange={(d) => d && setDate(d)} disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
-        <Select aria-label="Shift" value={shift} onChange={setShift} style={{ width: 130 }} options={SHIFTS.map((s) => ({ value: s, label: s }))} />
+      <FormSection title="Shift" description="Choose the day and shift to reconcile.">
+        <FieldGrid min={180}>
+          <div>
+            <label className="bill-field-label" htmlFor="shift-date">Date</label>
+            <DatePicker id="shift-date" aria-label="Shift date" style={{ width: '100%' }} value={date} allowClear={false} onChange={(d) => d && setDate(d)} disabledDate={(d) => d.isAfter(dayjs(), 'day')} />
+          </div>
+          <div>
+            <label className="bill-field-label" htmlFor="shift-sel">Shift</label>
+            <Select id="shift-sel" aria-label="Shift" value={shift} onChange={setShift} style={{ width: '100%' }} options={SHIFTS.map((s) => ({ value: s, label: s }))} />
+          </div>
+        </FieldGrid>
         {manager && (
-          <label style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
-            <Switch size="small" checked={onlyMine} onChange={setOnlyMine} aria-label="Only my collections" />
-            <span>Only my collections</span>
-          </label>
+          <SettingRow label="Only my collections" help="Count just the payments you posted.">
+            <Switch checked={onlyMine} onChange={setOnlyMine} aria-label="Only my collections" />
+          </SettingRow>
         )}
-      </div>
+      </FormSection>
       {alreadyClosed && <Alert style={{ marginTop: 8 }} type="info" showIcon message={`You already closed the ${shift} shift for ${dateKey}.`} />}
       {!loading && scoped.length === 0 && !alreadyClosed && <Alert style={{ marginTop: 8 }} type="info" showIcon message="No payments were posted in this shift." />}
+      <FormSection title="Cash count" description="Enter what you counted for each mode. Differences need a note.">
       <Table
-        style={{ marginTop: 8 }}
         size="small"
         rowKey="mode"
         loading={loading}
@@ -186,7 +194,7 @@ export default function ShiftCloseModal({ open, onClose }: { open: boolean; onCl
                 value={counted[r.mode] ?? 0}
                 disabled={alreadyClosed}
                 onChange={(v) => setCounted({ ...counted, [r.mode]: v ?? 0 })}
-                style={{ width: 150 }}
+                style={{ width: 170 }}
               />
             ),
           },
@@ -201,9 +209,11 @@ export default function ShiftCloseModal({ open, onClose }: { open: boolean; onCl
           </Table.Summary.Row>
         )}
       />
-      <Input.TextArea style={{ marginTop: 8 }} rows={2} placeholder={diff !== 0 ? 'Note (required: explain the difference)' : 'Note (optional)'} value={note} onChange={(e) => setNote(e.target.value)} disabled={alreadyClosed} />
+      <Input.TextArea aria-label="Note" style={{ marginTop: 'var(--s-3)' }} rows={2} placeholder={diff !== 0 ? 'Note (required: explain the difference)' : 'Note (optional)'} value={note} onChange={(e) => setNote(e.target.value)} disabled={alreadyClosed} />
+      </FormSection>
       {closes.length > 0 && (
-        <div style={{ marginTop: 12 }}>
+        <FormSection title="Already closed">
+        <div>
           <b>Closed on {dateKey}</b>
           {closes.map((c) => (
             <div key={c.id} className="bill-muted">
@@ -213,6 +223,7 @@ export default function ShiftCloseModal({ open, onClose }: { open: boolean; onCl
             </div>
           ))}
         </div>
+        </FormSection>
       )}
     </Modal>
   )

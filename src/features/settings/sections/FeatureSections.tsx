@@ -43,7 +43,9 @@ export function InventorySettings() {
           checked={draft.strictPartnerPricing === true}
           onChange={(v) => set(['strictPartnerPricing'], v)}
         />
-        <Field label="Commission basis is set under Referrals"><Select disabled value={draft.referrals.commissionBasis} options={[{ value: draft.referrals.commissionBasis, label: draft.referrals.commissionBasis }]} /></Field>
+        <div className="st-grid">
+          <Field label="Commission basis is set under Referrals"><Select disabled value={draft.referrals.commissionBasis} options={[{ value: draft.referrals.commissionBasis, label: draft.referrals.commissionBasis }]} /></Field>
+        </div>
       </SectionCard>
     </>
   )

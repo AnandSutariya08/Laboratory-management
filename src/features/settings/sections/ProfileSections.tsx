@@ -2,7 +2,7 @@ import { Input, Select } from 'antd'
 import { Button } from '../../../design/Button'
 import { CYCLES, PATIENT_BLOCK_FIELDS } from '../constants'
 import { PreviewButton } from '../Preview'
-import { bind, Field, SectionCard, useDraft } from '../ui'
+import { bind, Field, Group, SectionCard, useDraft } from '../ui'
 import type { PartnerInvoiceSettings } from '../../../types'
 
 const P = bind('profile')
@@ -17,30 +17,36 @@ export function LabDetails() {
   return (
     <>
       <SectionCard title="Lab details" description="Printed on reports, bills and shared links.">
-        <div className="st-grid">
-          <Field label="Lab name">
-            <Input value={draft.name} onChange={(e) => set(['name'], e.target.value)} />
-          </Field>
-          <Field label="Lab contact">
-            <Input value={draft.phone} onChange={(e) => set(['phone'], e.target.value)} />
-          </Field>
-          <Field label="Lab email">
-            <Input type="email" value={draft.email} onChange={(e) => set(['email'], e.target.value)} />
-          </Field>
-          <P.Txt f="city" label="City" />
-          <P.Txt f="website" label="Website" placeholder="https://" />
-          <P.Sel
-            f="dateFormat"
-            label="Date format"
-            options={['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD MMM YYYY'].map((v) => ({ value: v, label: v }))}
-          />
-          <Field label="Address" wide>
-            <Input.TextArea rows={2} value={draft.address} onChange={(e) => set(['address'], e.target.value)} />
-          </Field>
-          <Field label="Logo" wide>
-            <P.Img f="logoDataUrl" label="logo" />
-          </Field>
-        </div>
+        <Group title="Identity and contact">
+          <div className="st-grid">
+            <Field label="Lab name">
+              <Input value={draft.name} onChange={(e) => set(['name'], e.target.value)} />
+            </Field>
+            <Field label="Lab contact">
+              <Input value={draft.phone} onChange={(e) => set(['phone'], e.target.value)} />
+            </Field>
+            <Field label="Lab email">
+              <Input type="email" value={draft.email} onChange={(e) => set(['email'], e.target.value)} />
+            </Field>
+            <P.Txt f="website" label="Website" placeholder="https://" />
+          </div>
+        </Group>
+        <Group title="Address and format">
+          <div className="st-grid">
+            <Field label="Address" wide>
+              <Input.TextArea rows={2} value={draft.address} onChange={(e) => set(['address'], e.target.value)} />
+            </Field>
+            <P.Txt f="city" label="City" />
+            <P.Sel
+              f="dateFormat"
+              label="Date format"
+              options={['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD', 'DD MMM YYYY'].map((v) => ({ value: v, label: v }))}
+            />
+          </div>
+        </Group>
+        <Group title="Logo">
+          <P.Img f="logoDataUrl" label="logo" />
+        </Group>
       </SectionCard>
       <SectionCard title="Lab admin details" description="The person we contact about this account.">
         <div className="st-grid">
@@ -78,9 +84,9 @@ export function ReportDetails() {
     <>
       <SectionCard title="Header, footer and letterhead" extra={<PreviewButton kind="report" />}>
         <R.Sw f="useLetterhead" title="Print on pre-printed letterhead" description="Leaves header and footer space blank." />
-        <R.Sw f="showHeader" title="Show header" />
-        <R.Sw f="showFooter" title="Show footer" />
-        <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
+        <R.Sw f="showHeader" title="Show header" description="Print the lab name, logo and address at the top of every page." />
+        <R.Sw f="showFooter" title="Show footer" description="Print the footer text at the bottom of every page." />
+        <div className="st-grid">
           <Field label="Header image" wide>
             <R.Img f="headerImage" label="header image" />
           </Field>
@@ -91,10 +97,10 @@ export function ReportDetails() {
       <SectionCard title="Page layout">
         <div className="st-grid">
           <R.Sel f="pageSize" label="Page size" options={['A4', 'A5', 'Letter'].map((v) => ({ value: v, label: v }))} />
-          <R.Num f="marginTop" label="Top margin (mm)" max={60} />
-          <R.Num f="marginBottom" label="Bottom margin (mm)" max={60} />
-          <R.Num f="marginLeft" label="Left margin (mm)" max={60} />
-          <R.Num f="marginRight" label="Right margin (mm)" max={60} />
+          <R.Num f="marginTop" unit="mm" label="Top margin" max={60} />
+          <R.Num f="marginBottom" unit="mm" label="Bottom margin" max={60} />
+          <R.Num f="marginLeft" unit="mm" label="Left margin" max={60} />
+          <R.Num f="marginRight" unit="mm" label="Right margin" max={60} />
           <R.Sel
             f="signaturePlacement"
             label="Signature placement"
@@ -114,10 +120,10 @@ export function ReportDetails() {
         <R.Sw f="showQr" title="Show QR code" description="Links to the online copy of the report." />
         <R.Sw f="showBarcode" title="Show barcode" />
         <R.Sw f="showReferenceRanges" title="Show reference ranges" />
-        <R.Sw f="showFlagArrows" title="Show high/low arrows" />
+        <R.Sw f="showFlagArrows" title="Show high/low arrows" description="An up or down arrow beside values outside the range." />
         <R.Sw f="pageBreakPerDepartment" title="Start each department on a new page" />
         <R.Sw f="showSampleTypePerTest" title="Show sample type under each test" />
-        <R.Sw f="duplicateWatermark" title="DUPLICATE watermark after the first print" />
+        <R.Sw f="duplicateWatermark" title="DUPLICATE watermark after the first print" description="Marks re-printed copies so they cannot pass as the original." />
       </SectionCard>
       <SectionCard title="Provisional reports and sending">
         <R.Sw f="provisionalShowSign" title="Print the signature on provisional reports" />
@@ -127,7 +133,7 @@ export function ReportDetails() {
       <SectionCard title="Radiology and flag colours">
         <R.Sw f="radiologyRequireImage" title="Radiology sign-off needs an attached image" />
         <R.Sw f="radiologyRequireImpression" title="Radiology sign-off needs an impression" />
-        <div className="st-grid" style={{ marginTop: 'var(--s-3)' }}>
+        <div className="st-grid">
           <Field label="Low value colour">
             <Select value={rd.lowColour ?? '#1D4ED8'} onChange={(v) => set(['reportDetails', 'lowColour'], v)} options={FLAG_COLOURS} />
           </Field>
@@ -138,9 +144,9 @@ export function ReportDetails() {
       </SectionCard>
       <SectionCard title="Patient block fields" description="Fields shown in the patient details block of the report.">
         <R.Checks f="patientFields" options={PATIENT_BLOCK_FIELDS} />
-        <span className="st-field__hint">{rd.patientFields.length} selected</span>
-        <div className="st-actions" style={{ marginTop: 'var(--s-3)' }}>
+        <div className="st-actions">
           <Button onClick={() => set(['reportDetails', 'patientFields'], PATIENT_BLOCK_FIELDS.map((f) => f.value))}>Select all</Button>
+          <span className="st-field__hint">{rd.patientFields.length} selected</span>
         </div>
       </SectionCard>
     </>
@@ -168,13 +174,13 @@ export function BillDetails() {
         <B.Sw f="showBarcode" title="Barcode" />
         <B.Sw f="showBilledBy" title="Billed by" />
         <B.Sw f="showReportDelivery" title="Report delivery" />
-        <B.Sw f="thermalEnabled" title="Enable thermal printing" />
+        <B.Sw f="thermalEnabled" title="Enable thermal printing" description="Offer a thermal receipt option when printing a bill." />
       </SectionCard>
       <SectionCard title="Tax and UPI">
-        <B.Sw f="gstEnabled" title="Show GST on bills" />
+        <B.Sw f="gstEnabled" title="Show GST on bills" description="Prints the GSTIN, HSN code and GST amount on the bill." />
         <div className="st-grid">
           <B.Txt f="gstin" label="GSTIN" />
-          <B.Num f="gstPercent" label="GST %" max={100} />
+          <B.Num f="gstPercent" unit="%" label="GST rate" max={100} />
           <B.Txt f="hsnCode" label="HSN / SAC code" />
           <B.Txt f="upiId" label="UPI ID for bill QR" />
         </div>
@@ -188,7 +194,7 @@ export function QuotationDetails() {
     <SectionCard title="Quotation details" extra={<PreviewButton kind="quotation" />}>
       <div className="st-grid">
         <Q.Txt f="prefix" label="Quotation prefix" />
-        <Q.Num f="validityDays" label="Validity (days)" min={1} max={365} />
+        <Q.Num f="validityDays" unit="days" label="Validity" min={1} max={365} />
         <Q.Txt f="header" label="Header" area />
         <Q.Txt f="terms" label="Terms and conditions" area />
       </div>
@@ -211,21 +217,31 @@ function PartnerInvoice({ group, title }: { group: 'b2bInvoice' | 'corporateInvo
   )
   return (
     <SectionCard title={title}>
-      <div className="st-grid">
-        {txt('prefix', 'Invoice prefix')}
-        <Field label="Invoice cycle">
-          <Select value={v.cycle} options={CYCLES} onChange={(x) => put('cycle', x)} />
-        </Field>
-        <Field label="Detailed view">
-          <Select value={v.detailedView} options={[{ value: 'patient', label: 'Patient wise' }, { value: 'test', label: 'Test wise' }]} onChange={(x) => put('detailedView', x)} />
-        </Field>
-        {txt('bankName', 'Bank name')}
-        {txt('bankAccountName', 'Account holder')}
-        {txt('bankAccountNo', 'Account number')}
-        {txt('bankIfsc', 'IFSC')}
-        {txt('upiId', 'UPI ID')}
-        {txt('terms', 'Terms and conditions', true)}
-      </div>
+      <Group title="Invoice">
+        <div className="st-grid">
+          {txt('prefix', 'Invoice prefix')}
+          <Field label="Invoice cycle">
+            <Select value={v.cycle} options={CYCLES} onChange={(x) => put('cycle', x)} />
+          </Field>
+          <Field label="Detailed view">
+            <Select value={v.detailedView} options={[{ value: 'patient', label: 'Patient wise' }, { value: 'test', label: 'Test wise' }]} onChange={(x) => put('detailedView', x)} />
+          </Field>
+        </div>
+      </Group>
+      <Group title="Bank and payment details" description="Printed on the invoice so the partner knows where to pay.">
+        <div className="st-grid">
+          {txt('bankName', 'Bank name')}
+          {txt('bankAccountName', 'Account holder')}
+          {txt('bankAccountNo', 'Account number')}
+          {txt('bankIfsc', 'IFSC')}
+          {txt('upiId', 'UPI ID')}
+        </div>
+      </Group>
+      <Group title="Terms">
+        <div className="st-grid">
+          {txt('terms', 'Terms and conditions', true)}
+        </div>
+      </Group>
     </SectionCard>
   )
 }

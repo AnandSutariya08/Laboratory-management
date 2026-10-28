@@ -1,7 +1,8 @@
 /* ---- Designer chrome (app tokens) ---- */
 .sr-layout { display: grid; grid-template-columns: minmax(320px, 440px) minmax(0, 1fr); gap: var(--s-5); align-items: start; }
 @media (max-width: 1100px) { .sr-layout { grid-template-columns: 1fr; } }
-.sr-form { display: grid; gap: var(--s-4); }
+.sr-form { display: block; }
+.sr-form .sr-field { margin-bottom: var(--s-3); }
 .sr-field { display: grid; gap: var(--s-2); }
 .sr-field > label, .sr-field__label { font-size: var(--fs-dense); color: var(--c-on-surface-variant); font-weight: 600; }
 .sr-toggle { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }

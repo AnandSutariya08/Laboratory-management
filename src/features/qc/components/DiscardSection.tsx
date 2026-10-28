@@ -6,7 +6,7 @@ import { col, docRef } from '../../../lib/db'
 import { useCatalogueMaps } from '../../../hooks/useCatalogue'
 import { Segmented } from '../../../design/Segmented'
 import { Button as DsButton } from '../../../design/Button'
-import { Chip } from '../ui'
+import { Chip, Panel } from '../ui'
 import { useAuth } from '../../../auth/AuthProvider'
 import { useLiveQuery } from '../../../hooks/useLive'
 import { fmtDate, fmtDateTime, tsToDate } from '../../../components/results/common'
@@ -14,7 +14,7 @@ import type { Order } from '../../../types'
 import { QC, type SampleDiscard } from '../types'
 import { useBranchScope } from '../../../lib/branchScope'
 import { branchStamp } from '../../../lib/activeBranch'
-import { Panel } from '../ui'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 
 const { Text } = Typography
 const METHODS = ['Autoclave', 'Incineration', 'Chemical disinfection', 'Other']
@@ -133,6 +133,8 @@ export default function DiscardSection() {
                 render: (_: unknown, t: (typeof maps.sampleTypes)[number]) => (
                   <InputNumber
                     min={0}
+                    style={{ width: 130 }}
+                    addonAfter={f === 'discardDays' ? 'days' : f === 'discardHours' ? 'hours' : 'min'}
                     aria-label={`${t.name} ${f}`}
                     defaultValue={t[f] ?? 0}
                     onBlur={(e) => {
@@ -150,7 +152,7 @@ export default function DiscardSection() {
 
       {tab === 'discard' && (
         <div className="qc-stack">
-          <Panel title="Samples due for discard" extra={<Space>Default retention (days) <InputNumber min={1} value={days} onChange={(v) => setDays(v ?? 7)} /></Space>}>
+          <Panel title="Samples due for discard" extra={<Space align="center"><label htmlFor="qc-discard-days">Default retention</label><InputNumber id="qc-discard-days" min={1} value={days} onChange={(v) => setDays(v ?? 7)} addonAfter="days" style={{ width: 150 }} /></Space>}>
             <Table<Order>
               size="small"
               rowKey="id"
@@ -225,12 +227,16 @@ export default function DiscardSection() {
       <Modal title="Record sample discard" open={open} onOk={record} onCancel={() => setOpen(false)} okText="Record discard" destroyOnHidden>
         <Alert type="info" showIcon style={{ marginBottom: 12 }} message={`${selected.length} sample(s) will be recorded as discarded by ${profile?.name ?? 'you'}. A second user verifies it afterwards in the Verify discard tab.`} />
         <Form form={form} layout="vertical">
-          <Form.Item name="method" label="Disposal method" rules={[{ required: true }]}>
-            <Select options={METHODS.map((m) => ({ value: m, label: m }))} />
-          </Form.Item>
-          <Form.Item name="date" label="Discard date" rules={[{ required: true }]}>
-            <DatePicker />
-          </Form.Item>
+          <FormSection title="Disposal" description="How and when the samples were disposed of.">
+            <FieldGrid min={220}>
+              <Form.Item name="method" label="Disposal method" rules={[{ required: true }]}>
+                <Select options={METHODS.map((m) => ({ value: m, label: m }))} />
+              </Form.Item>
+              <Form.Item name="date" label="Discard date" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
         </Form>
         <Text type="secondary">Verification is recorded by name; the verifier is expected to have witnessed the disposal.</Text>
       </Modal>

@@ -65,7 +65,7 @@ export default function VoidOrderModal({ order, open, onClose }: { order: Order;
           {reported && <Alert style={{ marginBottom: 8 }} type="warning" showIcon message="A test on this bill already has an approved result. Its report stops being available." />}
           {hasMoney && !wallet && (
             <Radio.Group
-              style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-2)', marginBottom: 'var(--s-3)' }}
               value={refundNow}
               onChange={(e) => setRefundNow(e.target.value)}
               options={[
@@ -75,7 +75,9 @@ export default function VoidOrderModal({ order, open, onClose }: { order: Order;
             />
           )}
           {hasMoney && wallet && <Alert style={{ marginBottom: 8 }} type="info" showIcon message="The amount goes back to the B2B centre wallet." />}
+          <label className="bill-field-label" htmlFor="void-reason">Reason</label>
           <AutoComplete
+            id="void-reason"
             style={{ width: '100%', marginBottom: 8 }}
             options={masters.voidReasons.map((r) => ({ value: r }))}
             value={reason}

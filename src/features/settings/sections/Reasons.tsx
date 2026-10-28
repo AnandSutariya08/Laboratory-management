@@ -5,7 +5,7 @@ import { Button } from '../../../design/Button'
 import { useLiveQuery } from '../../../hooks/useLive'
 import { col, docRef } from '../../../lib/db'
 import type { ReasonDoc } from '../../../lib/masters'
-import { SectionCard, useDraft } from '../ui'
+import { Group, SectionCard, useDraft } from '../ui'
 
 // Picklists offered by the delete, discount, reject, hold, re-run, amend, send-back and out-of-TAT dialogs.
 const KINDS = [
@@ -46,14 +46,15 @@ export function Reasons() {
 
   return (
     <SectionCard title="Reasons" description="Reasons staff pick from when they delete a bill, give a discount, reject a sample, hold, re-run or amend a result. Staff can still type their own.">
-      <div className="st-actions" style={{ marginBottom: 'var(--s-4)' }}>
-        <Select aria-label="Reason type" style={{ width: 260 }} value={kind} onChange={(v) => { setKind(v); setEditing(null) }} options={KINDS} />
+      <div className="st-toolbar" style={{ marginBottom: 'var(--s-4)' }}>
+        <Select aria-label="Reason type" style={{ width: 'min(100%, 320px)' }} value={kind} onChange={(v) => { setKind(v); setEditing(null) }} options={KINDS} />
         <span className="st-field__hint">{list.length} reason{list.length === 1 ? '' : 's'}</span>
       </div>
+      <div>
       {list.map((r) => (
         <div className="st-row" key={r.id}>
           {editing?.id === r.id ? (
-            <Input style={{ maxWidth: 360 }} value={editing.text} autoFocus aria-label="Edit reason"
+            <Input style={{ maxWidth: 360, flex: 1, minWidth: 180 }} value={editing.text} autoFocus aria-label="Edit reason"
               onChange={(e) => setEditing({ id: r.id, text: e.target.value })} onPressEnter={save} />
           ) : (
             <div className="st-row__title">{r.text}</div>
@@ -75,11 +76,14 @@ export function Reasons() {
           )}
         </div>
       ))}
+      </div>
       {canEdit && (
-        <div className="st-actions" style={{ marginTop: 'var(--s-4)' }}>
-          <Input style={{ maxWidth: 360 }} value={text} onChange={(e) => setText(e.target.value)} onPressEnter={add} placeholder="New reason" aria-label="New reason" />
-          <Button onClick={add}>Add reason</Button>
-        </div>
+        <Group title="Add a reason" description="Appears in the picklist for the type selected above.">
+          <div className="st-input-row">
+            <Input value={text} onChange={(e) => setText(e.target.value)} onPressEnter={add} placeholder="New reason" aria-label="New reason" />
+            <Button onClick={add}>Add reason</Button>
+          </div>
+        </Group>
       )}
     </SectionCard>
   )

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Drawer, Select, Switch } from 'antd'
 import { Button } from '../../design/Button'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { useCatalogueMaps } from '../../hooks/useCatalogue'
 import { useBranch } from '../../branch/BranchProvider'
 import { useLiveQuery } from '../../hooks/useLive'
@@ -18,15 +19,6 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     <label className="pl-field">
       <span className="pl-field__label">{label}</span>
       {children}
-    </label>
-  )
-}
-
-function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label className="pl-toggle">
-      <span>{label}</span>
-      <Switch checked={checked} onChange={onChange} aria-label={label} />
     </label>
   )
 }
@@ -78,7 +70,7 @@ export default function FiltersDrawer({
       open={open}
       onClose={onClose}
       title="Filters"
-      width={420}
+      width={520}
       destroyOnHidden
       footer={
         <div className="pl-drawer-foot">
@@ -96,6 +88,8 @@ export default function FiltersDrawer({
       }
     >
       <div className="pl-fields">
+        <FormSection title="Tests and reports" description="Narrow by what was ordered and its report status.">
+          <FieldGrid min={190} style={{ rowGap: 'var(--s-4)' }}>
         {showBranch && (
           <Field label="Branch">
             <Select {...selectProps} value={f.branch} onChange={(v) => set('branch', v)} options={opt(branches)} />
@@ -123,6 +117,10 @@ export default function FiltersDrawer({
             ]}
           />
         </Field>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Referral" description="Who sent the patient.">
+          <FieldGrid min={190} style={{ rowGap: 'var(--s-4)' }}>
         <Field label="Referral doctor">
           <Select {...selectProps} value={f.referrer} onChange={(v) => set('referrer', v)} options={byName(doctorNames)} />
         </Field>
@@ -132,6 +130,13 @@ export default function FiltersDrawer({
         <Field label="Second referral">
           <Select {...selectProps} value={f.secondReferrer} onChange={(v) => set('secondReferrer', v)} options={byName([...doctorNames, ...hospitalNames])} />
         </Field>
+        <Field label="PRO">
+          <Select {...selectProps} value={f.pro} onChange={(v) => set('pro', v)} options={opt(pros)} />
+        </Field>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Centre and client" description="Where the sample or bill came from.">
+          <FieldGrid min={190} style={{ rowGap: 'var(--s-4)' }}>
         <Field label="B2B centre">
           <Select {...selectProps} value={f.b2b} onChange={(v) => set('b2b', v)} options={opt(b2b)} />
         </Field>
@@ -141,17 +146,18 @@ export default function FiltersDrawer({
         <Field label="Corporate client">
           <Select {...selectProps} value={f.corporate} onChange={(v) => set('corporate', v)} options={opt(corporates)} />
         </Field>
-        <Field label="PRO">
-          <Select {...selectProps} value={f.pro} onChange={(v) => set('pro', v)} options={opt(pros)} />
-        </Field>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Staff and payment" description="Who handled the visit and how it was paid.">
+          <FieldGrid min={190} style={{ rowGap: 'var(--s-4)' }}>
         <Field label="Phlebotomist">
           <Select {...selectProps} value={f.phlebotomist} onChange={(v) => set('phlebotomist', v)} options={phlebs.map((u) => ({ value: u.uid, label: u.name }))} />
         </Field>
-        <Field label="Payment mode">
-          <Select {...selectProps} value={f.paymentMode} onChange={(v) => set('paymentMode', v)} options={modeOptions} />
-        </Field>
         <Field label="Created by">
           <Select {...selectProps} value={f.createdBy} onChange={(v) => set('createdBy', v)} options={users.map((u) => ({ value: u.uid, label: u.name }))} />
+        </Field>
+        <Field label="Payment mode">
+          <Select {...selectProps} value={f.paymentMode} onChange={(v) => set('paymentMode', v)} options={modeOptions} />
         </Field>
         <Field label="Printed">
           <Select
@@ -176,10 +182,14 @@ export default function FiltersDrawer({
             ]}
           />
         </Field>
-        <Toggle label="Urgent only" checked={!!f.urgent} onChange={(v) => set('urgent', v)} />
-        <Toggle label="Smart report" checked={!!f.smartReport} onChange={(v) => set('smartReport', v)} />
-        <Toggle label="Self / walk-in patients" checked={!!f.selfWalking} onChange={(v) => set('selfWalking', v)} />
-        <Toggle label="ABHA linked" checked={!!f.abhaLinked} onChange={(v) => set('abhaLinked', v)} />
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Show only" description="Switch on to limit the list to these cases.">
+          <SettingRow label="Urgent only"><Switch checked={!!f.urgent} onChange={(v) => set('urgent', v)} aria-label="Urgent only" /></SettingRow>
+          <SettingRow label="Smart report"><Switch checked={!!f.smartReport} onChange={(v) => set('smartReport', v)} aria-label="Smart report" /></SettingRow>
+          <SettingRow label="Self / walk-in patients"><Switch checked={!!f.selfWalking} onChange={(v) => set('selfWalking', v)} aria-label="Self / walk-in patients" /></SettingRow>
+          <SettingRow label="ABHA linked"><Switch checked={!!f.abhaLinked} onChange={(v) => set('abhaLinked', v)} aria-label="ABHA linked" /></SettingRow>
+        </FormSection>
       </div>
     </Drawer>
   )

@@ -11,7 +11,7 @@
 .stat-tile__hint { font-size: var(--fs-min); color: var(--c-on-surface-variant); }
 .qc-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3); margin-bottom: var(--s-4); }
 .qc-toolbar__spacer { flex: 1; }
-.qc-stack { display: grid; gap: var(--s-4); }
+.qc-stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--s-4); }
 .qc-card-title { margin: 0 0 var(--s-3); font-size: var(--fs-body); font-weight: 600; }
 .qc-muted { color: var(--c-on-surface-variant); }
 .qc-subnav { margin-bottom: var(--s-4); }
@@ -23,3 +23,41 @@
 .wizard li[data-done='true'] { background: var(--c-success-wash); }
 .wizard label { display: flex; gap: var(--s-3); align-items: flex-start; cursor: pointer; }
 .wizard input { margin-top: 4px; width: 18px; height: 18px; }
+
+/* Westgard rules: one row per rule (name, meaning, on/off, severity). */
+.qc-rules { border: 1px solid var(--c-outline-variant); border-radius: var(--r-section); overflow: hidden; }
+.qc-rules__head, .qc-rules__row {
+  display: grid; grid-template-columns: 80px minmax(0, 1fr) 90px 150px; gap: var(--s-4); align-items: center; padding: 10px 16px;
+}
+.qc-rules__head { background: var(--c-surface-container); font-size: var(--fs-dense); font-weight: 600; color: var(--c-on-surface-variant); }
+.qc-rules__row + .qc-rules__row { border-top: 1px solid var(--c-outline-variant); }
+.qc-rules__row[data-off='true'] .qc-rules__name, .qc-rules__row[data-off='true'] .qc-rules__desc { opacity: 0.55; }
+.qc-rules__name { font-weight: 700; font-variant-numeric: tabular-nums; }
+.qc-rules__desc { font-size: var(--fs-dense); color: var(--c-on-surface-variant); line-height: 1.45; }
+@media (max-width: 760px) {
+  .qc-rules__head { display: none; }
+  .qc-rules__row { grid-template-columns: 1fr auto; grid-template-areas: 'name sw' 'desc desc' 'sev sev'; gap: 6px 12px; }
+  .qc-rules__row > :nth-child(1) { grid-area: name; } .qc-rules__row > :nth-child(2) { grid-area: desc; }
+  .qc-rules__row > :nth-child(3) { grid-area: sw; } .qc-rules__row > :nth-child(4) { grid-area: sev; }
+}
+
+/* Shifts: name, start, to, end, remove on one tidy row each. */
+.qc-shifts { display: grid; gap: 10px; }
+.qc-shifts__row { display: grid; grid-template-columns: minmax(140px, 220px) 150px auto 150px auto; gap: 10px; align-items: center; justify-content: start; }
+.qc-shifts__to { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
+@media (max-width: 640px) { .qc-shifts__row { grid-template-columns: 1fr 1fr; } .qc-shifts__to { display: none; } }
+
+/* Add-bar: a select + button(s) that add a row to a table below. */
+.qc-addbar { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; margin-bottom: var(--s-3); }
+.qc-addbar > * { max-width: 100%; }
+.qc-checkgrid.ant-checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: var(--s-1) var(--s-3); min-width: 260px; }
+.qc-sect-gap { margin-top: var(--s-4); }
+.qc-actionbar { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; }
+.qc-actionbar .ant-input-number-group-wrapper { width: 160px; }
+.qc-note { margin: 0 0 var(--s-3); color: var(--c-on-surface-variant); font-size: var(--fs-dense); line-height: 1.5; }
+
+/* A bordered group inside a modal form (one parameter, one mapping). */
+.qc-subcard { padding: var(--s-3) var(--s-4); margin-bottom: var(--s-3); border: 1px solid var(--c-outline-variant); border-radius: var(--r-section); background: var(--c-surface-container); }
+
+/* Let tables inside a FormSection scroll instead of stretching the page. */
+.fsec__body { grid-template-columns: minmax(0, 1fr); }

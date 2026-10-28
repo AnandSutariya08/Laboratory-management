@@ -1,6 +1,7 @@
 import { useRef, type ReactNode } from 'react'
 import { DatePicker, Table, type TableProps } from 'antd'
 import dayjs from 'dayjs'
+import { FormSection } from '../../design/FormLayout'
 import { Card } from '../../design/Card'
 import { EmptyState } from '../../design/EmptyState'
 import { SkeletonRows } from '../../design/Skeletons'
@@ -27,11 +28,8 @@ export const Kpis = ({ items }: { items: { label: string; value: ReactNode }[] }
   </div>
 )
 
-export const Section = ({ title, children }: { title: string; children: ReactNode }) => (
-  <section className="pt-section">
-    <h3 className="pt-section__title">{title}</h3>
-    {children}
-  </section>
+export const Section = ({ title, description, children }: { title: string; description?: string; children: ReactNode }) => (
+  <FormSection title={title} description={description}>{children}</FormSection>
 )
 
 export const thisMonth = (): Range => [dayjs().startOf('month'), dayjs().endOf('month')]

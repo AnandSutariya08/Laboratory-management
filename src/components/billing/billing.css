@@ -18,3 +18,16 @@
 .bill-paper { background: #fff; color: #000; border: 1px solid var(--c-outline-variant); margin: 0 auto; max-width: 100%; box-sizing: border-box; }
 .bill-paper table { width: 100%; border-collapse: collapse; }
 .bill-paper hr { border: 0; border-top: 1px solid #999; margin: 8px 0; }
+
+/* Billing modal: labelled field grids and payment rows */
+.bill-fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--s-3) var(--s-4); align-items: end; }
+.bill-fgrid__full { grid-column: 1 / -1; }
+.bill-section__title--split { margin-top: var(--s-4); padding-top: var(--s-3); border-top: 1px solid var(--c-outline-variant); }
+.bill-payrow { display: grid; grid-template-columns: 120px 160px minmax(0, 1fr) auto; gap: var(--s-2); align-items: center; margin-top: var(--s-2); }
+.bill-payrow > :nth-child(3):last-child { grid-column: span 2; }
+@media (max-width: 560px) { .bill-payrow { grid-template-columns: 1fr 1fr; } .bill-payrow > :nth-child(3) { grid-column: 1 / -1; } }
+.bill-row--tight { margin-top: var(--s-3); }
+.bill-row__name { min-width: 180px; flex: 0 1 220px; }
+.bill-opts { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-4); padding: var(--s-2) var(--s-3); margin-bottom: var(--s-3); background: var(--c-surface-container); border-radius: var(--r-section); }
+.bill-opts__label { font-weight: 600; color: var(--c-on-surface); }
+.bk-toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s-3) var(--s-4); margin-bottom: var(--s-3); }

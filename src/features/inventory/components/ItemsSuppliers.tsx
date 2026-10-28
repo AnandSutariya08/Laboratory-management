@@ -1,3 +1,4 @@
+import { FieldGrid, FormSection, SettingRow } from '../../../design/FormLayout'
 import { useState } from 'react'
 import { App, Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table } from 'antd'
 import { addDoc, deleteDoc, updateDoc } from 'firebase/firestore'
@@ -85,39 +86,46 @@ function ItemsTab({ inv }: { inv: InventoryData }) {
       />
       <Modal title={editing === 'new' ? 'Add item' : 'Edit item'} open={!!editing} onCancel={() => setEditing(null)} onOk={save} destroyOnHidden forceRender>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Space align="start" wrap>
-            <Form.Item name="code" label="Code / SKU"><Input /></Form.Item>
-            <Form.Item name="category" label="Category"><Select style={{ width: 150 }} options={CATEGORIES.map((c) => ({ value: c, label: c }))} /></Form.Item>
-            <Form.Item name="unit" label="Unit" rules={[{ required: true }]}><Select style={{ width: 120 }} showSearch options={UNITS.map((c) => ({ value: c, label: c }))} /></Form.Item>
-          </Space>
-          <Space align="start" wrap>
-            <Form.Item name="purchaseUnit" label="Purchase unit"><Select allowClear style={{ width: 120 }} showSearch options={UNITS.map((c) => ({ value: c, label: c }))} /></Form.Item>
-            <Form.Item name="packSize" label="1 purchase unit = (base units)" tooltip="Stock and consumption are counted in the base unit above; purchase orders can be entered in purchase units."><InputNumber min={1} /></Form.Item>
-            <Form.Item name="taxPercent" label="GST (%)"><InputNumber min={0} max={100} precision={2} /></Form.Item>
-            <Form.Item name="reorderLevel" label="Reorder level"><InputNumber min={0} /></Form.Item>
-            <Form.Item name="storage" label="Storage temp"><Input placeholder="2-8 C" /></Form.Item>
-          </Space>
-          <Form.Item name="defaultSupplierId" label="Default supplier">
-            <Select allowClear options={inv.suppliers.map((s) => ({ value: s.id, label: s.name }))} />
-          </Form.Item>
-          <Form.List name="suppliers">
-            {(fields, { add, remove }) => (
-              <div style={{ marginBottom: 12 }}>
-                <div className="qc-muted" style={{ marginBottom: 6 }}>Suppliers in order of preference, each with its price per {'{base unit}'}. The first one is filled in on new purchase orders.</div>
-                {fields.map((f, idx) => (
-                  <Space key={f.key} align="baseline" wrap>
-                    <span>{idx + 1}.</span>
-                    <Form.Item name={[f.name, 'supplierId']} rules={[{ required: true, message: 'Pick a supplier' }]}><Select aria-label="Supplier" placeholder="Supplier" style={{ width: 200 }} options={inv.suppliers.map((s) => ({ value: s.id, label: s.name }))} /></Form.Item>
-                    <Form.Item name={[f.name, 'priceRs']}><InputNumber aria-label="Price per base unit" addonBefore="₹" min={0} precision={2} style={{ width: 130 }} /></Form.Item>
-                    <Button size="small" onClick={() => remove(f.name)}>Remove</Button>
-                  </Space>
-                ))}
-                <Button size="small" onClick={() => add({ supplierId: undefined, priceRs: 0 })}>Add supplier</Button>
-              </div>
-            )}
-          </Form.List>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+          <FormSection title="Item" description="What it is called and how it is counted in stock.">
+            <FieldGrid min={200}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="code" label="Code / SKU"><Input /></Form.Item>
+              <Form.Item name="category" label="Category"><Select options={CATEGORIES.map((c) => ({ value: c, label: c }))} /></Form.Item>
+              <Form.Item name="unit" label="Unit" rules={[{ required: true }]}><Select showSearch options={UNITS.map((c) => ({ value: c, label: c }))} /></Form.Item>
+              <Form.Item name="storage" label="Storage temperature"><Input placeholder="2-8 C" /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Purchasing and stock levels" description="Stock and consumption are counted in the base unit; purchase orders can be entered in purchase units.">
+            <FieldGrid min={200}>
+              <Form.Item name="purchaseUnit" label="Purchase unit"><Select allowClear showSearch options={UNITS.map((c) => ({ value: c, label: c }))} /></Form.Item>
+              <Form.Item name="packSize" label="Base units per purchase unit" tooltip="1 purchase unit = this many base units."><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item name="taxPercent" label="GST"><InputNumber min={0} max={100} precision={2} addonAfter="%" style={{ width: '100%' }} /></Form.Item>
+              <Form.Item name="reorderLevel" label="Reorder level"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Suppliers" description="Suppliers in order of preference, each with its price per base unit. The first one is filled in on new purchase orders.">
+            <Form.Item name="defaultSupplierId" label="Default supplier">
+              <Select allowClear options={inv.suppliers.map((s) => ({ value: s.id, label: s.name }))} />
+            </Form.Item>
+            <Form.List name="suppliers">
+              {(fields, { add, remove }) => (
+                <div>
+                  {fields.map((f, idx) => (
+                    <div key={f.key} style={{ display: 'grid', gridTemplateColumns: 'auto minmax(140px, 1fr) minmax(130px, 160px) auto', gap: 'var(--s-3)', alignItems: 'start' }}>
+                      <span style={{ paddingTop: 5 }}>{idx + 1}.</span>
+                      <Form.Item name={[f.name, 'supplierId']} rules={[{ required: true, message: 'Pick a supplier' }]}><Select aria-label="Supplier" placeholder="Supplier" options={inv.suppliers.map((s) => ({ value: s.id, label: s.name }))} /></Form.Item>
+                      <Form.Item name={[f.name, 'priceRs']}><InputNumber aria-label="Price per base unit" addonBefore="₹" min={0} precision={2} style={{ width: '100%' }} /></Form.Item>
+                      <Button size="small" style={{ marginTop: 3 }} onClick={() => remove(f.name)}>Remove</Button>
+                    </div>
+                  ))}
+                  <Button size="small" onClick={() => add({ supplierId: undefined, priceRs: 0 })}>Add supplier</Button>
+                </div>
+              )}
+            </Form.List>
+          </FormSection>
+          <FormSection title="Status">
+            <SettingRow label="Active" help="Inactive items are hidden from new orders and consumption." htmlFor="inv-item-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="inv-item-active" /></Form.Item></SettingRow>
+          </FormSection>
         </Form>
       </Modal>
     </>
@@ -200,20 +208,22 @@ function SuppliersTab({ inv }: { inv: InventoryData }) {
       />
       <Modal title={editing === 'new' ? 'Add supplier' : 'Edit supplier'} open={!!editing} onCancel={() => setEditing(null)} onOk={save} destroyOnHidden forceRender>
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Space align="start" wrap>
-            <Form.Item name="contact" label="Contact person"><Input /></Form.Item>
-            <Form.Item name="phone" label="Phone"><Input /></Form.Item>
-          </Space>
-          <Space align="start" wrap>
-            <Form.Item name="email" label="Email"><Input /></Form.Item>
-            <Form.Item name="gstin" label="GSTIN"><Input /></Form.Item>
-          </Space>
-          <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="suppliedIds" label="Items supplied">
-            <Select mode="multiple" optionFilterProp="label" options={inv.items.map((i) => ({ value: i.id, label: i.name }))} />
-          </Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+          <FormSection title="Supplier" description="Who the supplier is and how to reach them.">
+            <FieldGrid min={200}>
+              <Form.Item name="name" label="Name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="contact" label="Contact person"><Input /></Form.Item>
+              <Form.Item name="phone" label="Phone"><Input /></Form.Item>
+              <Form.Item name="email" label="Email"><Input /></Form.Item>
+              <Form.Item name="gstin" label="GSTIN"><Input /></Form.Item>
+            </FieldGrid>
+            <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
+          </FormSection>
+          <FormSection title="Items and status">
+            <Form.Item name="suppliedIds" label="Items supplied">
+              <Select mode="multiple" optionFilterProp="label" options={inv.items.map((i) => ({ value: i.id, label: i.name }))} />
+            </Form.Item>
+            <SettingRow label="Active" help="Inactive suppliers cannot be chosen on new purchase orders." htmlFor="inv-sup-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="inv-sup-active" /></Form.Item></SettingRow>
+          </FormSection>
         </Form>
       </Modal>
     </>

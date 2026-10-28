@@ -1,3 +1,4 @@
+import { SettingRow } from '../../design/FormLayout'
 import { useMemo, useState } from 'react'
 import { Drawer, Form, Input, InputNumber, Popconfirm, Select, Switch, message } from 'antd'
 import { DeleteOutlined, DownloadOutlined, EditOutlined, PlusOutlined, ProfileOutlined } from '@ant-design/icons'
@@ -131,7 +132,7 @@ function CentreDrawer({ value, onClose }: { value: Partial<CollectionCentre> | n
     <Drawer open={!!value} onClose={onClose} size="large" destroyOnHidden title={value?.id ? 'Edit collection centre' : 'Add collection centre'}
       footer={<div className="pt-sticky-foot"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={submit}>Save</Button></div>}>
       <Form form={form} layout="vertical" initialValues={{ ...value, settlementValue: value?.settlementType === 'flatPerBill' ? (value.settlementValue ?? 0) / 100 : value?.settlementValue }}>
-        <Section title="Centre details">
+        <Section title="Centre details" description="Who the centre is and the email it signs in with.">
           <div className="pt-grid2">
             <Form.Item name="name" label="Centre name" rules={[{ required: true }]}><Input /></Form.Item>
             <Form.Item name="code" label="Centre code"><Input /></Form.Item>
@@ -141,30 +142,32 @@ function CentreDrawer({ value, onClose }: { value: Partial<CollectionCentre> | n
             <Form.Item name="loginEmail" label="Login email (centre portal)" rules={[{ type: 'email' }]}><Input /></Form.Item>
           </div>
           <Form.Item name="address" label="Address"><Input.TextArea rows={2} /></Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked"><Switch /></Form.Item>
+          <SettingRow label="Active" help="Inactive centres cannot register new bills." htmlFor="cc-active"><Form.Item name="active" valuePropName="checked" noStyle><Switch id="cc-active" /></Form.Item></SettingRow>
         </Section>
-        <Section title="Settlement terms">
+        <Section title="Settlement terms" description="How and how often the centre is paid.">
           <div className="pt-grid3">
             <Form.Item name="settlementType" label="Settlement"><Select options={[{ value: 'none', label: 'None' }, { value: 'sharePercent', label: 'Centre share % of net' }, { value: 'flatPerBill', label: 'Flat per bill' }]} /></Form.Item>
-            {st !== 'none' && <Form.Item name="settlementValue" label={st === 'flatPerBill' ? 'Per bill (Rs)' : 'Share (%)'}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>}
-            <Form.Item name="settlementDays" label="Settle every (days)"><InputNumber min={1} style={{ width: '100%' }} /></Form.Item>
+            {st !== 'none' && <Form.Item name="settlementValue" label={st === 'flatPerBill' ? 'Per bill' : 'Share'}><InputNumber min={0} {...(st === 'flatPerBill' ? { addonBefore: '₹' } : { addonAfter: '%' })} style={{ width: '100%' }} /></Form.Item>}
+            <Form.Item name="settlementDays" label="Settle every"><InputNumber min={1} addonAfter="days" style={{ width: '100%' }} /></Form.Item>
           </div>
         </Section>
-        <Section title="Permissions and bill settings">
+        <Section title="Permissions" description="What staff at this centre may do.">
+          <SettingRow label="View / download due reports" help="Staff can open and download reports that still have dues." htmlFor="cc-due"><Form.Item name="dueReportView" valuePropName="checked" noStyle><Switch id="cc-due" /></Form.Item></SettingRow>
+          <SettingRow label="Allow bill delete" help="Staff can delete bills they created." htmlFor="cc-del"><Form.Item name="allowBillDelete" valuePropName="checked" noStyle><Switch id="cc-del" /></Form.Item></SettingRow>
+          <SettingRow label="Referral doctors" help="Which referrers staff can pick while billing." htmlFor="cc-refs"><Form.Item name="referrals" noStyle><Select id="cc-refs" style={{ width: '100%', maxWidth: 260 }} options={[{ value: 'all', label: 'All' }, { value: 'selected', label: 'Selected only' }]} /></Form.Item></SettingRow>
+          <Form.Item noStyle shouldUpdate={(a, b) => a.referrals !== b.referrals}>
+            {({ getFieldValue }) => getFieldValue('referrals') === 'selected' && (
+              <Form.Item name="referrerIds" label="Allowed referrers" style={{ marginTop: 'var(--s-3)' }}>
+                <Select mode="multiple" showSearch optionFilterProp="label" options={refs.data.filter((r) => !r.mergedInto).map((r) => ({ value: r.id, label: r.name }))} />
+              </Form.Item>
+            )}
+          </Form.Item>
+        </Section>
+        <Section title="Bill payment QR" description="UPI details and the QR size printed on the centre's bills.">
           <div className="pt-grid3">
-            <Form.Item name="dueReportView" label="View / download due reports" valuePropName="checked"><Switch /></Form.Item>
-            <Form.Item name="allowBillDelete" label="Allow bill delete" valuePropName="checked"><Switch /></Form.Item>
-            <Form.Item name="referrals" label="Referral doctors"><Select options={[{ value: 'all', label: 'All' }, { value: 'selected', label: 'Selected only' }]} /></Form.Item>
-            <Form.Item noStyle shouldUpdate={(a, b) => a.referrals !== b.referrals}>
-              {({ getFieldValue }) => getFieldValue('referrals') === 'selected' && (
-                <Form.Item name="referrerIds" label="Allowed referrers">
-                  <Select mode="multiple" showSearch optionFilterProp="label" options={refs.data.filter((r) => !r.mergedInto).map((r) => ({ value: r.id, label: r.name }))} />
-                </Form.Item>
-              )}
-            </Form.Item>
             <Form.Item name="upiId" label="UPI ID"><Input /></Form.Item>
-            <Form.Item name="qrWidth" label="QR width (px)"><InputNumber min={40} style={{ width: '100%' }} /></Form.Item>
-            <Form.Item name="qrHeight" label="QR height (px)"><InputNumber min={40} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="qrWidth" label="QR width"><InputNumber min={40} addonAfter="px" style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="qrHeight" label="QR height"><InputNumber min={40} addonAfter="px" style={{ width: '100%' }} /></Form.Item>
           </div>
         </Section>
       </Form>

@@ -1,6 +1,7 @@
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { useMemo, useState } from 'react'
 import { addDoc, query, serverTimestamp, where } from 'firebase/firestore'
-import { App, Input, InputNumber, Modal, Select, Table } from 'antd'
+import { App, Form, Input, InputNumber, Modal, Select, Table } from 'antd'
 import dayjs from 'dayjs'
 import { useAuth } from '../../auth/AuthProvider'
 import { Button } from '../../design/Button'
@@ -184,13 +185,20 @@ export default function CommissionLedger({
         ]}
       />
       <Modal open={!!pay} onCancel={() => setPay(null)} title={`Payout to ${pay?.partner.name ?? ''}`} okText="Record payout" onOk={recordPayout} okButtonProps={{ loading: busy }} destroyOnHidden>
-        <p>Period {dayjs(from).format('DD MMM')} to {dayjs(to).format('DD MMM YYYY')}. Balance owed {formatINR(pay?.balance ?? 0)}.</p>
-        <div style={{ display: 'grid', gap: 8 }}>
-          <InputNumber aria-label="Payout amount" addonBefore="₹" min={0} precision={2} value={amount} onChange={(v) => setAmount(v ?? 0)} style={{ width: '100%' }} />
-          <Select aria-label="Payout mode" value={mode} onChange={setMode} options={modeOptions} />
-          <Input aria-label="Reference" placeholder="Transaction / cheque reference" value={reference} onChange={(e) => setReference(e.target.value)} />
-          <Input.TextArea aria-label="Note" rows={2} placeholder="Note" value={note} onChange={(e) => setNote(e.target.value)} />
-        </div>
+        <FormSection title="Payout" description={`Period ${dayjs(from).format('DD MMM')} to ${dayjs(to).format('DD MMM YYYY')}. Balance owed ${formatINR(pay?.balance ?? 0)}.`}>
+          <Form layout="vertical" component="div">
+            <FieldGrid min={220}>
+              <Form.Item label="Amount"><InputNumber aria-label="Payout amount" addonBefore="₹" min={0} precision={2} value={amount} onChange={(v) => setAmount(v ?? 0)} style={{ width: '100%' }} /></Form.Item>
+              <Form.Item label="Mode"><Select aria-label="Payout mode" value={mode} onChange={setMode} options={modeOptions} /></Form.Item>
+            </FieldGrid>
+          </Form>
+        </FormSection>
+        <FormSection title="Reference">
+          <Form layout="vertical" component="div">
+            <Form.Item label="Transaction / cheque reference"><Input aria-label="Reference" value={reference} onChange={(e) => setReference(e.target.value)} /></Form.Item>
+            <Form.Item label="Note"><Input.TextArea aria-label="Note" rows={2} value={note} onChange={(e) => setNote(e.target.value)} /></Form.Item>
+          </Form>
+        </FormSection>
       </Modal>
       <Modal open={!!detail} onCancel={() => setDetail(null)} title={`Payout history · ${detail?.name ?? ''}`} footer={null} width={dialogWidth(720)} destroyOnHidden>
         <Table

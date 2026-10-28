@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { branchStamp } from '../lib/activeBranch'
 import { col } from '../lib/db'
 import { dialogWidth } from '../design/dialog'
+import { FormSection } from '../design/FormLayout'
 
 export type TicketType = 'ticket' | 'idea' | 'feedback'
 
@@ -46,7 +47,8 @@ export default function SupportTicketModal({ open, onClose }: { open: boolean; o
     }
   }
   return (
-    <Modal title="Support ticket" open={open} onCancel={onClose} onOk={submit} okText="Send ticket" confirmLoading={busy} okButtonProps={{ disabled: !subject.trim() || !description.trim() }} destroyOnHidden width={dialogWidth(480)}>
+    <Modal title="Support ticket" open={open} onCancel={onClose} onOk={submit} okText="Send ticket" confirmLoading={busy} okButtonProps={{ disabled: !subject.trim() || !description.trim() }} destroyOnHidden width={dialogWidth(560)}>
+      <FormSection title="Tell us what happened" description="The lab admin sees this ticket and follows up.">
       <div className="field-row">
         <label htmlFor="tk-subject">Subject</label>
         <input id="tk-subject" value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={120} />
@@ -63,6 +65,7 @@ export default function SupportTicketModal({ open, onClose }: { open: boolean; o
           <option value="high">High, work is blocked</option>
         </select>
       </div>
+      </FormSection>
     </Modal>
   )
 }

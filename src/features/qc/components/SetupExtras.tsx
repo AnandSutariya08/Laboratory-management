@@ -18,6 +18,8 @@ import { useCatalogueMaps } from '../../../hooks/useCatalogue'
 import { DEFAULT_SEVERITY } from '../lib/westgard'
 import QcStandards from './QcStandards'
 import { dialogWidth } from '../../../design/dialog'
+import { FieldGrid, FormSection, SettingRow } from '../../../design/FormLayout'
+import { Segmented } from '../../../design/Segmented'
 
 const TOGGLES: [keyof QcSettings, string, string][] = [
   ['showMeasurementUncertainty', 'Show measurement uncertainty', 'Adds the uncertainty to QC results and reports.'],
@@ -54,85 +56,102 @@ export function QcSettingsTab() {
   return (
     <div className="qc-stack">
       <Panel title="Control levels and rules" extra={<Button variant="primary" disabled={!editable || loading || saving} onClick={save}>Save settings</Button>}>
-        <div className="field-row">
-          <label>Control levels per run</label>
-          <Radio.Group value={draft.levelCount} onChange={(e) => set('levelCount', e.target.value)} options={[{ value: 2, label: '2 levels' }, { value: 3, label: '3 levels' }]} />
-        </div>
-        <div className="field-row">
-          <label>Westgard rules applied by default</label>
-          <Checkbox.Group value={draft.rules} onChange={(v) => set('rules', v as QcSettings['rules'])} options={WESTGARD_RULES.map((r) => ({ value: r, label: r }))} />
-        </div>
-        <div className="field-row">
-          <label>Rule severity (what each rule does when it fires)</label>
-          <Space wrap>
-            {WESTGARD_RULES.map((r) => (
-              <Space key={r} size={4}>
-                <span>{r}</span>
-                <Select
-                  size="small"
-                  style={{ width: 110 }}
-                  aria-label={`Severity of ${r}`}
-                  value={draft.ruleSeverity?.[r] ?? DEFAULT_SEVERITY[r]}
-                  onChange={(v) => set('ruleSeverity', { ...(draft.ruleSeverity ?? {}), [r]: v })}
-                  options={[{ value: 'warning', label: 'Warning' }, { value: 'fail', label: 'Reject' }]}
-                />
-              </Space>
-            ))}
-          </Space>
-        </div>
-        <div className="field-row">
-          <label htmlFor="qc-grace">Missed-QC grace period (minutes)</label>
-          <InputNumber id="qc-grace" min={0} max={720} value={draft.graceMinutes ?? 30} onChange={(v) => set('graceMinutes', v ?? 30)} />
-        </div>
-        <div className="field-row">
-          <label htmlFor="qc-window">Machine-reading match window (hours)</label>
-          <InputNumber id="qc-window" min={1} max={168} value={draft.matchWindowHours} onChange={(v) => set('matchWindowHours', v ?? 24)} />
-          <small className="qc-muted">A QC run within this many hours of a timed slot counts as that slot's run (and, for EQAS, is how far from a reading a machine value may sit).</small>
-        </div>
+        <FormSection title="Run setup" description="How each QC run is recorded and when a scheduled run counts as missed.">
+          <SettingRow label="Control levels per run" help="How many control levels (e.g. normal and abnormal) are run together each time.">
+            <Segmented<2 | 3> aria-label="Control levels per run" value={draft.levelCount} onChange={(v) => set('levelCount', v)} options={[{ value: 2, label: '2 levels' }, { value: 3, label: '3 levels' }]} />
+          </SettingRow>
+          <SettingRow label="Missed-QC grace period" help="After a scheduled QC time passes, wait this long before marking it missed." htmlFor="qc-grace">
+            <InputNumber id="qc-grace" min={0} max={720} value={draft.graceMinutes ?? 30} onChange={(v) => set('graceMinutes', v ?? 30)} addonAfter="minutes" style={{ width: 180 }} />
+          </SettingRow>
+          <SettingRow label="Machine-reading match window" help="A run within this many hours of a scheduled slot counts as that slot's run. For EQAS, it is how far a machine reading may be from the report date." htmlFor="qc-window">
+            <InputNumber id="qc-window" min={1} max={168} value={draft.matchWindowHours} onChange={(v) => set('matchWindowHours', v ?? 24)} addonAfter="hours" style={{ width: 180 }} />
+          </SettingRow>
+        </FormSection>
+
+        <FormSection title="Westgard rules" description="Choose which rules check every QC run, and whether a rule only warns or rejects the run.">
+          <div className="qc-rules" role="table" aria-label="Westgard rules">
+            <div className="qc-rules__head" role="row">
+              <span role="columnheader">Rule</span>
+              <span role="columnheader">What it catches</span>
+              <span role="columnheader">Applied</span>
+              <span role="columnheader">When it fires</span>
+            </div>
+            {WESTGARD_RULES.map((r) => {
+              const on = draft.rules.includes(r)
+              return (
+                <div key={r} className="qc-rules__row" role="row" data-off={!on}>
+                  <span role="cell" className="qc-rules__name">{r}</span>
+                  <span role="cell" className="qc-rules__desc">{RULE_HELP[r] ?? ''}</span>
+                  <span role="cell">
+                    <Switch aria-label={`Apply ${r}`} checked={on} onChange={(v) => set('rules', (v ? [...draft.rules, r] : draft.rules.filter((x) => x !== r)) as QcSettings['rules'])} />
+                  </span>
+                  <span role="cell">
+                    <Select
+                      aria-label={`Severity of ${r}`}
+                      disabled={!on}
+                      style={{ width: 130 }}
+                      value={draft.ruleSeverity?.[r] ?? DEFAULT_SEVERITY[r]}
+                      onChange={(v) => set('ruleSeverity', { ...(draft.ruleSeverity ?? {}), [r]: v })}
+                      options={[{ value: 'warning', label: 'Warn only' }, { value: 'fail', label: 'Reject run' }]}
+                    />
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </FormSection>
+
         <ShiftsEditor shifts={shiftsOf(draft)} onChange={(v) => set('shifts', v)} />
       </Panel>
       <QcStandards draft={draft} set={set} />
       <IlcAcceptance draft={draft} set={set} />
       <Panel title="QC workflow">
-        <ul className="howto">
+        <FormSection title="What happens around a QC run" description="Switch on the steps your lab follows after a QC run, especially a failed one.">
           {TOGGLES.map(([k, label, hint]) => (
-            <li key={k} style={{ display: 'flex', gap: 'var(--s-3)', alignItems: 'center', justifyContent: 'space-between' }}>
-              <span>
-                <strong>{label}</strong>
-                <br />
-                <small className="qc-muted">{hint}</small>
-              </span>
+            <SettingRow key={k} label={label} help={hint}>
               <Switch aria-label={label} checked={draft[k] as boolean} onChange={(v) => set(k, v as never)} />
-            </li>
+            </SettingRow>
           ))}
-        </ul>
+        </FormSection>
       </Panel>
     </div>
   )
 }
 
 // Lab shifts used by "once per shift" QC schedules. `end` before `start` crosses midnight.
+// Plain-language meaning of each Westgard rule (shown next to the rule).
+const RULE_HELP: Record<string, string> = {
+  '1-2s': 'One control beyond 2 SD. Usually a warning to look closer.',
+  '1-3s': 'One control beyond 3 SD. A likely random error.',
+  '2-2s': 'Two controls in a row beyond 2 SD on the same side. A systematic shift.',
+  'R-4s': 'Two controls more than 4 SD apart. Random error between levels.',
+  '4-1s': 'Four controls in a row beyond 1 SD on the same side. A gradual drift.',
+  '10x': 'Ten controls in a row on the same side of the mean. A steady bias.',
+}
+
 function ShiftsEditor({ shifts, onChange }: { shifts: QcShift[]; onChange: (v: QcShift[]) => void }) {
   const upd = (i: number, patch: Partial<QcShift>) => onChange(shifts.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   return (
-    <div className="field-row">
-      <label>Shifts (for "once per shift" schedules)</label>
-      <Space vertical size={6}>
+    <FormSection
+      title="Shifts"
+      description='Used by "once per shift" QC schedules. An end time earlier than the start runs past midnight.'
+      extra={<Button onClick={() => onChange(DEFAULT_SHIFTS)}>Reset to morning / evening / night</Button>}
+    >
+      <div className="qc-shifts">
         {shifts.map((sh, i) => (
-          <Space key={sh.id} wrap>
-            <Input aria-label="Shift name" style={{ width: 150 }} value={sh.name} onChange={(e) => upd(i, { name: e.target.value })} />
-            <Input aria-label={`${sh.name} start`} type="time" style={{ width: 120 }} value={sh.start} onChange={(e) => upd(i, { start: e.target.value })} />
-            <span>to</span>
-            <Input aria-label={`${sh.name} end`} type="time" style={{ width: 120 }} value={sh.end} onChange={(e) => upd(i, { end: e.target.value })} />
-            <Button aria-label={`Remove shift ${sh.name}`} icon={<DeleteOutlined />} onClick={() => onChange(shifts.filter((_, j) => j !== i))} />
-          </Space>
+          <div key={sh.id} className="qc-shifts__row">
+            <Input aria-label="Shift name" value={sh.name} onChange={(e) => upd(i, { name: e.target.value })} />
+            <Input aria-label={`${sh.name} start`} type="time" value={sh.start} onChange={(e) => upd(i, { start: e.target.value })} />
+            <span className="qc-shifts__to">to</span>
+            <Input aria-label={`${sh.name} end`} type="time" value={sh.end} onChange={(e) => upd(i, { end: e.target.value })} />
+            <Button variant="text" aria-label={`Remove shift ${sh.name}`} icon={<DeleteOutlined />} onClick={() => onChange(shifts.filter((_, j) => j !== i))} />
+          </div>
         ))}
-        <Space>
-          <Button icon={<PlusOutlined />} onClick={() => onChange([...shifts, { id: newShiftId(), name: `Shift ${shifts.length + 1}`, start: '09:00', end: '17:00' }])}>Add shift</Button>
-          <Button onClick={() => onChange(DEFAULT_SHIFTS)}>Reset to morning / evening / night</Button>
-        </Space>
-      </Space>
-    </div>
+      </div>
+      <div style={{ marginTop: 'var(--s-3)' }}>
+        <Button icon={<PlusOutlined />} onClick={() => onChange([...shifts, { id: newShiftId(), name: `Shift ${shifts.length + 1}`, start: '09:00', end: '17:00' }])}>Add shift</Button>
+      </div>
+    </FormSection>
   )
 }
 const newShiftId = () => `s${Math.random().toString(36).slice(2, 7)}`
@@ -148,26 +167,30 @@ function IlcAcceptance({ draft, set }: { draft: QcSettings; set: <K extends keyo
   }
   return (
     <Panel title="ILC acceptance limits">
-      <div className="field-row">
-        <label htmlFor="ilc-default">Default limit (% difference)</label>
-        <InputNumber id="ilc-default" min={0} value={draft.ilcDefaultLimitPct ?? 10} onChange={(v) => set('ilcDefaultLimitPct', v ?? 10)} />
-      </div>
-      <Space wrap style={{ marginBottom: 8 }}>
-        <TestParamSelect tests={maps.tests} value={tp} onChange={setTp} />
-        <Button onClick={add} disabled={!tp.testId || !tp.paramKey}>Add parameter limit</Button>
-      </Space>
-      <Table
-        size="small"
-        pagination={false}
-        rowKey="k"
-        locale={{ emptyText: 'No parameter-specific limits; the default applies.' }}
-        dataSource={Object.entries(map).map(([k, v]) => ({ k, v }))}
-        columns={[
-          { title: 'Test / parameter', render: (_, r) => { const [t, p] = r.k.split('|'); return `${maps.testById.get(t)?.name ?? t} / ${paramName(maps.testById.get(t), p)}` } },
-          { title: 'Limit %', render: (_, r) => <InputNumber min={0} value={r.v} onChange={(v) => set('ilcAcceptance', { ...map, [r.k]: v ?? 0 })} /> },
-          { title: '', render: (_, r) => <Button aria-label="Remove limit" icon={<DeleteOutlined />} onClick={() => { const n = { ...map }; delete n[r.k]; set('ilcAcceptance', n) }} /> },
-        ]}
-      />
+      <FormSection title="Default limit" description="Used for every parameter that has no limit of its own below.">
+        <SettingRow label="Default limit" help="Largest percent difference between labs that is still acceptable." htmlFor="ilc-default">
+          <InputNumber id="ilc-default" min={0} style={{ width: 180 }} addonAfter="%" value={draft.ilcDefaultLimitPct ?? 10} onChange={(v) => set('ilcDefaultLimitPct', v ?? 10)} />
+        </SettingRow>
+      </FormSection>
+      <FormSection title="Limits for specific parameters" description="Add a parameter to give it its own limit instead of the default.">
+        <div className="qc-addbar">
+          <TestParamSelect tests={maps.tests} value={tp} onChange={setTp} />
+          <Button onClick={add} disabled={!tp.testId || !tp.paramKey}>Add parameter limit</Button>
+        </div>
+        <Table
+          size="small"
+          pagination={false}
+          rowKey="k"
+          scroll={{ x: 'max-content' }}
+          locale={{ emptyText: 'No parameter-specific limits; the default applies.' }}
+          dataSource={Object.entries(map).map(([k, v]) => ({ k, v }))}
+          columns={[
+            { title: 'Test / parameter', render: (_, r) => { const [t, p] = r.k.split('|'); return `${maps.testById.get(t)?.name ?? t} / ${paramName(maps.testById.get(t), p)}` } },
+            { title: 'Limit', width: 170, render: (_, r) => <InputNumber aria-label="Limit for this parameter" min={0} style={{ width: 140 }} addonAfter="%" value={r.v} onChange={(v) => set('ilcAcceptance', { ...map, [r.k]: v ?? 0 })} /> },
+            { title: '', width: 56, render: (_, r) => <Button aria-label="Remove limit" icon={<DeleteOutlined />} onClick={() => { const n = { ...map }; delete n[r.k]; set('ilcAcceptance', n) }} /> },
+          ]}
+        />
+      </FormSection>
     </Panel>
   )
 }
@@ -267,58 +290,68 @@ export function SchedulesTab() {
           },
         ]}
       />
-      <Modal title={editing?.id ? 'Edit schedule' : 'Add new schedule'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(520)}>
+      <Modal title={editing?.id ? 'Edit schedule' : 'Add new schedule'} open={!!editing} onOk={save} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(640)}>
         <Form form={form} layout="vertical">
-          <Form.Item name="machineId" label="Machine" rules={[{ required: true }]}>
-            <Select options={machines.map((m) => ({ value: m.id, label: m.name }))} disabled={!!editing?.id} />
-          </Form.Item>
-          <Form.Item name="materialId" label="Sample kit">
-            <Select allowClear options={materials.map((m) => ({ value: m.id, label: `${m.name} (${m.lotNo})` }))} placeholder="Any kit" />
-          </Form.Item>
-          <Form.Item name="frequency" label="Frequency" rules={[{ required: true }]}>
-            <Radio.Group options={[{ value: 'daily', label: 'Daily' }, { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]} />
-          </Form.Item>
-          {freq === 'weekly' && (
-            <Form.Item name="days" label="Days of the week">
-              <Checkbox.Group options={WEEKDAYS.map((d, i) => ({ value: i, label: d }))} />
+          <FormSection title="What to run">
+            <FieldGrid min={220}>
+              <Form.Item name="machineId" label="Machine" rules={[{ required: true }]}>
+                <Select options={machines.map((m) => ({ value: m.id, label: m.name }))} disabled={!!editing?.id} />
+              </Form.Item>
+              <Form.Item name="materialId" label="Sample kit">
+                <Select allowClear options={materials.map((m) => ({ value: m.id, label: `${m.name} (${m.lotNo})` }))} placeholder="Any kit" />
+              </Form.Item>
+              <Form.Item name="level" label="Control level">
+                <Select options={[{ value: 'all', label: 'All levels' }, ...QC_LEVELS.map((l) => ({ value: l, label: l }))]} />
+              </Form.Item>
+              <Form.Item name="assignedTo" label="Assigned to (optional)">
+                <Select allowClear showSearch optionFilterProp="label" options={users.data.filter((u) => u.active && !u.deleted).map((u) => ({ value: u.uid, label: u.name }))} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="When it is due">
+            <Form.Item name="frequency" label="Frequency" rules={[{ required: true }]}>
+              <Radio.Group options={[{ value: 'daily', label: 'Daily' }, { value: 'weekly', label: 'Weekly' }, { value: 'monthly', label: 'Monthly' }]} />
             </Form.Item>
-          )}
-          {freq === 'monthly' && (
-            <Form.Item name="days" label="Days of the month">
-              <Select mode="multiple" options={Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))} />
+            {freq === 'weekly' && (
+              <Form.Item name="days" label="Days of the week">
+                <Checkbox.Group className="qc-checkgrid" options={WEEKDAYS.map((d, i) => ({ value: i, label: d }))} />
+              </Form.Item>
+            )}
+            {freq === 'monthly' && (
+              <Form.Item name="days" label="Days of the month">
+                <Select mode="multiple" options={Array.from({ length: 31 }, (_, i) => ({ value: i + 1, label: String(i + 1) }))} />
+              </Form.Item>
+            )}
+            <Form.Item name="recurrence" label="Runs">
+              <Radio.Group options={[{ value: 'time', label: 'At set times' }, { value: 'perShift', label: 'Once per shift' }, { value: 'perNPatients', label: 'Every N patients' }]} />
             </Form.Item>
-          )}
-          <Form.Item name="recurrence" label="Runs">
-            <Radio.Group options={[{ value: 'time', label: 'At set times' }, { value: 'perShift', label: 'Once per shift' }, { value: 'perNPatients', label: 'Every N patients' }]} />
-          </Form.Item>
-          {recurrence === 'time' && (
-            <Form.Item name="times" label="Time(s)" rules={[{ required: true }]}>
-              <Select mode="tags" tokenSeparators={[',', ' ']} placeholder="Type a time such as 09:00 and press Enter" open={false} />
+            {recurrence === 'time' && (
+              <Form.Item name="times" label="Time(s)" rules={[{ required: true }]}>
+                <Select mode="tags" tokenSeparators={[',', ' ']} placeholder="Type a time such as 09:00 and press Enter" open={false} />
+              </Form.Item>
+            )}
+            {recurrence === 'perShift' && (
+              <Form.Item name="shiftIds" label="Shifts that need a run" extra="Empty means every shift. Shifts are defined under QC settings.">
+                <Select mode="multiple" allowClear options={shiftsOf(qcSettings).map((x) => ({ value: x.id, label: `${x.name} (${x.start}-${x.end})` }))} />
+              </Form.Item>
+            )}
+            {recurrence === 'perNPatients' && (
+              <Form.Item name="everyNPatients" label="Run QC after every N patients on this machine" rules={[{ required: true }]}>
+                <InputNumber min={1} max={10000} style={{ width: 180 }} addonAfter="patients" />
+              </Form.Item>
+            )}
+            {preview.length > 0 && <div className="qc-muted">Next runs: {preview.join(' | ')}</div>}
+          </FormSection>
+          <FormSection title="Status">
+            <Form.Item name="graceMinutes" label="Grace period" extra="Minutes before a slot counts as missed. Leave empty to use the lab default.">
+              <InputNumber min={0} max={720} placeholder="Lab default" style={{ width: 180 }} addonAfter="minutes" />
             </Form.Item>
-          )}
-          {recurrence === 'perShift' && (
-            <Form.Item name="shiftIds" label="Shifts that need a run" extra="Empty means every shift. Shifts are defined under QC settings.">
-              <Select mode="multiple" allowClear options={shiftsOf(qcSettings).map((x) => ({ value: x.id, label: `${x.name} (${x.start}-${x.end})` }))} />
-            </Form.Item>
-          )}
-          {recurrence === 'perNPatients' && (
-            <Form.Item name="everyNPatients" label="Run QC after every N patients on this machine" rules={[{ required: true }]}>
-              <InputNumber min={1} max={10000} />
-            </Form.Item>
-          )}
-          <Form.Item name="assignedTo" label="Assigned to (optional)">
-            <Select allowClear showSearch optionFilterProp="label" options={users.data.filter((u) => u.active && !u.deleted).map((u) => ({ value: u.uid, label: u.name }))} />
-          </Form.Item>
-          <Form.Item name="level" label="Control level">
-            <Select options={[{ value: 'all', label: 'All levels' }, ...QC_LEVELS.map((l) => ({ value: l, label: l }))]} />
-          </Form.Item>
-          <Form.Item name="graceMinutes" label="Grace period (minutes before a slot counts as missed)">
-            <InputNumber min={0} max={720} placeholder="Lab default" />
-          </Form.Item>
-          <Form.Item name="active" label="Active" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-          {preview.length > 0 && <div className="qc-muted">Next runs: {preview.join(' | ')}</div>}
+            <SettingRow label="Active" help="Inactive schedules are ignored when working out missed QC.">
+              <Form.Item name="active" valuePropName="checked" noStyle>
+                <Switch aria-label="Active" />
+              </Form.Item>
+            </SettingRow>
+          </FormSection>
         </Form>
       </Modal>
     </>

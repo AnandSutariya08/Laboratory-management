@@ -13,7 +13,7 @@ import { htmlToPlain, plainToHtml } from './richText'
 import { useRadConfig } from '../../features/radiology/config'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { Alert, App, AutoComplete, Col, Form, Input, InputNumber, Modal, Row, Select, Space, Switch, Table } from 'antd'
+import { Alert, App, AutoComplete, Form, Input, InputNumber, Modal, Select, Space, Switch, Table } from 'antd'
 import {
   ArrowDownOutlined, ArrowUpOutlined, CommentOutlined, CopyOutlined, DeleteOutlined, EditOutlined,
   EyeOutlined, FileSearchOutlined, PlusOutlined, UndoOutlined,
@@ -27,6 +27,7 @@ import { toPaise, toRupees } from '../../lib/money'
 import { ageInDays, resolveRange } from '../../lib/results'
 import { PageHeader } from '../../design/PageHeader'
 import { Card } from '../../design/Card'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { Button } from '../../design/Button'
 import { StatusChip } from '../../design/StatusChip'
 import { EmptyState } from '../../design/EmptyState'
@@ -343,111 +344,107 @@ export default function TestEditorPage() {
       <Form form={form} layout="vertical" initialValues={DEFAULTS} disabled={!canEdit}>
         <div className="cat-stack">
           <Card>
-            <h2 className="cat-section-title">Test details</h2>
-            <Row gutter={16}>
-              <Col xs={24} md={6}><Form.Item name="testType" label="Test type" tooltip="Radiology tests go to the Radiology worklist and have no parameter grid">
-                <Select options={TEST_TYPES} onChange={(t) => form.setFieldsValue({ modality: t === 'radiology' ? form.getFieldValue('modality') || 'Other' : '' })} />
-              </Form.Item></Col>
-              <Col xs={24} md={6}><Form.Item name="code" label="Test code" rules={[{ required: true }]}><Input /></Form.Item></Col>
-              <Col xs={24} md={12}><Form.Item name="name" label="Test name" rules={[{ required: true }]}><Input /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="departmentId" label="Department" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={departments.map((d) => ({ value: d.id, label: d.name }))} /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="sampleTypeId" label="Sample" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={sampleTypes.map((s) => ({ value: s.id, label: s.name }))} /></Form.Item></Col>
-              <Col xs={24} md={4}>
+            <FormSection title="Basic details" description="What the test is called and how it is identified across the lab.">
+              <FieldGrid min={240}>
+                <Form.Item name="testType" label="Test type" tooltip="Radiology tests go to the Radiology worklist and have no parameter grid">
+                  <Select options={TEST_TYPES} onChange={(t) => form.setFieldsValue({ modality: t === 'radiology' ? form.getFieldValue('modality') || 'Other' : '' })} />
+                </Form.Item>
+                <Form.Item name="code" label="Test code" rules={[{ required: true }]}><Input /></Form.Item>
+                <Form.Item name="name" label="Test name" rules={[{ required: true }]}><Input /></Form.Item>
+                <Form.Item name="catalogueCode" label="Catalogue code" tooltip="Global code that identifies this test across labs"><Input /></Form.Item>
+                <Form.Item name="machineCode" label="Machine / LIS code"><Input /></Form.Item>
+                <Form.Item name="method" label="Test method">
+                  <AutoComplete allowClear placeholder="Pick or type a method" options={TEST_METHODS.map((m) => ({ value: m }))} filterOption={(i, o) => (o?.value ?? '').toLowerCase().includes(i.toLowerCase())} />
+                </Form.Item>
+                {radiology && (
+                  <Form.Item name="modality" label="Radiology modality" tooltip="Imaging tests go to the Radiology worklist instead of Enter & Verify">
+                    <Select options={[...new Set([...radCfg.modalities.map((m) => m.label), 'Other', ...(form.getFieldValue('modality') ? [form.getFieldValue('modality')] : [])])].map((m) => ({ value: m, label: m }))} />
+                  </Form.Item>
+                )}
+              </FieldGrid>
+            </FormSection>
+
+            <FormSection title="Sample and price" description="Where the test is processed, what sample it needs and what it costs.">
+              <FieldGrid min={240}>
+                <Form.Item name="departmentId" label="Department" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={departments.map((d) => ({ value: d.id, label: d.name }))} /></Form.Item>
+                <Form.Item name="sampleTypeId" label="Sample" rules={[{ required: true }]}><Select showSearch optionFilterProp="label" options={sampleTypes.map((s) => ({ value: s.id, label: s.name }))} /></Form.Item>
                 <Form.Item label="Sample colour">
                   <span className="cat-toolbar" style={{ margin: 0 }}>
                     <span className="cat-dot" style={{ background: sampleColor ?? 'transparent' }} aria-hidden="true" />
                     <span className="cat-muted">{sampleColor ?? 'Pick a sample'}</span>
                   </span>
                 </Form.Item>
-              </Col>
-              <Col xs={24} md={4}><Form.Item name="barcodeSuffix" label="Barcode suffix"><Input /></Form.Item></Col>
-              <Col xs={24} md={6}><Form.Item name="price" label="Price (₹)" rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} disabled={!isNew && !can(profile, 'catalogue.price')} /></Form.Item></Col>
-              <Col xs={24} md={6}>
+                <Form.Item name="barcodeSuffix" label="Barcode suffix"><Input /></Form.Item>
+                <Form.Item name="price" label="Price" rules={[{ required: true }]}><InputNumber min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} disabled={!isNew && !can(profile, 'catalogue.price')} /></Form.Item>
                 <Form.Item name="gender" label="Gender">
                   <Select options={[{ value: 'both', label: 'Both' }, { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />
                 </Form.Item>
-              </Col>
-              <Col xs={24} md={12}>
-                <Form.Item name="method" label="Test method">
-                  <AutoComplete allowClear placeholder="Pick or type a method" options={TEST_METHODS.map((m) => ({ value: m }))} filterOption={(i, o) => (o?.value ?? '').toLowerCase().includes(i.toLowerCase())} />
+                <Form.Item name="species" label="Species" tooltip="Only these species can be billed for this test. Human only is the default."
+                  getValueProps={(v: string) => ({ value: (v ?? '').split(',').map((x) => x.trim()).filter(Boolean) })} normalize={(v: string[]) => (v ?? []).join(',')}>
+                  <Select mode="multiple" options={SPECIES.map((x) => ({ value: x, label: x }))} />
                 </Form.Item>
-              </Col>
-              {radiology && (
-                <Col xs={24} md={12}>
-                  <Form.Item name="modality" label="Radiology modality" tooltip="Imaging tests go to the Radiology worklist instead of Enter & Verify">
-                    <Select options={[...new Set([...radCfg.modalities.map((m) => m.label), 'Other', ...(form.getFieldValue('modality') ? [form.getFieldValue('modality')] : [])])].map((m) => ({ value: m, label: m }))} />
-                  </Form.Item>
-                </Col>
-              )}
-              <Col xs={24} md={8}><Form.Item name="tatMinutes" label="Total TAT"><TatInput label="TAT" /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="urgentTatMinutes" label="Urgent TAT"><TatInput label="Urgent TAT" /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="preAnalyticalTatMinutes" label="Pre-analytical TAT" tooltip="Time from collection to the lab receiving the sample"><TatInput label="Pre-analytical TAT" /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="species" label="Species" tooltip="Only these species can be billed for this test. Human only is the default."
-                getValueProps={(v: string) => ({ value: (v ?? '').split(',').map((x) => x.trim()).filter(Boolean) })} normalize={(v: string[]) => (v ?? []).join(',')}>
-                <Select mode="multiple" options={SPECIES.map((x) => ({ value: x, label: x }))} />
-              </Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="catalogueCode" label="Catalogue code" tooltip="Global code that identifies this test across labs"><Input /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="machineCode" label="Machine / LIS code"><Input /></Form.Item></Col>
-              <Col xs={24} md={8}><Form.Item name="machineReading" label="Read from analyser" tooltip="Results arrive from a connected analyser (machine values on result entry)" valuePropName="checked"><Switch /></Form.Item></Col>
-              <Col xs={24} md={8}>
                 <Form.Item name="reportTemplateId" label="Report template">
                   <Select allowClear placeholder={`Department default${departments.find((d) => d.id === values.departmentId)?.reportTemplateId ? '' : ' (lab default)'}`} options={templates.map((t) => ({ value: t.id, label: t.name }))} />
                 </Form.Item>
-              </Col>
-            </Row>
-          </Card>
+              </FieldGrid>
+            </FormSection>
 
-          <Card>
-            <h2 className="cat-section-title">Collection and billing rules</h2>
-            <Space size="large" wrap align="start">
-              <Form.Item name="lmpRequired" label="LMP required" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="idRequired" label="ID required" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="consentForm" label="Consent form" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="onlyMale" label="Only male" valuePropName="checked"><Switch onChange={(on) => on && form.setFieldsValue({ onlyFemale: false, gender: 'male' })} /></Form.Item>
-              <Form.Item name="onlyFemale" label="Only female" valuePropName="checked"><Switch onChange={(on) => on && form.setFieldsValue({ onlyMale: false, gender: 'female' })} /></Form.Item>
-              <Form.Item name="onlyBilling" label="Only billing" tooltip="Billable only, no result entry" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="startNextPage" label="Start from next page" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="pcpndt" label="PCPNDT regulated (Form F, shown in the Patient List PCPNDT tab)" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="restricted" label="Restricted (never sent by WhatsApp or SMS)" valuePropName="checked"><Switch /></Form.Item>
-              <Form.Item name="disabled" label="Disabled" tooltip="Hidden from new bills" valuePropName="checked"><Switch /></Form.Item>
-            </Space>
-            <Form.Item noStyle shouldUpdate={(a, b) => a.consentForm !== b.consentForm}>
-              {({ getFieldValue }) =>
-                getFieldValue('consentForm') ? <Form.Item name="consentText" label="Consent form text"><Input.TextArea rows={3} /></Form.Item> : null
-              }
-            </Form.Item>
-            <Form.Item name="preCollectionGuidelines" label="Pre-collection guidelines" tooltip="Shown to reception and on the booking confirmation">
-              <Input.TextArea rows={2} placeholder="e.g. Fasting for 10 to 12 hours" />
-            </Form.Item>
-          </Card>
+            <FormSection title="Turnaround time" description="How long results take, in days, hours and minutes.">
+              <FieldGrid min={280}>
+                <Form.Item name="tatMinutes" label="Total TAT"><TatInput label="TAT" /></Form.Item>
+                <Form.Item name="urgentTatMinutes" label="Urgent TAT"><TatInput label="Urgent TAT" /></Form.Item>
+                <Form.Item name="preAnalyticalTatMinutes" label="Pre-analytical TAT" tooltip="Time from collection to the lab receiving the sample"><TatInput label="Pre-analytical TAT" /></Form.Item>
+              </FieldGrid>
+            </FormSection>
 
-          <Card>
-            <h2 className="cat-section-title">Test name in other report languages</h2>
-            <Space wrap>
-              {REPORT_LANGS.filter((l) => l.value !== 'en').map((l) => (
-                <Form.Item key={l.value} name={['translations', l.value]} label={l.label}><Input style={{ width: 200 }} /></Form.Item>
-              ))}
-            </Space>
-          </Card>
+            <FormSection title="Collection and billing rules" description="What reception must capture and who this test can be billed for.">
+              <SettingRow label="LMP required" help="Ask for the last menstrual period when billing." htmlFor="te-lmp"><Form.Item name="lmpRequired" valuePropName="checked" noStyle><Switch id="te-lmp" /></Form.Item></SettingRow>
+              <SettingRow label="ID required" help="Reception must record an ID proof." htmlFor="te-id"><Form.Item name="idRequired" valuePropName="checked" noStyle><Switch id="te-id" /></Form.Item></SettingRow>
+              <SettingRow label="Consent form" help="Patient signs a consent before sample collection." htmlFor="te-consent"><Form.Item name="consentForm" valuePropName="checked" noStyle><Switch id="te-consent" /></Form.Item></SettingRow>
+              <Form.Item noStyle shouldUpdate={(a, b) => a.consentForm !== b.consentForm}>
+                {({ getFieldValue }) =>
+                  getFieldValue('consentForm') ? <Form.Item name="consentText" label="Consent form text"><Input.TextArea rows={3} /></Form.Item> : null
+                }
+              </Form.Item>
+              <SettingRow label="Only male" help="Can be billed for male patients only." htmlFor="te-male"><Form.Item name="onlyMale" valuePropName="checked" noStyle><Switch id="te-male" onChange={(on) => on && form.setFieldsValue({ onlyFemale: false, gender: 'male' })} /></Form.Item></SettingRow>
+              <SettingRow label="Only female" help="Can be billed for female patients only." htmlFor="te-female"><Form.Item name="onlyFemale" valuePropName="checked" noStyle><Switch id="te-female" onChange={(on) => on && form.setFieldsValue({ onlyMale: false, gender: 'female' })} /></Form.Item></SettingRow>
+              <SettingRow label="PCPNDT regulated" help="Form F is required; shown in the Patient List PCPNDT tab." htmlFor="te-pcpndt"><Form.Item name="pcpndt" valuePropName="checked" noStyle><Switch id="te-pcpndt" /></Form.Item></SettingRow>
+              <SettingRow label="Restricted" help="Never sent by WhatsApp or SMS." htmlFor="te-restricted"><Form.Item name="restricted" valuePropName="checked" noStyle><Switch id="te-restricted" /></Form.Item></SettingRow>
+              <SettingRow label="Only billing" help="Billable only, no result entry." htmlFor="te-billing"><Form.Item name="onlyBilling" valuePropName="checked" noStyle><Switch id="te-billing" /></Form.Item></SettingRow>
+              <SettingRow label="Read from analyser" help="Results arrive from a connected analyser (machine values on result entry)." htmlFor="te-machine"><Form.Item name="machineReading" valuePropName="checked" noStyle><Switch id="te-machine" /></Form.Item></SettingRow>
+              <SettingRow label="Start from next page" help="Begin this test on a new page of the printed report." htmlFor="te-nextpage"><Form.Item name="startNextPage" valuePropName="checked" noStyle><Switch id="te-nextpage" /></Form.Item></SettingRow>
+              <SettingRow label="Disabled" help="Hidden from new bills." htmlFor="te-disabled"><Form.Item name="disabled" valuePropName="checked" noStyle><Switch id="te-disabled" /></Form.Item></SettingRow>
+              <Form.Item name="preCollectionGuidelines" label="Pre-collection guidelines" tooltip="Shown to reception and on the booking confirmation" style={{ marginTop: 'var(--s-4)' }}>
+                <Input.TextArea rows={2} placeholder="e.g. Fasting for 10 to 12 hours" />
+              </Form.Item>
+            </FormSection>
 
-          <Card>
-            <h2 className="cat-section-title">Interpretation and comments</h2>
-            <Form.Item name="interpretationEnabled" label="Print interpretation on report" valuePropName="checked"><Switch /></Form.Item>
-            <Form.Item label="Interpretation" extra="Rich text. Draft with AI writes a general note from the test definition for you to review.">
-              <div className="cat-rich">
-                <Form.Item name="interpretationHtml" noStyle>
-                  <RichBox label="Interpretation" disabled={!canEdit} />
-                </Form.Item>
-              </div>
-              <div className="cat-toolbar" style={{ marginTop: 8 }}>
-                <Button disabled={!canEdit || aiBusy || settings.aiEnabled === false} onClick={() => void draftWithAi()}>{aiBusy ? 'Drafting' : 'Draft with AI'}</Button>
-                {settings.aiEnabled === false && <span className="cat-muted">AI is off in Lab settings.</span>}
-              </div>
-            </Form.Item>
-            <Form.Item label="Comments (printed under the results)">
-              <div className="cat-toolbar"><CommentTemplatePicker disabled={!canEdit} onPick={(t) => form.setFieldsValue({ comments: t })} /></div>
-              <Form.Item name="comments" noStyle><Input.TextArea rows={3} /></Form.Item>
-            </Form.Item>
+            <FormSection title="Test name in other report languages" description="Optional. Printed on reports generated in that language.">
+              <FieldGrid min={200}>
+                {REPORT_LANGS.filter((l) => l.value !== 'en').map((l) => (
+                  <Form.Item key={l.value} name={['translations', l.value]} label={l.label}><Input /></Form.Item>
+                ))}
+              </FieldGrid>
+            </FormSection>
+
+            <FormSection title="Interpretation and comments" description="Notes that print on the report along with the results.">
+              <SettingRow label="Print interpretation on report" help="Turn off to keep the interpretation for internal use." htmlFor="te-interp"><Form.Item name="interpretationEnabled" valuePropName="checked" noStyle><Switch id="te-interp" /></Form.Item></SettingRow>
+              <Form.Item label="Interpretation" extra="Rich text. Draft with AI writes a general note from the test definition for you to review." style={{ marginTop: 'var(--s-4)' }}>
+                <div className="cat-rich">
+                  <Form.Item name="interpretationHtml" noStyle>
+                    <RichBox label="Interpretation" disabled={!canEdit} />
+                  </Form.Item>
+                </div>
+                <div className="cat-toolbar" style={{ marginTop: 8 }}>
+                  <Button disabled={!canEdit || aiBusy || settings.aiEnabled === false} onClick={() => void draftWithAi()}>{aiBusy ? 'Drafting' : 'Draft with AI'}</Button>
+                  {settings.aiEnabled === false && <span className="cat-muted">AI is off in Lab settings.</span>}
+                </div>
+              </Form.Item>
+              <Form.Item label="Comments (printed under the results)">
+                <div className="cat-toolbar"><CommentTemplatePicker disabled={!canEdit} onPick={(t) => form.setFieldsValue({ comments: t })} /></div>
+                <Form.Item name="comments" noStyle><Input.TextArea rows={3} /></Form.Item>
+              </Form.Item>
+            </FormSection>
           </Card>
         </div>
       </Form>

@@ -17,6 +17,7 @@ import { biasPct, fmt, sdi } from '../lib/stats'
 import { QC, type Capa, type EqasOutcome, type EqasRound, type QcSettings } from '../types'
 import { useQcSettings } from '../lib/useQcSettings'
 import CapaModal from './CapaModal'
+import { FieldGrid, FormSection } from '../../../design/FormLayout'
 import EqasTrend from './EqasTrend'
 import { numericParams, paramName, TestParamSelect, useCapas, useMachines, useRecentRuns, type TestParam } from './shared'
 import { Button as DsButton } from '../../../design/Button'
@@ -406,71 +407,70 @@ export default function EqasSection() {
       )}
       <Modal title={editing?.id ? 'Edit EQAS round' : 'Add EQAS round'} open={!!editing} onOk={save} okButtonProps={{ disabled: editing?.status === 'verified' }} onCancel={() => setEditing(null)} destroyOnHidden width={dialogWidth(720)}>
         <Form form={form} layout="vertical" disabled={editing?.status === 'verified'}>
-          <Space wrap size="middle">
-            <Form.Item name="provider" label="Provider" rules={[{ required: true }]}>
-              <Input style={{ width: 200 }} placeholder="e.g. CMC Vellore" />
+          <FormSection title="Round details" description="Which programme and sample this round belongs to.">
+            <FieldGrid min={200}>
+              <Form.Item name="provider" label="Provider" rules={[{ required: true }]}>
+                <Input placeholder="e.g. CMC Vellore" />
+              </Form.Item>
+              <Form.Item name="programmeId" label="EQAS ID">
+                <Input />
+              </Form.Item>
+              <Form.Item name="cycle" label="Cycle (year)" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="frequency" label="Frequency">
+                <Select options={['monthly', 'quarterly', 'half-yearly', 'yearly'].map((x) => ({ value: x, label: x }))} />
+              </Form.Item>
+              <Form.Item name="round" label="Round" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="sampleId" label="Sample ID" rules={[{ required: true }]}>
+                <Input />
+              </Form.Item>
+              <Form.Item name="machineId" label="Machine">
+                <Select allowClear options={machines.map((m) => ({ value: m.id, label: m.name }))} />
+              </Form.Item>
+              <Form.Item name="sampleType" label="Sample type">
+                <Select allowClear options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} />
+              </Form.Item>
+              <Form.Item name="dueDate" label="Run by" rules={[{ required: true }]}>
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Results" description="Leave the results empty to schedule the round; it appears under Run EQAS until you enter them." extra={<Button onClick={() => { setExtracted(null); setExtractText(''); setExtractOpen(true) }} disabled={editing?.status === 'verified'}>Read values from report text (AI)</Button>}>
+            <Form.Item name="tp" label="Test and parameter" rules={[{ required: true }]}>
+              <TestParamSelect tests={maps.tests} />
             </Form.Item>
-            <Form.Item name="programmeId" label="EQAS ID">
-              <Input style={{ width: 140 }} />
+            {iqcNear && <p className="qc-note">IQC on this machine within {matchDays} days of the result date: {iqcNear.n} runs, {iqcNear.fail} failed, {iqcNear.warn} warning</p>}
+            <FieldGrid min={150}>
+              <Form.Item name="ourResult" label="Our result">
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="peerMean" label="Peer mean">
+                <InputNumber style={{ width: '100%' }} />
+              </Form.Item>
+              <Form.Item name="peerSd" label="Peer SD">
+                <InputNumber style={{ width: '100%' }} min={0} />
+              </Form.Item>
+              <Form.Item name="date" label="Result date">
+                <DatePicker style={{ width: '100%' }} />
+              </Form.Item>
+            </FieldGrid>
+            {live && (
+              <div style={{ marginBottom: 12 }}>
+                SDI {fmt(live.sdi)} | deviation {fmt(live.devPct)}% | <Chip status={live.outcome} />
+              </div>
+            )}
+          </FormSection>
+          <FormSection title="Report and notes">
+            <Form.Item name="reportUrl" label="Provider report link">
+              <Input placeholder="https://..." />
             </Form.Item>
-            <Form.Item name="cycle" label="Cycle (year)" rules={[{ required: true }]}>
-              <Input style={{ width: 100 }} />
+            <Form.Item name="notes" label="Notes">
+              <Input.TextArea rows={2} />
             </Form.Item>
-            <Form.Item name="frequency" label="Frequency">
-              <Select style={{ width: 140 }} options={['monthly', 'quarterly', 'half-yearly', 'yearly'].map((x) => ({ value: x, label: x }))} />
-            </Form.Item>
-          </Space>
-          <Space wrap size="middle">
-            <Form.Item name="round" label="Round" rules={[{ required: true }]}>
-              <Input style={{ width: 120 }} />
-            </Form.Item>
-            <Form.Item name="sampleId" label="Sample ID" rules={[{ required: true }]}>
-              <Input style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="machineId" label="Machine">
-              <Select allowClear style={{ width: 200 }} options={machines.map((m) => ({ value: m.id, label: m.name }))} />
-            </Form.Item>
-            <Form.Item name="sampleType" label="Sample type">
-              <Select allowClear style={{ width: 160 }} options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} />
-            </Form.Item>
-            <Form.Item name="dueDate" label="Run by" rules={[{ required: true }]}>
-              <DatePicker />
-            </Form.Item>
-          </Space>
-          <Form.Item name="tp" label="Test and parameter" rules={[{ required: true }]}>
-            <TestParamSelect tests={maps.tests} />
-          </Form.Item>
-          <Space wrap style={{ marginBottom: 8 }}>
-            <Button onClick={() => { setExtracted(null); setExtractText(''); setExtractOpen(true) }} disabled={editing?.status === 'verified'}>Read values from report text (AI)</Button>
-            {iqcNear && <Typography.Text type="secondary">IQC on this machine within {matchDays} days of the result date: {iqcNear.n} runs, {iqcNear.fail} failed, {iqcNear.warn} warning</Typography.Text>}
-          </Space>
-          <br />
-          <Typography.Text type="secondary">Leave the results empty to schedule the round; it appears under Run EQAS until you enter them.</Typography.Text>
-          <Space wrap size="middle" style={{ marginTop: 8, display: 'flex' }}>
-            <Form.Item name="ourResult" label="Our result">
-              <InputNumber style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="peerMean" label="Peer mean">
-              <InputNumber style={{ width: 140 }} />
-            </Form.Item>
-            <Form.Item name="peerSd" label="Peer SD">
-              <InputNumber style={{ width: 140 }} min={0} />
-            </Form.Item>
-            <Form.Item name="date" label="Result date">
-              <DatePicker />
-            </Form.Item>
-          </Space>
-          {live && (
-            <div style={{ marginBottom: 12 }}>
-              SDI {fmt(live.sdi)} | deviation {fmt(live.devPct)}% | <Chip status={live.outcome} />
-            </div>
-          )}
-          <Form.Item name="reportUrl" label="Provider report link">
-            <Input placeholder="https://..." />
-          </Form.Item>
-          <Form.Item name="notes" label="Notes">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+          </FormSection>
         </Form>
       </Modal>
       <CapaModal open={!!capa} initial={capa} onClose={() => setCapa(null)} />
@@ -498,37 +498,42 @@ export default function EqasSection() {
           />
         )}
       </Modal>
-      <Modal title="Add EQAS programme" open={programme} onOk={saveProgramme} onCancel={() => setProgramme(false)} destroyOnHidden width={dialogWidth(820)} okText="Schedule rounds">
+      <Modal title="Add EQAS programme" open={programme} onOk={saveProgramme} onCancel={() => setProgramme(false)} destroyOnHidden width={dialogWidth(760)} okText="Schedule rounds">
         <Form form={pform} layout="vertical">
-          <Space wrap size="middle">
-            <Form.Item name="provider" label="Provider" rules={[{ required: true }]}><Input style={{ width: 200 }} placeholder="e.g. CMC Vellore" /></Form.Item>
-            <Form.Item name="programmeId" label="EQAS ID"><Input style={{ width: 140 }} /></Form.Item>
-            <Form.Item name="cycleStart" label="Cycle start" rules={[{ required: true }]}><DatePicker /></Form.Item>
-            <Form.Item name="cycleEnd" label="Cycle end" rules={[{ required: true }]}><DatePicker /></Form.Item>
-            <Form.Item name="frequency" label="Frequency" rules={[{ required: true }]}>
-              <Select style={{ width: 140 }} options={['monthly', 'quarterly', 'half-yearly', 'yearly'].map((x) => ({ value: x, label: x }))} />
-            </Form.Item>
-          </Space>
-          <Typography.Text strong>Mappings</Typography.Text>
+          <FormSection title="Programme" description="The provider and the cycle the rounds belong to.">
+            <FieldGrid min={200}>
+              <Form.Item name="provider" label="Provider" rules={[{ required: true }]}><Input placeholder="e.g. CMC Vellore" /></Form.Item>
+              <Form.Item name="programmeId" label="EQAS ID"><Input /></Form.Item>
+              <Form.Item name="frequency" label="Frequency" rules={[{ required: true }]}>
+                <Select options={['monthly', 'quarterly', 'half-yearly', 'yearly'].map((x) => ({ value: x, label: x }))} />
+              </Form.Item>
+              <Form.Item name="cycleStart" label="Cycle start" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+              <Form.Item name="cycleEnd" label="Cycle end" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+            </FieldGrid>
+          </FormSection>
+          <FormSection title="Mappings" description="Each mapping is one machine and sample with the tests it is checked on.">
           <Form.List name="mappings">
             {(fields, { add, remove }) => (
               <>
                 {fields.map((f) => (
-                  <Space key={f.key} wrap align="start" style={{ display: 'flex', marginTop: 8 }}>
-                    <Form.Item name={[f.name, 'machineId']} label="Machine"><Select allowClear style={{ width: 170 }} options={machines.map((m) => ({ value: m.id, label: m.name }))} /></Form.Item>
-                    <Form.Item name={[f.name, 'sampleType']} label="Sample type"><Select allowClear style={{ width: 140 }} options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} /></Form.Item>
-                    <Form.Item name={[f.name, 'sampleName']} label="Sample name" rules={[{ required: true }]}><Input style={{ width: 130 }} /></Form.Item>
-                    <Form.Item name={[f.name, 'startDate']} label="First round" rules={[{ required: true }]}><DatePicker /></Form.Item>
+                  <div key={f.key} className="qc-subcard">
+                    <FieldGrid min={180}>
+                      <Form.Item name={[f.name, 'machineId']} label="Machine"><Select allowClear options={machines.map((m) => ({ value: m.id, label: m.name }))} /></Form.Item>
+                      <Form.Item name={[f.name, 'sampleType']} label="Sample type"><Select allowClear options={maps.sampleTypes.map((t) => ({ value: t.name, label: t.name }))} /></Form.Item>
+                      <Form.Item name={[f.name, 'sampleName']} label="Sample name" rules={[{ required: true }]}><Input /></Form.Item>
+                      <Form.Item name={[f.name, 'startDate']} label="First round" rules={[{ required: true }]}><DatePicker style={{ width: '100%' }} /></Form.Item>
+                    </FieldGrid>
                     <Form.Item name={[f.name, 'testIds']} label="Tests (all numeric parameters)" rules={[{ required: true }]}>
-                      <Select mode="multiple" optionFilterProp="label" style={{ width: 260 }} options={maps.tests.map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} />
+                      <Select mode="multiple" optionFilterProp="label" options={maps.tests.map((t) => ({ value: t.id, label: `${t.name} (${t.code})` }))} />
                     </Form.Item>
                     <Button onClick={() => remove(f.name)} aria-label="Remove mapping">Remove</Button>
-                  </Space>
+                  </div>
                 ))}
                 <Button onClick={() => add({ startDate: dayjs() })}>Add mapping</Button>
               </>
             )}
           </Form.List>
+          </FormSection>
         </Form>
       </Modal>
       <Modal
@@ -541,7 +546,7 @@ export default function EqasSection() {
         destroyOnHidden
       >
         <Space vertical style={{ width: '100%' }}>
-          {act?.kind === 'reschedule' && <DatePicker value={newDue} onChange={setNewDue} aria-label="New due date" />}
+          {act?.kind === 'reschedule' && <DatePicker style={{ width: '100%' }} value={newDue} onChange={setNewDue} aria-label="New due date" />}
           <Input.TextArea rows={3} aria-label="Reason" placeholder="Reason (required)" value={actReason} onChange={(e) => setActReason(e.target.value)} />
         </Space>
       </Modal>

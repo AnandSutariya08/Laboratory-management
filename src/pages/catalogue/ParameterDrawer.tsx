@@ -1,10 +1,10 @@
 import { REPORT_LANGS } from '../../features/report/i18n'
 import { useEffect, useMemo, useState } from 'react'
-import { AutoComplete, Button as AButton, Col, Divider, Drawer, Form, Input, InputNumber, Row, Select, Space, Switch, Typography } from 'antd'
+import { AutoComplete, Button as AButton, Drawer, Form, Input, InputNumber, Select, Space, Switch } from 'antd'
 import { MinusCircleOutlined, PlusOutlined } from '@ant-design/icons'
 import { ageInDays, evaluateFormula, resolveRange } from '../../lib/results'
 import { StatusChip } from '../../design/StatusChip'
-import { Card } from '../../design/Card'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import type { AgeRange, AgeUnit, ParamDataType } from '../../types'
 import { FIELD_TYPES, SEX_OPTIONS, TEST_METHODS, type FieldType, type ParameterExt } from './ext'
 
@@ -206,7 +206,7 @@ export function ParameterDrawer({
       title={initial ? `Edit parameter ${initial.key}` : 'Add parameter'}
       open={open}
       onClose={onClose}
-      size={680}
+      size={760}
       destroyOnHidden
       extra={
         <Space>
@@ -216,11 +216,11 @@ export function ParameterDrawer({
       }
     >
       <Form form={form} layout="vertical" initialValues={emptyParam()}>
-        <Form.Item name="fieldType" label="Field type">
-          <Select options={FIELD_TYPES} />
-        </Form.Item>
-        <Row gutter={12}>
-          <Col span={8}>
+        <FormSection title="Parameter" description="What this result line is called and what kind of value it holds.">
+          <FieldGrid min={220}>
+            <Form.Item name="fieldType" label="Field type">
+              <Select options={FIELD_TYPES} />
+            </Form.Item>
             <Form.Item
               name="key"
               label="Key"
@@ -234,40 +234,39 @@ export function ParameterDrawer({
             >
               <Input />
             </Form.Item>
-          </Col>
-          <Col span={16}>
             <Form.Item name="name" label="Name" rules={[{ required: true }]}>
               <Input />
             </Form.Item>
-          </Col>
-        </Row>
-        {!isGroup && (
-          <Row gutter={12}>
-            <Col span={12}>
+            {!isGroup && (
               <Form.Item name="parentKey" label="Parent group (multiple field)">
                 <Select allowClear placeholder="None" options={siblings.filter((s) => s.structure === 'group').map((s) => ({ value: s.key, label: `${s.name} (${s.key})` }))} />
               </Form.Item>
-            </Col>
-            {plain && (
-              <Col span={12}>
-                <Form.Item name="dataType" label="Field">
-                  <Select options={[
-                    { value: 'numeric', label: 'Numeric' },
-                    { value: 'text', label: 'Text' },
-                    { value: 'numericUnbound', label: 'Numeric unbound (no range)' },
-                    { value: 'options', label: 'Options (custom list)' },
-                    { value: 'richText', label: 'Rich text (formatted)' },
-                    { value: 'image', label: 'Image' },
-                    { value: 'pdf', label: 'PDF' },
-                  ]} />
-                </Form.Item>
-              </Col>
             )}
-          </Row>
-        )}
+            {!isGroup && plain && (
+              <Form.Item name="dataType" label="Field">
+                <Select options={[
+                  { value: 'numeric', label: 'Numeric' },
+                  { value: 'text', label: 'Text' },
+                  { value: 'numericUnbound', label: 'Numeric unbound (no range)' },
+                  { value: 'options', label: 'Options (custom list)' },
+                  { value: 'richText', label: 'Rich text (formatted)' },
+                  { value: 'image', label: 'Image' },
+                  { value: 'pdf', label: 'PDF' },
+                ]} />
+              </Form.Item>
+            )}
+            <Form.Item name="machineCode" label="Machine / LIS code"><Input /></Form.Item>
+          </FieldGrid>
+        </FormSection>
 
         {plain && (
-          <>
+          <FormSection title="Result entry" description="Unit, method and any pre-filled or fixed values for the technician.">
+            <FieldGrid min={220}>
+              <Form.Item name="unit" label="Unit"><Input /></Form.Item>
+              <Form.Item name="method" label="Test method">
+                <AutoComplete allowClear placeholder="Pick or type a method" options={TEST_METHODS.map((m) => ({ value: m }))} filterOption={(i, o) => (o?.value ?? '').toLowerCase().includes(i.toLowerCase())} />
+              </Form.Item>
+            </FieldGrid>
             {dataType === 'options' && (
               <Form.Item name="options" label="Options" rules={[{ required: true, message: 'Add at least one option' }]}>
                 <Select mode="tags" tokenSeparators={[',']} placeholder="Type an option and press Enter" />
@@ -275,13 +274,18 @@ export function ParameterDrawer({
             )}
             {dataType === 'options' && (
               <Form.Item noStyle shouldUpdate={(a, b) => a.options !== b.options}>
-                {({ getFieldValue }) =>
-                  ((getFieldValue('options') as string[] | undefined) ?? []).map((o) => (
-                    <Form.Item key={o} name={['optionFlags', o]} label={`"${o}" is`} initialValue="normal" style={{ marginBottom: 8 }}>
-                      <Select style={{ width: 160 }} options={[{ value: 'normal', label: 'Normal' }, { value: 'abnormal', label: 'Abnormal' }, { value: 'critical', label: 'Critical' }]} />
-                    </Form.Item>
-                  ))
-                }
+                {({ getFieldValue }) => {
+                  const opts = (getFieldValue('options') as string[] | undefined) ?? []
+                  return opts.length > 0 ? (
+                    <FieldGrid min={220}>
+                      {opts.map((o) => (
+                        <Form.Item key={o} name={['optionFlags', o]} label={`"${o}" is`} initialValue="normal">
+                          <Select options={[{ value: 'normal', label: 'Normal' }, { value: 'abnormal', label: 'Abnormal' }, { value: 'critical', label: 'Critical' }]} />
+                        </Form.Item>
+                      ))}
+                    </FieldGrid>
+                  ) : null
+                }}
               </Form.Item>
             )}
             {(dataType === 'text' || dataType === 'richText' || dataType === 'options') && (
@@ -289,33 +293,25 @@ export function ParameterDrawer({
                 <Input.TextArea rows={2} />
               </Form.Item>
             )}
-            <Form.Item name="explanation" label="Plain-language explanation" tooltip="Shown under this parameter on the smart report.">
-              <Input.TextArea rows={2} />
-            </Form.Item>
-            <Form.Item label="Name in other report languages" tooltip="Used when the report is printed in that language; falls back to the English name.">
-              <Row gutter={8}>
-                {REPORT_LANGS.filter((l) => l.value !== 'en').map((l) => (
-                  <Col span={8} key={l.value}><Form.Item name={['translations', l.value]} label={l.label} style={{ marginBottom: 8 }}><Input /></Form.Item></Col>
-                ))}
-              </Row>
-            </Form.Item>
-            <Row gutter={12}>
-              <Col span={8}>
-                <Form.Item name="unit" label="Unit"><Input /></Form.Item>
-              </Col>
-              <Col span={16}>
-                <Form.Item name="method" label="Test method">
-                  <AutoComplete allowClear placeholder="Pick or type a method" options={TEST_METHODS.map((m) => ({ value: m }))} filterOption={(i, o) => (o?.value ?? '').toLowerCase().includes(i.toLowerCase())} />
-                </Form.Item>
-              </Col>
-            </Row>
+            {numeric && (
+              <FieldGrid min={170}>
+                <Form.Item name="decimals" label="Decimals" tooltip="Decimals kept on a calculated value. Blank = the lab setting (Report entry)."><InputNumber min={0} max={6} style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name="deltaLimitPct" label="Delta limit" tooltip="Overrides the lab delta-check percent for this parameter"><InputNumber min={0} addonAfter="%" style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name="deltaLimitAbs" label="Delta limit (absolute)" tooltip="Absolute change that raises a delta flag"><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+              </FieldGrid>
+            )}
+          </FormSection>
+        )}
+
+        {plain && (numeric || dataType === 'text' || dataType === 'richText' || dataType === 'options' || dataType === 'image' || dataType === 'pdf') && (
+          <FormSection title="Reference range" description="The normal and critical limits used to flag results.">
             {numeric && dataType === 'numeric' && (
-              <Row gutter={12}>
-                <Col span={6}><Form.Item name="low" label="Range from"><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-                <Col span={6}><Form.Item name="high" label="Range to"><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-                <Col span={6}><Form.Item name="criticalLow" label="Critical below"><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-                <Col span={6}><Form.Item name="criticalHigh" label="Critical above"><InputNumber style={{ width: '100%' }} /></Form.Item></Col>
-              </Row>
+              <FieldGrid min={150}>
+                <Form.Item name="low" label="Range from"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name="high" label="Range to"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name="criticalLow" label="Critical below"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                <Form.Item name="criticalHigh" label="Critical above"><InputNumber style={{ width: '100%' }} /></Form.Item>
+              </FieldGrid>
             )}
             <Form.Item name="displayRange" label="Result range to show in report" tooltip="Shown on the report instead of from - to">
               <Input placeholder="e.g. Negative, or 12.0 - 17.0" />
@@ -330,46 +326,36 @@ export function ParameterDrawer({
                 <Input placeholder="Leave empty for manual entry" />
               </Form.Item>
             )}
-          </>
+          </FormSection>
         )}
-
-        <Form.Item name="machineCode" label="Machine / LIS code"><Input /></Form.Item>
-        {plain && numeric && (
-          <Space size="large" wrap>
-            <Form.Item name="decimals" label="Decimals" tooltip="Decimals kept on a calculated value. Blank = the lab setting (Report entry)."><InputNumber min={0} max={6} style={{ width: 110 }} /></Form.Item>
-            <Form.Item name="deltaLimitPct" label="Delta limit (%)" tooltip="Overrides the lab delta-check percent for this parameter"><InputNumber min={0} style={{ width: 110 }} /></Form.Item>
-            <Form.Item name="deltaLimitAbs" label="Delta limit (units)" tooltip="Absolute change that raises a delta flag"><InputNumber min={0} style={{ width: 110 }} /></Form.Item>
-          </Space>
-        )}
-        <Space size="large" wrap>
-          <Form.Item name="required" label="Required" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="hideOnReport" label="Do not show in report" valuePropName="checked"><Switch /></Form.Item>
-          <Form.Item name="omitFromTotal" label="Omit from DLC total" valuePropName="checked"><Switch /></Form.Item>
-        </Space>
 
         {plain && numeric && dataType === 'numeric' && (
-          <>
-            <Divider titlePlacement="start">Age ranges</Divider>
-            <Typography.Paragraph type="secondary">
-              A band that contains the patient&apos;s age overrides the default range above. Pick a sex where the band applies to one sex only.
-            </Typography.Paragraph>
+          <FormSection title="Age ranges" description="A band that contains the patient's age overrides the default range above. Pick a sex where the band applies to one sex only.">
             <Form.List name="ranges">
               {(fields, { add, remove }) => (
                 <>
                   {fields.map(({ key, name }) => (
-                    <Card key={key} padding={12} style={{ marginBottom: 8 }}>
-                      <Space wrap align="start">
-                        <Form.Item name={[name, 'fromValue']} label="From" rules={[{ required: true }]} style={{ marginBottom: 0 }}><InputNumber min={0} style={{ width: 80 }} /></Form.Item>
-                        <Form.Item name={[name, 'fromUnit']} label=" " style={{ marginBottom: 0 }}><Select options={UNIT_OPTIONS} style={{ width: 90 }} /></Form.Item>
-                        <Form.Item name={[name, 'toValue']} label="To" rules={[{ required: true }]} style={{ marginBottom: 0 }}><InputNumber min={0} style={{ width: 80 }} /></Form.Item>
-                        <Form.Item name={[name, 'toUnit']} label=" " style={{ marginBottom: 0 }}><Select options={UNIT_OPTIONS} style={{ width: 90 }} /></Form.Item>
-                        <Form.Item name={[name, 'gender']} label="Sex" style={{ marginBottom: 0 }}><Select options={SEX_OPTIONS} style={{ width: 110 }} /></Form.Item>
-                        <Form.Item name={[name, 'low']} label="Low" style={{ marginBottom: 0 }}><InputNumber style={{ width: 80 }} /></Form.Item>
-                        <Form.Item name={[name, 'high']} label="High" style={{ marginBottom: 0 }}><InputNumber style={{ width: 80 }} /></Form.Item>
-                        <Form.Item name={[name, 'displayText']} label="Display text" style={{ marginBottom: 0 }}><Input style={{ width: 150 }} /></Form.Item>
-                        <AButton type="text" danger aria-label="Remove age range" icon={<MinusCircleOutlined />} style={{ marginTop: 30 }} onClick={() => remove(name)} />
-                      </Space>
-                    </Card>
+                    <div key={key} className="cat-agerange">
+                      <FieldGrid min={150}>
+                        <Form.Item label="From" required>
+                          <Space.Compact block>
+                            <Form.Item name={[name, 'fromValue']} noStyle rules={[{ required: true, message: 'Required' }]}><InputNumber min={0} aria-label="From age" style={{ width: '50%' }} /></Form.Item>
+                            <Form.Item name={[name, 'fromUnit']} noStyle><Select aria-label="From age unit" options={UNIT_OPTIONS} style={{ width: '50%' }} /></Form.Item>
+                          </Space.Compact>
+                        </Form.Item>
+                        <Form.Item label="To" required>
+                          <Space.Compact block>
+                            <Form.Item name={[name, 'toValue']} noStyle rules={[{ required: true, message: 'Required' }]}><InputNumber min={0} aria-label="To age" style={{ width: '50%' }} /></Form.Item>
+                            <Form.Item name={[name, 'toUnit']} noStyle><Select aria-label="To age unit" options={UNIT_OPTIONS} style={{ width: '50%' }} /></Form.Item>
+                          </Space.Compact>
+                        </Form.Item>
+                        <Form.Item name={[name, 'gender']} label="Sex"><Select options={SEX_OPTIONS} /></Form.Item>
+                        <Form.Item name={[name, 'low']} label="Low"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                        <Form.Item name={[name, 'high']} label="High"><InputNumber style={{ width: '100%' }} /></Form.Item>
+                        <Form.Item name={[name, 'displayText']} label="Display text"><Input /></Form.Item>
+                      </FieldGrid>
+                      <AButton type="text" danger aria-label="Remove age range" icon={<MinusCircleOutlined />} onClick={() => remove(name)}>Remove</AButton>
+                    </div>
                   ))}
                   <AButton icon={<PlusOutlined />} onClick={() => add({ fromValue: 0, fromUnit: 'year', toValue: 12, toUnit: 'year', gender: 'any', low: null, high: null, displayText: '' })}>
                     Add age range
@@ -377,16 +363,37 @@ export function ParameterDrawer({
                 </>
               )}
             </Form.List>
-            <Divider titlePlacement="start">Range preview</Divider>
-            <Space wrap>
-              <span>Patient age</span>
-              <InputNumber aria-label="Preview age" min={0} value={previewAge} onChange={(v) => setPreviewAge(v ?? 0)} style={{ width: 80 }} />
-              <Select aria-label="Preview age unit" value={previewUnit} onChange={setPreviewUnit} options={UNIT_OPTIONS} style={{ width: 100 }} />
+            <div className="cat-agepreview">
+              <span>Range preview: patient age</span>
+              <InputNumber aria-label="Preview age" min={0} value={previewAge} onChange={(v) => setPreviewAge(v ?? 0)} style={{ width: 90 }} />
+              <Select aria-label="Preview age unit" value={previewUnit} onChange={setPreviewUnit} options={UNIT_OPTIONS} style={{ width: 110 }} />
               <span>reports as</span>
               <StatusChip variant="info">{preview?.text || '(no range)'}</StatusChip>
-            </Space>
-          </>
+            </div>
+          </FormSection>
         )}
+
+        <FormSection title="Report display" description="How this parameter appears on the printed and smart report.">
+          {plain && (
+            <Form.Item name="explanation" label="Plain-language explanation" tooltip="Shown under this parameter on the smart report.">
+              <Input.TextArea rows={2} />
+            </Form.Item>
+          )}
+          <SettingRow label="Required" help="Result entry cannot be finished without a value." htmlFor="pd-required"><Form.Item name="required" valuePropName="checked" noStyle><Switch id="pd-required" /></Form.Item></SettingRow>
+          <SettingRow label="Do not show in report" help="Keep the value internal; it will not print." htmlFor="pd-hide"><Form.Item name="hideOnReport" valuePropName="checked" noStyle><Switch id="pd-hide" /></Form.Item></SettingRow>
+          <SettingRow label="Omit from DLC total" help="Leave this value out of the differential count total." htmlFor="pd-omit"><Form.Item name="omitFromTotal" valuePropName="checked" noStyle><Switch id="pd-omit" /></Form.Item></SettingRow>
+          {plain && (
+            <>
+              <div style={{ marginTop: 'var(--s-4)', fontWeight: 600 }}>Name in other report languages</div>
+              <div className="cat-muted" style={{ fontSize: 'var(--fs-dense)', marginBottom: 'var(--s-3)' }}>Used when the report is printed in that language; falls back to the English name.</div>
+              <FieldGrid min={160}>
+                {REPORT_LANGS.filter((l) => l.value !== 'en').map((l) => (
+                  <Form.Item key={l.value} name={['translations', l.value]} label={l.label}><Input /></Form.Item>
+                ))}
+              </FieldGrid>
+            </>
+          )}
+        </FormSection>
       </Form>
     </Drawer>
   )

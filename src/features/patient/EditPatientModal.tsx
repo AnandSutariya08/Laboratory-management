@@ -8,6 +8,7 @@ import { patientEditLockReason, uhidTaken } from '../../lib/orders'
 import { DISPATCH_OPTIONS } from '../../components/billing/helpers'
 import { fetchPatientOrders, logActivity, useMaster } from './lib'
 import type { PatientDoc } from './types'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 
 export default function EditPatientModal({ patient, open, onClose }: { patient: PatientDoc; open: boolean; onClose: () => void }) {
@@ -100,33 +101,52 @@ export default function EditPatientModal({ patient, open, onClose }: { patient: 
   return (
     <Modal open={open} onCancel={onClose} title="Edit patient" okText="Save" onOk={save} confirmLoading={saving} destroyOnHidden width={dialogWidth(640)}>
       <Form form={form} layout="vertical">
-        <div className="pl-grid2">
-          <Form.Item label="Patient ID"><Input value={patient.patientNo} disabled /></Form.Item>
-          <Form.Item name="uhid" label="UHID"><Input /></Form.Item>
-          <Form.Item name="firstName" label="First name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="lastName" label="Last name"><Input /></Form.Item>
-          <Form.Item name="ageValue" label="Age" rules={[{ required: true }]}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="ageUnit" label="Age type"><Select options={[{ value: 'year', label: 'Years' }, { value: 'month', label: 'Months' }, { value: 'day', label: 'Days' }]} /></Form.Item>
-          <Form.Item name="gender" label="Gender"><Select options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} /></Form.Item>
-          <Form.Item name="phone" label="Phone"><Input inputMode="tel" /></Form.Item>
-          <Form.Item name="email" label="Email"><Input type="email" /></Form.Item>
-          <Form.Item name="dispatchModes" label="Dispatch methods"><Select mode="multiple" options={DISPATCH_OPTIONS} /></Form.Item>
-          <Form.Item name="referrerName" label="Referring doctor"><Select showSearch allowClear options={doctorOpts} placeholder="Self" /></Form.Item>
-          <Form.Item name="referrerHospital" label="Referring hospital"><Select showSearch allowClear options={hospOpts} /></Form.Item>
-          <Form.Item name="insuranceNo" label="Insurance no."><Input maxLength={40} /></Form.Item>
-          <Form.Item name="district" label="District"><Input maxLength={80} /></Form.Item>
-          <Form.Item name="town" label="Town"><Input maxLength={80} /></Form.Item>
-          <Form.Item name="weight" label="Weight (kg)"><InputNumber min={0} max={500} precision={1} style={{ width: '100%' }} /></Form.Item>
-          <Form.Item name="height" label="Height (cm)"><InputNumber min={0} max={300} precision={1} style={{ width: '100%' }} /></Form.Item>
+        <FormSection title="Patient" description="Name, age and gender.">
+          <FieldGrid min={170}>
+            <Form.Item label="Patient ID"><Input value={patient.patientNo} disabled /></Form.Item>
+            <Form.Item name="uhid" label="UHID"><Input /></Form.Item>
+            <Form.Item name="firstName" label="First name" rules={[{ required: true }]}><Input /></Form.Item>
+            <Form.Item name="lastName" label="Last name"><Input /></Form.Item>
+            <Form.Item name="ageValue" label="Age" rules={[{ required: true }]}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="ageUnit" label="Age type"><Select options={[{ value: 'year', label: 'Years' }, { value: 'month', label: 'Months' }, { value: 'day', label: 'Days' }]} /></Form.Item>
+            <Form.Item name="gender" label="Gender"><Select options={[{ value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }, { value: 'other', label: 'Other' }]} /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Contact and location" description="How to reach the patient and send reports.">
+          <FieldGrid min={200}>
+            <Form.Item name="phone" label="Phone"><Input inputMode="tel" /></Form.Item>
+            <Form.Item name="email" label="Email"><Input type="email" /></Form.Item>
+            <Form.Item name="dispatchModes" label="Dispatch methods"><Select mode="multiple" options={DISPATCH_OPTIONS} /></Form.Item>
+            <Form.Item name="district" label="District"><Input maxLength={80} /></Form.Item>
+            <Form.Item name="town" label="Town"><Input maxLength={80} /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Referral and insurance" description="Who referred the patient.">
+          <FieldGrid min={200}>
+            <Form.Item name="referrerName" label="Referring doctor"><Select showSearch allowClear options={doctorOpts} placeholder="Self" /></Form.Item>
+            <Form.Item name="referrerHospital" label="Referring hospital"><Select showSearch allowClear options={hospOpts} /></Form.Item>
+            <Form.Item name="insuranceNo" label="Insurance no."><Input maxLength={40} /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Clinical" description="Measurements and history.">
+          <FieldGrid min={160}>
+            <Form.Item name="weight" label="Weight (kg)"><InputNumber min={0} max={500} precision={1} style={{ width: '100%' }} /></Form.Item>
+            <Form.Item name="height" label="Height (cm)"><InputNumber min={0} max={300} precision={1} style={{ width: '100%' }} /></Form.Item>
+          </FieldGrid>
           <Form.Item name="clinicalHistory" label="Clinical history"><Input.TextArea rows={2} maxLength={1000} /></Form.Item>
-          <Form.Item name="aadhaar" label="Aadhaar"><Input maxLength={12} inputMode="numeric" /></Form.Item>
-          <Form.Item name="abhaNumber" label="ABHA number"><Input /></Form.Item>
-          <Form.Item name="abhaAddress" label="ABHA address"><Input /></Form.Item>
-        </div>
-        <label className="pl-toggle">
-          <span>Also update name, age and referrer on existing bills</span>
-          <Switch checked={propagate} onChange={setPropagate} aria-label="Update existing bills" />
-        </label>
+        </FormSection>
+        <FormSection title="Identity numbers" description="Government and ABHA identifiers.">
+          <FieldGrid min={200}>
+            <Form.Item name="aadhaar" label="Aadhaar"><Input maxLength={12} inputMode="numeric" /></Form.Item>
+            <Form.Item name="abhaNumber" label="ABHA number"><Input /></Form.Item>
+            <Form.Item name="abhaAddress" label="ABHA address"><Input /></Form.Item>
+          </FieldGrid>
+        </FormSection>
+        <FormSection title="Existing bills">
+          <SettingRow label="Update existing bills" help="Also update name, age and referrer on this patient's existing bills.">
+            <Switch checked={propagate} onChange={setPropagate} aria-label="Update existing bills" />
+          </SettingRow>
+        </FormSection>
       </Form>
     </Modal>
   )

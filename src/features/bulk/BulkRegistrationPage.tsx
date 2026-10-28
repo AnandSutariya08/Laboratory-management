@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import { FormSection, SettingRow } from '../../design/FormLayout'
 import { App, Checkbox, Progress, Select, Table } from 'antd'
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons'
 import { getDoc, limit, orderBy, query, serverTimestamp, setDoc } from 'firebase/firestore'
@@ -328,9 +329,9 @@ export default function BulkRegistrationPage() {
             title="Upload a file to begin"
             description="Download the template, fill one patient per row (tests as codes separated by semicolons), then upload it as .xlsx, .xls or .csv. Rows are checked before anything is saved. Up to 2000 rows per file."
             action={
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 'var(--s-3)', flexWrap: 'wrap', justifyContent: 'center', alignItems: 'center' }}>
                 <Button onClick={template}>Download template</Button>
-                <Select aria-label="Load a corporate roster" allowClear showSearch optionFilterProp="label" placeholder="Or load a corporate roster" style={{ width: 260 }} value={rosterClient}
+                <Select aria-label="Load a corporate roster" allowClear showSearch optionFilterProp="label" placeholder="Or load a corporate roster" style={{ width: 'min(100%, 280px)' }} value={rosterClient}
                   options={masters.corporateClients.filter((c) => (c.employees?.length ?? 0) > 0).map((c) => ({ value: c.id, label: `${c.name} (${c.employees.length})` }))}
                   onChange={(v) => { setRosterClient(v); if (v) loadRoster(v) }} />
               </div>
@@ -344,21 +345,29 @@ export default function BulkRegistrationPage() {
               <b>{fileName}</b>
               <StatusChip variant="success">{valid.length} ready</StatusChip>
               {invalid > 0 && <StatusChip variant="urgent">{invalid} with errors</StatusChip>}
-              {dupRows > 0 && (
-                <Select aria-label="Duplicate patients" style={{ width: 260 }} value={policy} onChange={setPolicy}
-                  options={[{ value: 'skip', label: `Duplicates (${dupRows}): skip` }, { value: 'attach', label: `Duplicates (${dupRows}): add bill to existing` }, { value: 'create', label: `Duplicates (${dupRows}): create new patient` }]} />
-              )}
-              <Checkbox checked={makeBills} onChange={(e) => setMakeBills(e.target.checked)}>Create bills for rows with test codes</Checkbox>
-              {makeBills && (
-                <Select aria-label="Payment for created bills" style={{ width: 200 }} value={payMode} onChange={setPayMode}
-                  options={[{ value: 'due', label: 'Leave bills due' }, ...payModes.map((m) => ({ value: m.value, label: `Paid in full: ${m.label}` }))]} />
-              )}
               <span style={{ flex: 1 }} />
               <Button disabled={running} onClick={() => { setRows([]); setFileName('') }}>Clear</Button>
               <Button variant="primary" disabled={running || finished || job?.status === 'failed' || valid.length === 0} onClick={run}>
                 Register {valid.length} patient{valid.length === 1 ? '' : 's'}
               </Button>
             </div>
+            <FormSection title="Import options" description="Choose how duplicates and bills are handled before registering.">
+              {dupRows > 0 && (
+                <SettingRow label="Duplicate patients" help={`${dupRows} row${dupRows === 1 ? '' : 's'} match an existing patient.`}>
+                  <Select aria-label="Duplicate patients" style={{ width: 'min(100%, 320px)' }} value={policy} onChange={setPolicy}
+                    options={[{ value: 'skip', label: `Duplicates (${dupRows}): skip` }, { value: 'attach', label: `Duplicates (${dupRows}): add bill to existing` }, { value: 'create', label: `Duplicates (${dupRows}): create new patient` }]} />
+                </SettingRow>
+              )}
+              <SettingRow label="Create bills" help="Bill rows that have test codes.">
+                <Checkbox checked={makeBills} onChange={(e) => setMakeBills(e.target.checked)}>Create bills for rows with test codes</Checkbox>
+              </SettingRow>
+              {makeBills && (
+                <SettingRow label="Payment for created bills" help="Leave the bills due, or mark them paid in full.">
+                  <Select aria-label="Payment for created bills" style={{ width: 'min(100%, 320px)' }} value={payMode} onChange={setPayMode}
+                    options={[{ value: 'due', label: 'Leave bills due' }, ...payModes.map((m) => ({ value: m.value, label: `Paid in full: ${m.label}` }))]} />
+                </SettingRow>
+              )}
+            </FormSection>
             {(running || finished || job?.status === 'failed') && (
               <div style={{ marginTop: 'var(--s-3)' }}>
                 <Progress percent={Math.round((done / Math.max(1, job?.total ?? valid.length)) * 100)} status={job?.status === 'failed' ? 'exception' : running ? 'active' : 'success'} />

@@ -3,6 +3,7 @@ import { App, Form, Input, InputNumber, Modal, Radio, Select, Switch, Table } fr
 import { AppstoreOutlined, BarsOutlined, CopyOutlined, DeleteOutlined, DownloadOutlined, PlusOutlined } from '@ant-design/icons'
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auditPriceChange, auditBulkPriceChange } from '../../features/settings/audit'
+import { FieldGrid, FormSection, SettingRow } from '../../design/FormLayout'
 import { CopyToBranchesModal } from './CopyToBranches'
 import { useCatalogueMaps } from '../../hooks/useCatalogue'
 import { useAuth, can } from '../../auth/AuthProvider'
@@ -251,47 +252,58 @@ export default function PackagesPage() {
 
       <Modal title={editing === 'new' ? 'New package' : 'Edit package'} open={!!editing} onOk={save} okText={editing === 'new' ? 'Create' : 'Save'} onCancel={() => setEditing(null)} width={dialogWidth(720)} destroyOnHidden>
         <Form form={form} layout="vertical">
-          <div className="cat-toolbar">
-            <Select showSearch optionFilterProp="label" placeholder="Copy from existing package" aria-label="Copy from package" style={{ width: 280 }} suffixIcon={<CopyOutlined />}
+          <FormSection title="Package details" description="Name, code and who the package is for." extra={
+            <Select showSearch optionFilterProp="label" placeholder="Copy from existing package" aria-label="Copy from package" style={{ width: 240, maxWidth: '100%' }} suffixIcon={<CopyOutlined />}
               options={packages.filter((p) => editing === 'new' || (editing && p.id !== editing.id)).map((p) => ({ value: p.id, label: `${p.code} - ${p.name}` }))}
               onChange={(id) => { const src = packages.find((p) => p.id === id); if (src) open(editing ?? 'new', src) }} />
-          </div>
-          <Form.Item name="name" label="Package name" rules={[{ required: true }]}><Input /></Form.Item>
-          <Form.Item name="code" label="Package code" rules={[{ required: true }]}><Input style={{ width: 200 }} /></Form.Item>
-          <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
-          <div className="cat-toolbar">
-            <Form.Item name="category" label="Category"><Select style={{ width: 200 }} options={(Object.keys(PACKAGE_CATEGORY_LABEL) as PackageCategory[]).map((k) => ({ value: k, label: PACKAGE_CATEGORY_LABEL[k] }))} /></Form.Item>
-            <Form.Item name="gender" label="Applies to"><Select style={{ width: 140 }} options={[{ value: 'both', label: 'Everyone' }, { value: 'male', label: 'Male only' }, { value: 'female', label: 'Female only' }]} /></Form.Item>
-            <Form.Item name="showTestsOnBill" label="Show tests on bill" valuePropName="checked"><Switch /></Form.Item>
-          </div>
-          <Form.Item name="preCollectionGuidelines" label="Pre-collection guidelines" extra="Fasting or preparation instructions shown at registration."><Input.TextArea rows={2} /></Form.Item>
-          {items.some((id) => !testById.get(id) || testById.get(id)?.disabled) && <p className="cat-warn">Some member tests are disabled or deleted; billing will warn and leave them out after confirmation.</p>}
-          <Form.Item label="Add test or package">
-            <Select showSearch optionFilterProp="label" placeholder="Search tests and packages" value={null as unknown as string} onChange={addEntry}
-              options={[
-                { label: 'Tests', options: tests.filter((t) => !t.disabled && !items.includes(t.id)).map((t) => ({ value: `t:${t.id}`, label: `${t.code} - ${t.name} (${formatINR(t.price)})` })) },
-                { label: 'Packages (adds their tests)', options: packages.filter((p) => !editing || editing === 'new' || p.id !== editing.id).map((p) => ({ value: `p:${p.id}`, label: `${p.code} - ${p.name}` })) },
-              ]} />
-          </Form.Item>
-          <Table
-            size="small"
-            rowKey="id"
-            pagination={false}
-            dataSource={items.map((id, i) => ({ id, sr: i + 1 }))}
-            locale={{ emptyText: 'No tests added' }}
-            columns={[
-              { title: 'Sr', dataIndex: 'sr', width: 60 },
-              { title: 'Test', render: (_, r) => testById.get(r.id)?.name ?? r.id },
-              { title: 'Price', width: 120, render: (_, r) => formatINR(testById.get(r.id)?.price ?? 0) },
-              { title: 'Action', width: 80, render: (_, r) => <Button variant="text" icon={<DeleteOutlined />} aria-label={`Remove ${testById.get(r.id)?.name ?? r.id}`} onClick={() => setItems((c) => c.filter((x) => x !== r.id))} /> },
-            ]}
-          />
-          <div className="cat-toolbar" style={{ marginTop: 'var(--s-4)' }}>
-            <Form.Item name="price" label="Package price (₹)" rules={[{ required: true }]} style={{ margin: 0 }}><InputNumber min={0} precision={2} disabled={editing !== 'new' && !canPrice} /></Form.Item>
-            <span>Total of tests: <b>{formatINR(sum)}</b></span>
-            {items.length > 0 && (discount > 0 ? <StatusChip variant="success">Discount {formatINR(discount)} ({sum ? Math.round((discount / sum) * 100) : 0}%)</StatusChip> : discount < 0 ? <StatusChip variant="caution">Above sum by {formatINR(-discount)}</StatusChip> : <StatusChip>Equal to sum</StatusChip>)}
-            <Form.Item name="disabled" label="Disabled" valuePropName="checked" style={{ margin: 0 }}><Switch /></Form.Item>
-          </div>
+          }>
+            <FieldGrid min={220}>
+              <Form.Item name="name" label="Package name" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="code" label="Package code" rules={[{ required: true }]}><Input /></Form.Item>
+              <Form.Item name="category" label="Category"><Select options={(Object.keys(PACKAGE_CATEGORY_LABEL) as PackageCategory[]).map((k) => ({ value: k, label: PACKAGE_CATEGORY_LABEL[k] }))} /></Form.Item>
+              <Form.Item name="gender" label="Applies to"><Select options={[{ value: 'both', label: 'Everyone' }, { value: 'male', label: 'Male only' }, { value: 'female', label: 'Female only' }]} /></Form.Item>
+            </FieldGrid>
+            <Form.Item name="description" label="Description"><Input.TextArea rows={2} /></Form.Item>
+            <Form.Item name="preCollectionGuidelines" label="Pre-collection guidelines" extra="Fasting or preparation instructions shown at registration."><Input.TextArea rows={2} /></Form.Item>
+          </FormSection>
+
+          <FormSection title="Included tests" description="Tests in this package. Adding a package adds all of its tests.">
+            {items.some((id) => !testById.get(id) || testById.get(id)?.disabled) && <p className="cat-warn">Some member tests are disabled or deleted; billing will warn and leave them out after confirmation.</p>}
+            <Form.Item label="Add test or package">
+              <Select showSearch optionFilterProp="label" placeholder="Search tests and packages" value={null as unknown as string} onChange={addEntry}
+                options={[
+                  { label: 'Tests', options: tests.filter((t) => !t.disabled && !items.includes(t.id)).map((t) => ({ value: `t:${t.id}`, label: `${t.code} - ${t.name} (${formatINR(t.price)})` })) },
+                  { label: 'Packages (adds their tests)', options: packages.filter((p) => !editing || editing === 'new' || p.id !== editing.id).map((p) => ({ value: `p:${p.id}`, label: `${p.code} - ${p.name}` })) },
+                ]} />
+            </Form.Item>
+            <Table
+              size="small"
+              rowKey="id"
+              pagination={false}
+              dataSource={items.map((id, i) => ({ id, sr: i + 1 }))}
+              locale={{ emptyText: 'No tests added' }}
+              columns={[
+                { title: 'Sr', dataIndex: 'sr', width: 60 },
+                { title: 'Test', render: (_, r) => testById.get(r.id)?.name ?? r.id },
+                { title: 'Price', width: 120, render: (_, r) => formatINR(testById.get(r.id)?.price ?? 0) },
+                { title: 'Action', width: 80, render: (_, r) => <Button variant="text" icon={<DeleteOutlined />} aria-label={`Remove ${testById.get(r.id)?.name ?? r.id}`} onClick={() => setItems((c) => c.filter((x) => x !== r.id))} /> },
+              ]}
+            />
+          </FormSection>
+
+          <FormSection title="Pricing and billing" description="The package price replaces the sum of its tests on the bill.">
+            <FieldGrid min={220}>
+              <Form.Item name="price" label="Package price" rules={[{ required: true }]}><InputNumber min={0} precision={2} addonBefore="₹" style={{ width: '100%' }} disabled={editing !== 'new' && !canPrice} /></Form.Item>
+              <Form.Item label="Total of tests">
+                <div className="cat-toolbar" style={{ margin: 0 }}>
+                  <b>{formatINR(sum)}</b>
+                  {items.length > 0 && (discount > 0 ? <StatusChip variant="success">Discount {formatINR(discount)} ({sum ? Math.round((discount / sum) * 100) : 0}%)</StatusChip> : discount < 0 ? <StatusChip variant="caution">Above sum by {formatINR(-discount)}</StatusChip> : <StatusChip>Equal to sum</StatusChip>)}
+                </div>
+              </Form.Item>
+            </FieldGrid>
+            <SettingRow label="Show tests on bill" help="List each included test under the package on the invoice." htmlFor="pk-show"><Form.Item name="showTestsOnBill" valuePropName="checked" noStyle><Switch id="pk-show" /></Form.Item></SettingRow>
+            <SettingRow label="Disabled" help="Hidden from new bills." htmlFor="pk-disabled"><Form.Item name="disabled" valuePropName="checked" noStyle><Switch id="pk-disabled" /></Form.Item></SettingRow>
+          </FormSection>
         </Form>
       </Modal>
 
@@ -305,10 +317,13 @@ export default function PackagesPage() {
 
       <CopyToBranchesModal open={!!copyId} packageIds={copyId ? [copyId] : []} onClose={() => setCopyId(null)} />
       <Modal title="Bulk price update" open={bulkOpen} onCancel={() => setBulkOpen(false)} onOk={applyBulk} okText={`Apply to ${bulkPreview.length}`} okButtonProps={{ disabled: bulkPreview.length === 0 }} destroyOnHidden>
-        <div className="cat-toolbar">
-          <Radio.Group optionType="button" value={bulk.kind} onChange={(e) => setBulk((b) => ({ ...b, kind: e.target.value }))} options={[{ value: 'percent', label: 'By percent' }, { value: 'flat', label: 'By amount (₹)' }]} />
-          <InputNumber aria-label="Change (negative to reduce)" value={bulk.amount} onChange={(v) => setBulk((b) => ({ ...b, amount: v ?? 0 }))} suffix={bulk.kind === 'percent' ? '%' : '₹'} />
-        </div>
+        <FormSection title="Change" description="Applies to every package. Use a negative value to reduce prices.">
+          <Form layout="vertical" component="div">
+            <Form.Item label="Rule"><Radio.Group optionType="button" value={bulk.kind} onChange={(e) => setBulk((b) => ({ ...b, kind: e.target.value }))} options={[{ value: 'percent', label: 'By percent' }, { value: 'flat', label: 'By amount (₹)' }]} /></Form.Item>
+            <Form.Item label="Value"><InputNumber aria-label="Change (negative to reduce)" value={bulk.amount} onChange={(v) => setBulk((b) => ({ ...b, amount: v ?? 0 }))} addonAfter={bulk.kind === 'percent' ? '%' : '₹'} style={{ width: 200, maxWidth: '100%' }} /></Form.Item>
+          </Form>
+        </FormSection>
+        <FormSection title="Preview">
         <Table size="small" rowKey={(r) => r.p.id} pagination={{ pageSize: 6, showSizeChanger: false }} dataSource={bulkPreview}
           locale={{ emptyText: 'No price would change.' }}
           columns={[
@@ -316,6 +331,7 @@ export default function PackagesPage() {
             { title: 'Current', width: 110, render: (_, r) => formatINR(r.p.price) },
             { title: 'New', width: 110, render: (_, r) => formatINR(r.next) },
           ]} />
+        </FormSection>
       </Modal>
     </div>
   )

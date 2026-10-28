@@ -6,6 +6,7 @@ import { ageText, GENDER_SHORT } from '../../components/billing/helpers'
 import { useMaster } from './lib'
 import { esc, labHeader, printHtml } from './print'
 import type { PatientOrder } from './types'
+import { FieldGrid, FormSection } from '../../design/FormLayout'
 import { dialogWidth } from '../../design/dialog'
 
 interface Line {
@@ -74,18 +75,23 @@ export default function WorksheetModal({ open, onClose, orders }: { open: boolea
   }
 
   const sel = (ph: string, v: string | undefined, set: (x?: string) => void, opts: { id: string; name: string }[]) => (
-    <Select allowClear showSearch optionFilterProp="label" placeholder={ph} aria-label={ph} value={v} onChange={set} style={{ minWidth: 190 }} options={opts.map((o) => ({ value: o.id, label: o.name }))} />
+    <div>
+      <label className="pl-field__label" htmlFor={`ws-${ph}`}>{ph}</label>
+      <Select id={`ws-${ph}`} allowClear showSearch optionFilterProp="label" placeholder="Any" aria-label={ph} value={v} onChange={set} style={{ width: '100%', marginTop: 4 }} options={opts.map((o) => ({ value: o.id, label: o.name }))} />
+    </div>
   )
   void tests
   return (
     <Modal open={open} onCancel={onClose} title="Print worksheet" width={dialogWidth(900)} okText="Print" onOk={print} okButtonProps={{ disabled: !lines.length }} destroyOnHidden>
-      <div className="pl-bar">
-        {sel('Department', dept, setDept, departments)}
-        {sel('B2B centre', b2bCentreId, setB2b, b2b)}
-        {sel('Government panel', govId, setGov, gov)}
-        {sel('Template', tplId, setTpl, templates)}
-      </div>
-      <p className="pl-sub">{lines.length} lines from {orders.length} bills (the selected bills, or all bills in the current list).</p>
+      <FormSection title="Worksheet options" description="Narrow the lines and pick a print template.">
+        <FieldGrid min={200} style={{ rowGap: 'var(--s-3)' }}>
+          {sel('Department', dept, setDept, departments)}
+          {sel('B2B centre', b2bCentreId, setB2b, b2b)}
+          {sel('Government panel', govId, setGov, gov)}
+          {sel('Template', tplId, setTpl, templates)}
+        </FieldGrid>
+      </FormSection>
+      <FormSection title="Lines to print" description={`${lines.length} lines from ${orders.length} bills (the selected bills, or all bills in the current list).`}>
       <Table
         size="small"
         rowKey="key"
@@ -99,6 +105,7 @@ export default function WorksheetModal({ open, onClose, orders }: { open: boolea
           { title: 'Result', render: () => <span className="pl-sub">______</span>, width: 90 },
         ]}
       />
+      </FormSection>
     </Modal>
   )
 }

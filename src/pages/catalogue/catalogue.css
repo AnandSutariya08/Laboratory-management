@@ -24,9 +24,14 @@
 .cat-preview table { width: 100%; border-collapse: collapse; font-size: var(--fs-dense); }
 .cat-preview th, .cat-preview td { text-align: left; padding: var(--s-2); border-bottom: var(--outline-w) solid var(--c-outline-variant); }
 .cat-preview pre { white-space: pre-wrap; font: inherit; margin: var(--s-3) 0 0; }
-.cat-tat { display: inline-flex; align-items: center; gap: var(--s-1); }
+.cat-tat { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--s-1); }
 .cat-diff-up { color: var(--c-success); }
 .cat-diff-down { color: var(--c-urgent); }
 @media (max-width: 640px) { .cat-grid { grid-template-columns: 1fr; } }
 
 .cat-rich .re-rich { max-width: none; width: 100%; }
+
+.cat-agerange { border: var(--outline-w) solid var(--c-outline-variant); border-radius: var(--r-section); padding: var(--s-3) var(--s-4); margin-bottom: var(--s-3); display: flex; flex-direction: column; align-items: flex-start; gap: var(--s-1); }
+.cat-agerange .fgrid { width: 100%; }
+.cat-agerange .ant-form-item { margin-bottom: var(--s-3); }
+.cat-agepreview { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin-top: var(--s-4); padding: var(--s-3); background: var(--c-surface-container); border-radius: var(--r-control); }
