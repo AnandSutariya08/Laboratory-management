@@ -15,6 +15,7 @@ import {
   updateDoc,
 } from 'firebase/firestore'
 import { auth, db } from '../firebase'
+import { canNow } from '../auth/AuthProvider'
 import { branchStamp } from './activeBranch'
 import { barcodeType } from '../features/settings/lib'
 import { logActivity } from '../layout/activity'
@@ -547,6 +548,9 @@ export async function editOrder(order: Order, input: EditOrderInput, user: UserP
   void logActivity('billEdit', `Bill ${order.billNo} edited: ${input.summary}`, `orders/${order.id}`, { category: 'BILLING', actor: user, before: { ...before, items: order.items.length }, after: { ...after, items: input.items.length } })
 }
 
+// Keys that may change a bill's paid / due / refunded / totals (mirrors firestore.rules billMoneyPerms).
+const MONEY_KEYS = ['payment.collect', 'billing.clearDue', 'billing.refund', 'billing.reverse', 'billing.void', 'billing.edit', 'billing.discount'] as const
+
 // Re-derive money and report status from the ledger and results.
 // Called after every payment, refund, approval or un-approval.
 export async function recomputeOrder(orderId: string, settings: LabSettings): Promise<void> {
@@ -582,11 +586,11 @@ export async function recomputeOrder(orderId: string, settings: LabSettings): Pr
     const { paid, refunded } = ledgerSums(ledger)
     const due = dueAmount(totals.net - (order.payer?.amount ?? 0), paid)
     const reportStatus = deriveReportStatus({ items: order.items, due }, approved, settings.finalRequiresPayment, rejected, provisional, active)
+    // Money fields are derived from the ledger. firestore.rules lets only a key that posts to the ledger move them,
+    // so a user who only saves or approves results (no payment / refund / edit key) leaves them as they are.
+    const mayMoveMoney = MONEY_KEYS.some((k) => canNow(k))
     tx.update(ref, {
-      ...totals,
-      paid,
-      refunded,
-      due,
+      ...(mayMoveMoney ? { ...totals, paid, refunded, due } : {}),
       reportStatus,
       reportedAt: reportStatus === 'final' && !order.reportedAt ? serverTimestamp() : order.reportedAt,
       // Flabs: the printed Report Date is the time of the first approval on the bill and does not move afterwards.
@@ -879,6 +883,23 @@ export async function voidOrder(
   const owed = [...byMode.entries()].filter(([, v]) => v > 0)
   const totalOwed = owed.reduce((n, [, v]) => n + v, 0)
   const isWallet = order.billedTo === 'b2b'
+  const pending = totalOwed > 0 && !refundNow && !isWallet ? totalOwed : 0
+  // The bill is marked deleted first: the security rules accept the pay-back entries below (which a user with
+  // only the void permission posts) because the bill is already voided.
+  await updateDoc(docRef(paths.orders, order.id), {
+    deleted: true,
+    voidReason: reason,
+    voidedBy: user.uid,
+    voidedByName: user.name,
+    voidedAt: serverTimestamp(),
+    // The barcode no longer resolves to a live sample and commission on the bill is reversed
+    // (commission is derived from live bills, so these flags make the reversal explicit and auditable).
+    barcodeVoided: true,
+    voidedBarcode: order.barcode,
+    commissionReversed: true,
+    commissionReversedAt: serverTimestamp(),
+    ...(pending > 0 ? { voidRefundPending: pending } : { paid: 0, due: 0 }),
+  })
   if (totalOwed > 0 && (refundNow || isWallet)) {
     for (const [mode, amount] of owed) {
       await addDoc(ledgerCol(order.id), {
@@ -896,21 +917,6 @@ export async function voidOrder(
       })
     }
   }
-  const pending = totalOwed > 0 && !refundNow && !isWallet ? totalOwed : 0
-  await updateDoc(docRef(paths.orders, order.id), {
-    deleted: true,
-    voidReason: reason,
-    voidedBy: user.uid,
-    voidedByName: user.name,
-    voidedAt: serverTimestamp(),
-    // The barcode no longer resolves to a live sample and commission on the bill is reversed
-    // (commission is derived from live bills, so these flags make the reversal explicit and auditable).
-    barcodeVoided: true,
-    voidedBarcode: order.barcode,
-    commissionReversed: true,
-    commissionReversedAt: serverTimestamp(),
-    ...(pending > 0 ? { voidRefundPending: pending } : { paid: 0, due: 0 }),
-  })
   if (order.billedTo === 'b2b' && order.b2bCentreId) {
     await walletMirror(order.b2bCentreId, order.b2bCentreName ?? '', order.net, order, `Bill ${order.billNo} deleted`, user)
   }

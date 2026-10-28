@@ -160,6 +160,13 @@ export default function UsersPage() {
       message.error('This is the last active Lab admin. Make another user a Lab admin first.')
       return
     }
+    if (common.username) {
+      const selfUid = editing && editing !== 'new' ? editing.uid : ''
+      if (users.some((u) => u.uid !== selfUid && !u.deleted && (u.username ?? '').trim().toLowerCase() === common.username)) {
+        message.error(`The username "${common.username}" is already taken.`)
+        return
+      }
+    }
     setSaving(true)
     try {
       if (editing === 'new') {
@@ -373,7 +380,7 @@ export default function UsersPage() {
             <Input />
           </Form.Item>
           <Space wrap size="middle">
-            <Form.Item name="username" label="Username" extra="Shown in lists. Sign-in still uses the email.">
+            <Form.Item name="username" label="Username" extra="Stored in lowercase and must be unique. Can be used instead of the email to sign in.">
               <Input style={{ width: 200 }} autoComplete="off" />
             </Form.Item>
             <Form.Item name="phone" label="Contact number">

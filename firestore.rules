@@ -1,17 +1,22 @@
 rules_version = '2';
 
-// ACCESS CONTROL SPLIT
-// Rules enforce what they can check cheaply and reliably:
+// ACCESS CONTROL
+// Rules enforce, per request:
 //   - authentication and an active staff profile,
-//   - coarse built-in role gates (labAdmin / admin / manager / ...),
 //   - BRANCH ISOLATION: branch-scoped docs may only be read or written when their
 //     branchId (missing = 'main', legacy data) is in the caller's profile.branchIds,
 //     or the caller has profile.allBranches == true,
-//   - append-only collections (ledger, stock movements, result versions, deliveries).
-// roles, branches and users are writable by labAdmin/admin only (rules cannot read
-// the editable role matrix cheaply). The fine-grained permission matrix
-// (labs/{lab}/roles/*, per-user grants/denies) is enforced in the client via
-// can(profile, key); treat it as UI/UX gating, not as a security boundary.
+//   - append-only collections (ledger, stock movements, result versions, deliveries),
+//   - the editable PERMISSION MATRIX for money-sensitive and admin writes. hasPerm / permAny
+//     mirror effectivePermissions() in src/auth/permissions.ts:
+//         labAdmin: everything.  Others: (role doc permissions OR user.grants) minus user.denies.
+//         No role doc: the built-in defaults (roleDefaults below, kept in step with
+//         DEFAULT_ROLE_PERMISSIONS; scripts/rules-check.mjs fails if they drift).
+//         A role doc saved before the "__v2" marker gets the IMPLIED_BY keys added (impliedKeys below).
+//   Per request this costs two extra document reads at most: the caller's profile (already read
+//   by isStaff) and the caller's role document (read once, whichever number of keys are checked).
+// What rules cannot check (price vs catalogue, totals vs lines beyond the first MAX lines,
+// the max-discount % cap and approver) stays in the client; see the notes next to each rule.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -98,6 +103,69 @@ service cloud.firestore {
       return hasRole(labId, ['labAdmin', 'admin']);
     }
 
+
+    // ---- Permission matrix (mirror of src/auth/permissions.ts) ------------------------------
+    // Built-in defaults, used only when labs/{lab}/roles/{role} does not exist. They carry the
+    // "__v2" marker in the app, so no implied keys are added for them. Only keys that rules
+    // check are listed. 'admin' holds everything by default.
+    function roleDefaults(role) {
+      return role == 'admin' ? ['bookings.manage', 'registration.create', 'quotation.manage', 'payment.collect', 'billing.discount', 'billing.clearDue', 'billing.refund', 'billing.edit', 'billing.void', 'billing.reverse', 'billing.backdate', 'results.enter', 'results.approve', 'results.unapprove', 'results.amend', 'catalogue.edit', 'catalogue.price', 'catalogue.delete', 'catalogue.import', 'referrals.manage', 'marketing.manage', 'b2b.view', 'b2b.manage', 'centres.manage', 'corporate.manage', 'ratelists.edit', 'outsource.view', 'outsource.edit', 'labmgmt.manage', 'qc.setup', 'ai.interpret', 'settings.manage', 'labprofile.edit', 'users.manage', 'roles.manage', 'branches.manage', '__v2']
+        : role == 'manager' ? ['bookings.manage', 'registration.create', 'quotation.manage', 'payment.collect', 'billing.discount', 'billing.clearDue', 'billing.refund', 'billing.edit', 'billing.void', 'billing.reverse', 'billing.backdate', 'catalogue.edit', 'catalogue.price', 'catalogue.delete', 'catalogue.import', 'referrals.manage', 'marketing.manage', 'b2b.view', 'b2b.manage', 'centres.manage', 'corporate.manage', 'ratelists.edit', 'outsource.view', 'outsource.edit', 'labmgmt.manage', 'qc.setup', 'results.enter', '__v2']
+        : role == 'reception' ? ['bookings.manage', 'registration.create', 'quotation.manage', 'billing.discount', 'billing.clearDue', 'payment.collect', '__v2']
+        : role == 'technician' ? ['results.enter', 'outsource.view', '__v2']
+        : role == 'doctor' ? ['results.enter', 'results.approve', 'results.unapprove', 'results.amend', 'qc.setup', 'ai.interpret', '__v2']
+        : ['__v2'];
+    }
+    // Keys implied by an older key, for role docs saved before the "__v2" marker (IMPLIED_BY).
+    function impliedKeys(rp) {
+      return (('settings.manage' in rp) ? ['labprofile.edit', 'referrals.manage', 'labmgmt.manage'] : [])
+        .concat(('billing.void' in rp) ? ['billing.reverse'] : [])
+        .concat(('billing.edit' in rp) ? ['billing.backdate'] : [])
+        .concat(('registration.create' in rp) ? ['payment.collect', 'quotation.manage'] : [])
+        .concat(('catalogue.edit' in rp) ? ['ratelists.edit', 'outsource.edit', 'catalogue.delete', 'catalogue.import'] : [])
+        .concat(('catalogue.view' in rp) ? ['outsource.view'] : [])
+        .concat(('finance.view' in rp) ? ['b2b.view', 'b2b.manage', 'centres.manage', 'corporate.manage'] : [])
+        .concat(('users.manage' in rp) ? ['marketing.manage'] : [])
+        .concat(('bookings.create' in rp) ? ['bookings.manage'] : []);
+    }
+    // The role document is read once per request (exists + get hit the same cached document).
+    function roleList(labId, role) {
+      let path = /databases/$(database)/documents/labs/$(labId)/roles/$(role);
+      return exists(path) && 'permissions' in get(path).data ? get(path).data.permissions : roleDefaults(role);
+    }
+    // Rules are limited to 1000 expressions per request, so permission tests are kept small:
+    // permAny(keys) = caller holds ANY of keys; heldOf(keys) = the keys (of a longer list) the caller holds,
+    // worked out once so one rule can test several keys cheaply.
+    function permCheck(labId, p, keys) {
+      let rp = roleList(labId, p.role);
+      let live = keys.removeAll(p.get('denies', []));
+      return rp.hasAny(live)
+        || p.get('grants', []).hasAny(live)
+        || (!('__v2' in rp) && impliedKeys(rp).hasAny(live));
+    }
+    // True when the caller (active staff) holds ANY of the keys. labAdmin holds every key.
+    function permAny(labId, keys) {
+      let p = profile(labId);
+      return staffProfile(p) && (p.role == 'labAdmin' || permCheck(labId, p, keys));
+    }
+    function hasPerm(labId, key) {
+      return permAny(labId, [key]);
+    }
+    function heldOf(labId, keys) {
+      let p = profile(labId);
+      let rp = roleList(labId, p.role);
+      let eff = ('__v2' in rp ? rp : rp.concat(impliedKeys(rp))).concat(p.get('grants', [])).removeAll(p.get('denies', []));
+      return !staffProfile(p) ? [] : p.role == 'labAdmin' ? keys : keys.removeAll(keys.removeAll(eff));
+    }
+    // Fields that differ between the stored document and the incoming write (update only).
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    // Start of today in India time (UTC+5:30), in milliseconds: "back-dated" means before this.
+    function istDayStartMs() {
+      return math.floor((request.time.toMillis() + 19800000) / 86400000.0) * 86400000 - 19800000;
+    }
+
     // ---- Branch isolation -------------------------------------------------------
     // Legacy profiles without branchIds are treated as ['main'].
     function userBranches(labId) {
@@ -130,6 +198,198 @@ service cloud.firestore {
         && canUseBranch(labId, docBranch(get(/databases/$(database)/documents/labs/$(labId)/orders/$(orderId)).data));
     }
 
+    // ---- Bills (orders): which writes need which permission ------------------------------------
+    // Rules cannot loop and are limited to 1000 expressions per request, so the per-line checks look at the first
+    // 10 lines of a bill (index 0..9); a bill with more lines is only protected on those lines plus the
+    // add / remove (size) check.
+    // lineMoney: line i keeps its price and discount (a bill shorter than i + 1 lines always passes).
+    function lineMoney(ni, oi, i) {
+      return ni.size() <= i
+        || (ni[i].get('price', 0) == oi[i].get('price', 0) && ni[i].get('discount', 0) == oi[i].get('discount', 0));
+    }
+    function linePrice(ni, oi, i) {
+      return ni.size() <= i || ni[i].get('price', 0) == oi[i].get('price', 0);
+    }
+    function linesMoneyKept(ni, oi) {
+      return lineMoney(ni, oi, 0)
+        && lineMoney(ni, oi, 1)
+        && lineMoney(ni, oi, 2)
+        && lineMoney(ni, oi, 3)
+        && lineMoney(ni, oi, 4)
+        && lineMoney(ni, oi, 5)
+        && lineMoney(ni, oi, 6)
+        && lineMoney(ni, oi, 7)
+        && lineMoney(ni, oi, 8)
+        && lineMoney(ni, oi, 9);
+    }
+    function linesPriceKept(ni, oi) {
+      return linePrice(ni, oi, 0)
+        && linePrice(ni, oi, 1)
+        && linePrice(ni, oi, 2)
+        && linePrice(ni, oi, 3)
+        && linePrice(ni, oi, 4)
+        && linePrice(ni, oi, 5)
+        && linePrice(ni, oi, 6)
+        && linePrice(ni, oi, 7)
+        && linePrice(ni, oi, 8)
+        && linePrice(ni, oi, 9);
+    }
+    // Lines of a new bill carry no discount.
+    function lineNoDiscount(ni, i) {
+      return ni.size() <= i || ni[i].get('discount', 0) == 0;
+    }
+    function linesNoDiscount(ni) {
+      return lineNoDiscount(ni, 0)
+        && lineNoDiscount(ni, 1)
+        && lineNoDiscount(ni, 2)
+        && lineNoDiscount(ni, 3)
+        && lineNoDiscount(ni, 4)
+        && lineNoDiscount(ni, 5)
+        && lineNoDiscount(ni, 6)
+        && lineNoDiscount(ni, 7)
+        && lineNoDiscount(ni, 8)
+        && lineNoDiscount(ni, 9);
+    }
+    // Keys that post to the ledger: they may move a bill's paid / due / refunded.
+    function billMoneyPerms() {
+      return ['payment.collect', 'billing.clearDue', 'billing.refund', 'billing.reverse', 'billing.void', 'billing.edit', 'billing.discount'];
+    }
+    // Order fields whose change needs a key. A write touching none of them (accession, results status,
+    // dispatch, print marks) only has to keep every checked line's price, discount and refund state.
+    function orderGuardedKeys() {
+      return ['deleted', 'voidRefundPending', 'refundPendingApproval', 'revisions', 'rev', 'writeOffs', 'gross', 'discount', 'net',
+        'paid', 'due', 'refunded', 'billDate',
+        'referrerId', 'referrerName', 'hospitalId', 'hospitalName', 'secondReferrerId', 'secondReferrerName',
+        'b2bCentreId', 'b2bCentreName', 'collectionCentreId', 'collectionCentreName', 'corporateClientId', 'corporateClientName',
+        'govPanelId', 'govPanelName', 'tpaId', 'tpaName', 'payer', 'billedTo', 'discountReason', 'discountedBy',
+        'discountBearer', 'discountSplitReferrerPct', 'commissionSnapshot', 'proId', 'proName', 'pcpndt'];
+    }
+    // A bill converted from a booking carries the booking's own discount and prepayment.
+    function bookingCovers(n, field, amount) {
+      return n.get('bookingId', '') != ''
+        && get(/databases/$(database)/documents/labs/main/bookings/$(n.bookingId)).data.get(field, 0) >= amount;
+    }
+
+    // New bill by staff: no discount without billing.discount, no back-dating without billing.backdate,
+    // no money already on it without payment.collect (a B2B wallet bill or a booking prepayment carries paid > 0).
+    function orderCreateOk(labId) {
+      let n = request.resource.data;
+      return n.get('deleted', false) == false
+        && n.get('refunded', 0) == 0
+        && ((n.get('discount', 0) == 0 && linesNoDiscount(n.get('items', [])))
+            || permAny(labId, ['billing.discount'])
+            || bookingCovers(n, 'discount', n.get('discount', 0)))
+        && (!('billDate' in n) || n.billDate.toMillis() >= istDayStartMs() || permAny(labId, ['billing.backdate']))
+        && (n.get('paid', 0) == 0
+            || n.get('billedTo', '') == 'b2b'
+            || permAny(labId, ['payment.collect'])
+            || bookingCovers(n, 'prepaid', n.get('paid', 0)));
+    }
+
+    // Update of an existing bill.
+    function orderUpdateOk(labId) {
+      let a = changed();
+      return a.hasAny(orderGuardedKeys())
+        ? orderGuardedUpdateOk(labId, a)
+        : (!a.hasAny(['items']) || orderItemsOk(labId));
+    }
+    // Only the lines changed (no guarded field): status-like changes are open; a moved price / discount or an
+    // added / removed line is edit-bill.
+    function orderItemsOk(labId) {
+      let ni = request.resource.data.get('items', []);
+      let oi = resource.data.get('items', []);
+      return (ni.size() == oi.size() && linesMoneyKept(ni, oi)) || permAny(labId, ['billing.edit']);
+    }
+    function orderGuardedUpdateOk(labId, a) {
+      let n = request.resource.data;
+      let o = resource.data;
+      let held = heldOf(labId, ['billing.void', 'billing.refund', 'billing.edit', 'billing.discount', 'billing.reverse', 'billing.clearDue', 'payment.collect', 'billing.backdate', 'referrals.manage']);
+      return
+        // edit-bill (revision trail, optimistic-lock counter, partner / referrer / totals / lines): billing.edit
+        // covers everything except voiding, refund markers and back-dating
+        (held.hasAny(['billing.edit']) && !a.hasAny(['deleted', 'voidRefundPending', 'refundPendingApproval', 'billDate']))
+        // write-off of a due balance: exactly the fields writeOffDue sets, prices untouched
+        || (a.hasAny(['writeOffs']) && a.hasOnly(['items', 'gross', 'discount', 'net', 'writeOffs', 'revisions'])
+            && held.hasAny(['billing.discount'])
+            && (!a.hasAny(['items']) || (n.get('items', []).size() == o.get('items', []).size() && linesPriceKept(n.get('items', []), o.get('items', [])))))
+        // everything else: the clauses below, one per guarded pattern
+        || (!a.hasAny(['revisions', 'rev', 'writeOffs'])
+            // void (deleted false -> true) and its leftovers
+            && (!a.hasAny(['deleted']) || held.hasAny(['billing.void']))
+            && (!a.hasAny(['voidRefundPending']) || held.hasAny(['billing.refund', 'billing.void']))
+            // refund request / approval marker
+            && (!a.hasAny(['refundPendingApproval']) || held.hasAny(['billing.refund']))
+            // referrer / partner / payer / discount-reason fields (billing.edit is the fast path above)
+            && (!a.hasAny(['referrerId', 'referrerName', 'hospitalId', 'hospitalName', 'secondReferrerId', 'secondReferrerName',
+                  'b2bCentreId', 'b2bCentreName', 'collectionCentreId', 'collectionCentreName', 'corporateClientId', 'corporateClientName',
+                  'govPanelId', 'govPanelName', 'tpaId', 'tpaName', 'payer', 'billedTo', 'discountReason', 'discountedBy',
+                  'discountBearer', 'discountSplitReferrerPct', 'commissionSnapshot', 'proId', 'proName', 'pcpndt'])
+                || held.hasAny(['referrals.manage']))
+            // lines: a moved price / discount or a size change needs edit-bill (the fast path above)
+            && (!a.hasAny(['items']) || (n.get('items', []).size() == o.get('items', []).size() && linesMoneyKept(n.get('items', []), o.get('items', []))))
+            // header totals only go down, and only through a refund
+            && (!a.hasAny(['gross', 'discount', 'net'])
+                || (n.get('gross', 0) <= o.get('gross', 0) && n.get('discount', 0) <= o.get('discount', 0)
+                    && held.hasAny(['billing.refund'])))
+            // paid / due / refunded are derived from the ledger: only a key that posts to the ledger may move them
+            && (!a.hasAny(['paid', 'due', 'refunded']) || held.hasAny(billMoneyPerms()))
+            // bill date
+            && (!a.hasAny(['billDate']) || !('billDate' in n) || n.billDate.toMillis() >= istDayStartMs()
+                || held.hasAny(['billing.backdate'])));
+    }
+    // ---- Ledger (append-only money trail) ----------------------------------------------------
+    function ledgerCreateOk(labId, orderId) {
+      let n = request.resource.data;
+      let order = get(/databases/$(database)/documents/labs/$(labId)/orders/$(orderId)).data;
+      let t = n.get('type', '');
+      return n.get('postedAt', null) == request.time
+        && n.get('postedBy', '') == request.auth.uid
+        && (!('backdatedTo' in n) || permAny(labId, ['billing.backdate']))
+        && (
+          (t == 'payment' && n.get('amount', 0) > 0
+            && (permAny(labId, ['payment.collect'])
+                // staff billing a B2B centre post the wallet payment (and edit-bill tops it up)
+                || (n.get('mode', '') == 'wallet' && order.get('billedTo', '') == 'b2b'
+                    && permAny(labId, ['registration.create', 'billing.edit']))
+                // prepayment taken on a booking and carried onto its bill
+                || bookingCovers(order, 'prepaid', n.get('amount', 0))))
+          || (t == 'clearDue' && n.get('amount', 0) > 0
+              && heldOf(labId, ['billing.clearDue', 'payment.collect']).hasAll(['billing.clearDue', 'payment.collect']))
+          || (t == 'refund' && n.get('amount', 0) < 0
+              && (permAny(labId, ['billing.refund'])
+                  // a void pays the bill back (the bill is already marked deleted)
+                  || (order.get('deleted', false) == true && permAny(labId, ['billing.void']))
+                  // edit-bill of a B2B bill gives the wallet difference back
+                  || (n.get('mode', '') == 'wallet' && order.get('billedTo', '') == 'b2b'
+                      && permAny(labId, ['billing.edit']))))
+          || (t == 'reversal' && n.get('amount', 0) < 0 && permAny(labId, ['billing.reverse']))
+        );
+    }
+
+    // ---- Results ----------------------------------------------------------------------------------
+    // Saving / entering: results.enter. Status -> approved: results.approve. Approved -> not approved:
+    // results.unapprove (or results.amend, as the app allows). Changing the content of an approved
+    // result: results.amend.
+    function resultCreateOk(labId) {
+      return request.resource.data.get('status', 'pending') == 'approved'
+        ? hasPerm(labId, 'results.approve')
+        : hasPerm(labId, 'results.enter');
+    }
+    function resultUpdateOk(labId) {
+      let was = resource.data.get('status', 'pending');
+      let now = request.resource.data.get('status', 'pending');
+      let a = changed();
+      return (now == 'approved' && was != 'approved') ? permAny(labId, ['results.approve'])
+        : (was == 'approved' && now != 'approved') ? permAny(labId, ['results.unapprove', 'results.amend'])
+        : was == 'approved'
+          ? (a.hasAny(['values', 'comment', 'paramComments', 'radiology', 'rejectedValues', 'rejectedParams'])
+              ? permAny(labId, ['results.amend'])
+              : permAny(labId, ['results.enter', 'results.approve', 'results.amend', 'ai.interpret']))
+        : (a.size() > 0 && a.hasOnly(['aiInterpretation', 'updatedAt'])) ? permAny(labId, ['ai.interpret', 'results.enter'])
+        : (a.size() > 0 && a.hasOnly(['status', 'verification', 'sentBack', 'updatedAt'])) ? permAny(labId, ['results.enter', 'results.approve'])
+        : permAny(labId, ['results.enter']);
+    }
+
     // Collection-group reads of ledger entries (Collection wise finance by payment date).
     // Entries carry branchId, so the same branch isolation applies.
     match /{path=**}/ledger/{entryId} {
@@ -152,14 +412,34 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Lab document (settings and lab profile). settings.manage may change anything; labprofile.edit only the
+    // profile fields (details, report and bill layout, doctors, templates...); a few keys have their own owner.
+    // 'subscription' is written by the platform (Admin SDK) only.
+    function labProfileKeys() {
+      return ['name', 'address', 'phone', 'email', 'billPrefix', 'profile', 'dailyReport', 'reportDetails', 'billDetails',
+        'quotation', 'signatories', 'b2bInvoice', 'corporateInvoice', 'docTemplates', 'templates', 'extraTemplates',
+        'reportLayout', 'radiologyConfig', 'pcpndt', 'emailSender', 'branchOverrides', 'credent', 'commentTemplates',
+        'publicAppUrl', 'reportLinkDays', 'smartReport'];
+    }
+    function labUpdateOk(labId) {
+      let a = changed();
+      return !a.hasAny(['subscription'])
+        && (permAny(labId, ['settings.manage'])
+            || (a.size() > 0 && a.hasOnly(labProfileKeys()) && permAny(labId, ['labprofile.edit']))
+            || (a.size() > 0 && a.hasOnly(['qcSettings']) && permAny(labId, ['qc.setup']))
+            || (a.size() > 0 && a.hasOnly(['quotation']) && permAny(labId, ['quotation.manage']))
+            || (a.size() > 0 && a.hasOnly(['commentTemplates']) && permAny(labId, ['catalogue.edit'])));
+    }
     match /labs/{labId} {
       allow read: if staffOrPartner(labId);
-      allow write: if isAdmin(labId);
+      allow create: if permAny(labId, ['settings.manage']);
+      allow update: if labUpdateOk(labId);
+      allow delete: if false;
 
       // Staff profiles: everyone reads (names on reports), only admins manage.
       match /users/{uid} {
         allow read: if isStaff(labId) || request.auth.uid == uid;
-        allow write: if isAdmin(labId);
+        allow create, update, delete: if hasPerm(labId, 'users.manage');
         // Staff may edit their own profile basics and stamp their sign-in time,
         // never their role, permissions or branches.
         allow update: if request.auth.uid == uid
@@ -169,9 +449,9 @@ service cloud.firestore {
         // Active login sessions (login-limit enforcement). A user manages their own
         // session docs; admins may list and remove them (force logout).
         match /sessions/{sid} {
-          allow read: if request.auth.uid == uid || isAdmin(labId);
+          allow read: if request.auth.uid == uid || permAny(labId, ['users.manage']);
           allow create, update: if request.auth.uid == uid && isStaff(labId);
-          allow delete: if request.auth.uid == uid || isAdmin(labId);
+          allow delete: if request.auth.uid == uid || permAny(labId, ['users.manage']);
         }
       }
 
@@ -233,19 +513,38 @@ service cloud.firestore {
       // Editable permission matrix and branches: everyone reads, admins write.
       match /roles/{roleId} {
         allow read: if staffOrPartner(labId);
-        allow write: if isAdmin(labId);
+        allow write: if hasPerm(labId, 'roles.manage');
       }
       match /branches/{branchId} {
         allow read: if staffOrPartner(labId);
-        allow write: if isAdmin(labId);
+        allow write: if hasPerm(labId, 'branches.manage');
       }
 
-      // Catalogue: read by all staff, edited by admins and managers.
+      // Catalogue: read by all staff. Create / edit: catalogue.edit (or catalogue.import for the bulk upload).
+      // A price change needs catalogue.price (or import). Delete, soft-delete and restore need catalogue.delete.
+      // Outsource mapping on a test (outsourceLabs) is also open to outsource.edit.
+      // Not enforceable here: that a bill line's price matches the catalogue / rate list.
+      function catalogueUpdateOk(labId) {
+        let a = changed();
+        return (a.size() > 0 && a.hasOnly(['deleted', 'deletedAt']))
+          ? permAny(labId, ['catalogue.delete', 'settings.manage'])
+          : (a.size() > 0 && a.hasOnly(['price', 'updatedAt']))
+            ? permAny(labId, ['catalogue.price', 'catalogue.import'])
+            : (a.size() > 0 && a.hasOnly(['outsourceLabs', 'updatedAt']))
+              ? permAny(labId, ['catalogue.edit', 'catalogue.import', 'outsource.edit'])
+              : permAny(labId, ['catalogue.edit', 'catalogue.import'])
+                && (!a.hasAny(['deleted', 'deletedAt']) || permAny(labId, ['catalogue.delete', 'settings.manage']))
+                && (!a.hasAny(['price']) || permAny(labId, ['catalogue.price', 'catalogue.import']));
+      }
       match /{catalogue}/{id} {
-        allow read: if staffOrPartner(labId)
-          && catalogue in ['departments', 'sampleTypes', 'tests', 'packages'];
-        allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
-          && catalogue in ['departments', 'sampleTypes', 'tests', 'packages'];
+        allow read: if catalogue in ['departments', 'sampleTypes', 'tests', 'packages']
+          && staffOrPartner(labId);
+        allow create: if catalogue in ['departments', 'sampleTypes', 'tests', 'packages']
+          && permAny(labId, ['catalogue.edit', 'catalogue.import']);
+        allow update: if catalogue in ['departments', 'sampleTypes', 'tests', 'packages']
+          && catalogueUpdateOk(labId);
+        allow delete: if catalogue in ['departments', 'sampleTypes', 'tests', 'packages']
+          && permAny(labId, ['catalogue.delete']);
       }
 
       match /counters/{name} {
@@ -403,28 +702,31 @@ service cloud.firestore {
         allow write: if false;
       }
       match /{qc}/{id} {
-        allow read: if readBranch(labId)
-          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
-        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && createBranch(labId)
-          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
-        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && updateBranch(labId)
-          && qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences'];
+        allow read: if qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences']
+          && readBranch(labId);
+        allow create: if qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences']
+          && hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && createBranch(labId);
+        allow update: if qc in ['qcMachines', 'qcRuns', 'capas', 'eqasRounds', 'ilcStudies', 'validationStudies', 'sampleDiscards', 'qcOccurrences']
+          && hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && updateBranch(labId);
         // QC runs and discard records are part of the audit trail.
-        allow delete: if isAdmin(labId) && canUseBranch(labId, docBranch(resource.data))
-          && qc in ['qcMachines', 'eqasRounds', 'ilcStudies', 'validationStudies'];
+        allow delete: if qc in ['qcMachines', 'eqasRounds', 'ilcStudies', 'validationStudies']
+          && isAdmin(labId) && canUseBranch(labId, docBranch(resource.data));
       }
 
       // Inventory: stock movements are append-only; batches change only via movements.
       // invItems / invSuppliers / stockMappings are shared by all branches;
       // invBatches, stockMovements and purchaseOrders are branch-scoped.
       match /{inv}/{id} {
-        allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+        allow read: if inv in ['invItems', 'invSuppliers', 'stockMappings', 'invBatches', 'purchaseOrders']
+          && hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
           && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv == 'purchaseOrders' && readBranch(labId)));
-        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+        allow create: if inv in ['invItems', 'invSuppliers', 'stockMappings', 'invBatches', 'purchaseOrders']
+          && hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
           && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv in ['invBatches', 'purchaseOrders'] && createBranch(labId)));
-        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
+        allow update: if inv in ['invItems', 'invSuppliers', 'stockMappings', 'invBatches', 'purchaseOrders']
+          && hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician'])
           && (inv in ['invItems', 'invSuppliers', 'stockMappings'] || (inv in ['invBatches', 'purchaseOrders'] && updateBranch(labId)));
-        allow delete: if isAdmin(labId) && inv in ['invItems', 'invSuppliers', 'stockMappings'];
+        allow delete: if inv in ['invItems', 'invSuppliers', 'stockMappings'] && isAdmin(labId);
       }
       match /stockMovements/{id} {
         // Reception may read auto-consumption / return rows so a refund or void can restore stock.
@@ -460,24 +762,24 @@ service cloud.firestore {
       // Partner portal: a portal user reads only their own partner document, that partner's rate
       // list, wallet rows, credit/debit notes and invoices.
       match /{pmaster}/{id} {
-        allow read: if isPartner(labId) && pmaster == partnerCollectionOf(profile(labId)) && id == profile(labId).partnerId;
-        allow read: if isPartner(labId) && pmaster == 'rateLists' && id == partnerDocOf(labId, profile(labId)).get('rateListId', '');
-        allow read: if isPartner(labId) && pmaster in ['walletTxns', 'creditNotes']
+        allow read: if pmaster in ['b2bCentres', 'collectionCentres', 'corporateClients', 'referrers', 'rateLists', 'walletTxns', 'creditNotes', 'partnerInvoices', 'commissionSettlements'] && isPartner(labId) && pmaster == partnerCollectionOf(profile(labId)) && id == profile(labId).partnerId;
+        allow read: if pmaster == 'rateLists' && isPartner(labId) && id == partnerDocOf(labId, profile(labId)).get('rateListId', '');
+        allow read: if pmaster in ['walletTxns', 'creditNotes'] && isPartner(labId)
           && profile(labId).role == 'b2b' && resource.data.get('centreId', '') == profile(labId).partnerId;
-        allow read: if isPartner(labId) && pmaster == 'partnerInvoices'
+        allow read: if pmaster == 'partnerInvoices' && isPartner(labId)
           && profile(labId).role in ['b2b', 'corporate'] && resource.data.get('partyId', '') == profile(labId).partnerId;
         // A referrer portal user reads the commission payouts (and reversals) recorded for their own referrer record.
-        allow read: if isPartner(labId) && pmaster == 'commissionSettlements'
+        allow read: if pmaster == 'commissionSettlements' && isPartner(labId)
           && profile(labId).role == 'referrer'
           && resource.data.get('partnerKind', '') == 'referrer'
           && resource.data.get('partnerId', '') == profile(labId).partnerId;
         // B2B billing mirrors the bill into the centre's wallet statement.
-        allow create: if partnerMayBill(labId) && pmaster == 'walletTxns' && profile(labId).role == 'b2b'
+        allow create: if pmaster == 'walletTxns' && partnerMayBill(labId) && profile(labId).role == 'b2b'
           && request.resource.data.centreId == profile(labId).partnerId
           && request.resource.data.kind == 'debit' && request.resource.data.amount <= 0;
         // A B2B portal user may ask for a top-up. It stays pending (not counted in the balance) until
         // lab staff approve it from B2B Labs > Wallet history.
-        allow create: if isPartner(labId) && pmaster == 'walletTxns' && profile(labId).role == 'b2b'
+        allow create: if pmaster == 'walletTxns' && isPartner(labId) && profile(labId).role == 'b2b'
           && request.resource.data.centreId == profile(labId).partnerId
           && request.resource.data.kind == 'topup' && request.resource.data.status == 'pending'
           && request.resource.data.amount is int && request.resource.data.amount > 0
@@ -485,14 +787,43 @@ service cloud.firestore {
           && request.resource.data.requestedByPartner == true;
       }
 
+      // Which keys may write each shared master. A rate list is also written by the owners it is attached to
+      // (a referrer, B2B centre... creates / reprices its own list). Not enforceable here: that rate-list
+      // entries match the catalogue.
+      function isMaster(m) {
+        return m in ['referrers', 'hospitals', 'tpas', 'govPanels', 'marketingTeam', 'processingLabs', 'b2bCentres', 'collectionCentres',
+          'corporateClients', 'rateLists', 'otherCharges', 'paymentModes', 'reportTemplates', 'worksheetTemplates', 'reasons',
+          'collectors', 'phlebotomists', 'priceBatches'];
+      }
+      function masterPerms(m) {
+        return m in ['referrers', 'hospitals', 'tpas', 'govPanels'] ? ['referrals.manage']
+          : m == 'marketingTeam' ? ['marketing.manage']
+          : m == 'processingLabs' ? ['outsource.edit']
+          : m == 'b2bCentres' ? ['b2b.manage']
+          : m == 'collectionCentres' ? ['centres.manage']
+          : m == 'corporateClients' ? ['corporate.manage']
+          : m == 'rateLists' ? ['ratelists.edit', 'referrals.manage', 'b2b.manage', 'centres.manage', 'corporate.manage', 'outsource.edit', 'catalogue.price']
+          : m == 'priceBatches' ? ['catalogue.price', 'ratelists.edit']
+          : m in ['reasons', 'paymentModes', 'otherCharges', 'worksheetTemplates'] ? ['settings.manage', 'labmgmt.manage']
+          : m == 'reportTemplates' ? ['catalogue.edit', 'settings.manage', 'labprofile.edit', 'labmgmt.manage']
+          : m in ['collectors', 'phlebotomists'] ? ['bookings.manage', 'referrals.manage']
+          : [];
+      }
+      function masterUpdateOk(labId, m) {
+        let a = changed();
+        return permAny(labId, masterPerms(m))
+          // soft delete / restore (removeMaster, restoreMaster)
+          || (a.size() > 0 && a.hasOnly(['deleted', 'deletedAt', 'updatedAt']) && permAny(labId, ['catalogue.delete', 'settings.manage']))
+          // pointing an owner (referrer, centre...) at a shared rate list
+          || (a.size() > 0 && a.hasOnly(['rateListId', 'updatedAt']) && permAny(labId, ['ratelists.edit']))
+          // PRO assignment from the marketing team page
+          || (m == 'referrers' && a.size() > 0 && a.hasOnly(['proManagerId', 'updatedAt']) && permAny(labId, ['marketing.manage']));
+      }
       match /{master}/{id} {
-        allow read: if isStaff(labId) && master in ['referrers', 'hospitals', 'tpas', 'govPanels',
-          'marketingTeam', 'processingLabs', 'b2bCentres', 'collectionCentres', 'corporateClients',
-          'rateLists', 'otherCharges', 'paymentModes', 'reportTemplates', 'worksheetTemplates', 'reasons', 'collectors', 'phlebotomists', 'priceBatches'];
-        allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
-          && master in ['referrers', 'hospitals', 'tpas', 'govPanels',
-          'marketingTeam', 'processingLabs', 'b2bCentres', 'collectionCentres', 'corporateClients',
-          'rateLists', 'otherCharges', 'paymentModes', 'reportTemplates', 'worksheetTemplates', 'reasons', 'collectors', 'phlebotomists', 'priceBatches'];
+        allow read: if isMaster(master) && isStaff(labId);
+        allow create: if isMaster(master) && permAny(labId, masterPerms(master));
+        allow update: if isMaster(master) && masterUpdateOk(labId, master);
+        allow delete: if isMaster(master) && (permAny(labId, masterPerms(master)) || permAny(labId, ['catalogue.delete']));
       }
 
       // Round 3 analysis: background export jobs (the server builds the CSV into Storage), outsource vendor
@@ -508,8 +839,8 @@ service cloud.firestore {
       }
       match /outsourceSettlements/{id} {
         allow read: if hasRole(labId, ['labAdmin', 'admin', 'manager']);
-        allow create: if hasRole(labId, ['labAdmin', 'admin', 'manager']) && request.resource.data.createdBy == request.auth.uid;
-        allow update: if hasRole(labId, ['labAdmin', 'admin', 'manager'])
+        allow create: if permAny(labId, ['outsource.edit']) && request.resource.data.createdBy == request.auth.uid;
+        allow update: if permAny(labId, ['outsource.edit'])
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'paidAt', 'paidBy', 'paidByName', 'reference', 'notes']);
         allow delete: if false;
       }
@@ -522,15 +853,45 @@ service cloud.firestore {
 
       // Branch-scoped working records added with the parity work (quotations,
       // partner wallets/invoices/notes, activity feed, support tickets).
+      // B2B wallet rows: a bill debits the centre (any billing staff), a pending top-up request needs b2b.view,
+      // and anything that adds money or decides a request (approved top-up, approval row, discount) needs b2b.manage.
+      // A positive "debit" row is a refund / void / edit-bill mirror, so it needs the key of that action.
+      function walletCreateOk(labId) {
+        let n = request.resource.data;
+        let k = n.get('kind', '');
+        return k == 'debit'
+          ? (n.get('amount', 0) <= 0 || permAny(labId, ['billing.refund', 'billing.edit', 'billing.void', 'b2b.manage']))
+          : (k == 'topup' && n.get('status', '') == 'pending')
+            ? permAny(labId, ['b2b.view', 'b2b.manage'])
+            : permAny(labId, ['b2b.manage']);
+      }
+      function scopedCreateOk(labId, s) {
+        return s == 'walletTxns' ? walletCreateOk(labId)
+          : s == 'creditNotes' ? permAny(labId, ['b2b.manage'])
+          : s == 'partnerInvoices' ? permAny(labId, [request.resource.data.get('kind', '') == 'corporate' ? 'corporate.manage' : 'b2b.manage'])
+          : s == 'outsourceJobs' ? permAny(labId, ['outsource.view', 'outsource.edit'])
+          : true;
+      }
+      function scopedUpdateOk(labId, s) {
+        return s == 'partnerInvoices' ? permAny(labId, [resource.data.get('kind', '') == 'corporate' ? 'corporate.manage' : 'b2b.manage'])
+          : s == 'outsourceJobs' ? permAny(labId, ['outsource.view', 'outsource.edit'])
+          : true;
+      }
       match /{scoped}/{id} {
-        allow read: if readBranch(labId) && scoped in ['quotations', 'walletTxns', 'partnerInvoices',
-          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs'];
-        allow create: if createBranch(labId) && scoped in ['quotations', 'walletTxns', 'partnerInvoices',
-          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs'];
-        allow update: if updateBranch(labId) && scoped in ['quotations', 'partnerInvoices', 'supportTickets', 'bulkImports', 'outsourceJobs'];
+        allow read: if scoped in ['quotations', 'walletTxns', 'partnerInvoices',
+          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs']
+          && readBranch(labId);
+        allow create: if scoped in ['quotations', 'walletTxns', 'partnerInvoices',
+          'creditNotes', 'activity', 'supportTickets', 'bulkImports', 'shiftCloses', 'commissionSettlements', 'outsourceJobs']
+          && createBranch(labId)
+          && scopedCreateOk(labId, scoped);
+        allow update: if scoped in ['quotations', 'partnerInvoices', 'supportTickets', 'bulkImports', 'outsourceJobs']
+          && updateBranch(labId)
+          && scopedUpdateOk(labId, scoped);
         allow delete: if false;
         // A draft partner invoice can be deleted (its bills become invoiceable again); sent / paid ones cannot.
-        allow delete: if scoped == 'partnerInvoices' && readBranch(labId) && resource.data.status == 'draft';
+        allow delete: if scoped == 'partnerInvoices' && resource.data.status == 'draft'
+          && readBranch(labId) && scopedUpdateOk(labId, scoped);
 
         // Quotation attachments: small data-URL documents (no Storage bucket).
         match /attachments/{attId} {
@@ -581,8 +942,8 @@ service cloud.firestore {
 
       match /orders/{orderId} {
         allow read: if readBranch(labId);
-        allow create: if createBranch(labId);
-        allow update: if updateBranch(labId);
+        allow create: if createBranch(labId) && orderCreateOk(labId);
+        allow update: if updateBranch(labId) && orderUpdateOk(labId);
         // Portal: own partner's bills only; new bills must carry the partner's own id and a branch they may use.
         allow read: if partnerOwns(labId, resource.data);
         allow create: if partnerMayBill(labId) && partnerOwns(labId, request.resource.data)
@@ -592,7 +953,8 @@ service cloud.firestore {
 
         // Ledger is append-only: no edits, no deletes.
         match /ledger/{entryId} {
-          allow read, create: if orderBranchOk(labId, orderId);
+          allow read: if orderBranchOk(labId, orderId);
+          allow create: if orderBranchOk(labId, orderId) && ledgerCreateOk(labId, orderId);
           allow read: if partnerOrderOk(labId, orderId);
           allow update, delete: if false;
         }
@@ -626,10 +988,14 @@ service cloud.firestore {
 
         match /results/{testId} {
           allow read: if orderBranchOk(labId, orderId) || partnerOrderOk(labId, orderId);
-          allow write: if hasRole(labId, ['labAdmin', 'admin', 'manager', 'technician', 'doctor']) && orderBranchOk(labId, orderId);
+          allow create: if orderBranchOk(labId, orderId) && resultCreateOk(labId);
+          allow update: if orderBranchOk(labId, orderId) && resultUpdateOk(labId);
+          allow delete: if orderBranchOk(labId, orderId) && permAny(labId, ['results.amend']);
 
           match /versions/{versionId} {
-            allow read, create: if orderBranchOk(labId, orderId);
+            allow read: if orderBranchOk(labId, orderId);
+            allow create: if orderBranchOk(labId, orderId)
+              && permAny(labId, ['results.enter', 'results.approve', 'results.unapprove', 'results.amend']);
             allow update, delete: if false;
           }
         }

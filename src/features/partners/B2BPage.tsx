@@ -48,7 +48,7 @@ const who = (p: { name?: string } | null) => ({ by: auth.currentUser?.uid ?? '',
 
 export default function B2BPage() {
   const { profile } = useAuth()
-  const canApprove = can(profile, 'finance.view')
+  const canApprove = can(profile, 'b2b.manage')
   const { constraints, key } = useBranchScope()
   const [tab, setTab] = useState<Tab>('labs')
   const [q, setQ] = useState('')

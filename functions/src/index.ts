@@ -1166,6 +1166,7 @@ export { recordAiConsent } from './ai/usage'
 export { mcp, createMcpConnection, confirmMcpConnection, revokeMcpConnection, updateMcpConnection, revokeMcpOnUserLeave } from './ai/mcp'
 export { extractEqasReport, draftTestFromText, draftRadiologyImpression } from './ai/extract'
 export { mirrorActivityToAudit } from './audit'
+export { resolveLogin } from './login'
 
 // ---- Mass statements (async jobs) ------------------------------------------------
 export { processStatementJob } from './statements'

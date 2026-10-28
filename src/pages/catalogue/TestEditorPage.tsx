@@ -361,7 +361,7 @@ export default function TestEditorPage() {
                 </Form.Item>
               </Col>
               <Col xs={24} md={4}><Form.Item name="barcodeSuffix" label="Barcode suffix"><Input /></Form.Item></Col>
-              <Col xs={24} md={6}><Form.Item name="price" label="Price (₹)" rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} /></Form.Item></Col>
+              <Col xs={24} md={6}><Form.Item name="price" label="Price (₹)" rules={[{ required: true }]}><InputNumber min={0} precision={2} style={{ width: '100%' }} disabled={!isNew && !can(profile, 'catalogue.price')} /></Form.Item></Col>
               <Col xs={24} md={6}>
                 <Form.Item name="gender" label="Gender">
                   <Select options={[{ value: 'both', label: 'Both' }, { value: 'male', label: 'Male' }, { value: 'female', label: 'Female' }]} />

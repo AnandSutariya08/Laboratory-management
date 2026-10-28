@@ -1,38 +1,17 @@
 import { inflateSync, deflateSync } from 'node:zlib'
 import type { DocumentData } from 'firebase-admin/firestore'
 import { ageDaysOf, flagOf, rangeFor, richToLines, type ReportPayload } from './snapshot'
+import { advanceOf, getFont, initFonts, measure, runs, shapeRun, subsetFont, type Fam, type Glyph } from './pdffonts'
 
-// Minimal PDF 1.4 writer (no dependencies): Helvetica text, lines, rectangles, JPEG and PNG images, multiple
-// pages. Text is WinAnsi; characters outside it print as "?". buildReportPdf renders a frozen report payload.
+// Minimal PDF 1.4 writer: Unicode text (Latin, Devanagari, Gujarati, Bengali, Tamil) set in embedded, subsetted
+// Noto Sans TrueType fonts (CIDFontType2, Identity-H, ToUnicode) after HarfBuzz shaping, plus lines, rectangles,
+// JPEG and PNG images and multiple pages. buildReportPdf renders a frozen report payload.
 
-const W_REG = '278 278 355 556 556 889 667 191 333 333 389 584 278 333 278 278 556 556 556 556 556 556 556 556 556 556 278 278 584 584 584 556 1015 667 667 722 722 667 611 778 722 278 500 667 556 833 722 778 667 778 722 667 611 722 667 944 667 667 611 278 278 278 469 556 333 556 556 500 556 556 278 556 556 222 222 500 222 833 556 556 556 556 333 500 278 556 500 722 500 500 500 334 260 334 584'.split(' ').map(Number)
-const W_BOLD = '278 333 474 556 556 889 722 238 333 333 389 584 278 333 278 278 556 556 556 556 556 556 556 556 556 556 333 333 584 584 584 611 975 722 722 722 722 667 611 778 722 278 556 722 611 833 722 778 667 778 722 667 611 722 667 944 667 667 611 333 278 333 584 556 333 556 611 556 611 556 333 611 611 278 278 556 278 889 611 611 611 611 389 556 333 611 556 778 556 556 500 389 280 389 584'.split(' ').map(Number)
-
-const MAP: Record<string, string> = {
-  '₹': 'Rs ', '↑': '^', '↓': 'v', '→': '->', '←': '<-', '≥': '>=', '≤': '<=', '×': 'x', '“': '"', '”': '"', '‘': "'", '’': "'", '…': '...', ' ': ' ',
-  '–': '\u0096', '—': '\u0097', '•': '\u0095', 'µ': 'µ', '°': '°', '±': '±',
-}
-function clean(s: string): string {
-  let out = ''
-  for (const ch of String(s ?? '')) {
-    const m = MAP[ch]
-    if (m !== undefined) out += m
-    else if (ch.charCodeAt(0) < 32) out += ' '
-    else if (ch.charCodeAt(0) <= 0xff) out += ch
-    else out += '?'
-  }
-  return out
-}
-const pdfStr = (s: string) => Buffer.from(clean(s), 'latin1').toString('latin1').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)')
+// PDF text string (UTF-16BE hex) for document metadata.
+const pdfStr = (s: string) => `<FEFF${Buffer.from(String(s ?? ''), 'utf16le').swap16().toString('hex')}>`
 
 export function textWidth(s: string, size: number, bold = false): number {
-  const t = bold ? W_BOLD : W_REG
-  let w = 0
-  for (const ch of clean(s)) {
-    const c = ch.charCodeAt(0)
-    w += c >= 32 && c <= 126 ? t[c - 32] : 556
-  }
-  return (w * size) / 1000
+  return measure(s, size, bold)
 }
 
 export function wrap(text: string, size: number, maxW: number, bold = false): string[] {
@@ -61,6 +40,14 @@ const hex = (c: string): [number, number, number] => {
 const f2 = (n: number) => (Math.round(n * 100) / 100).toString()
 
 interface Img { obj: number; w: number; h: number }
+interface FontUse { name: string; fam: Fam; bold: boolean; used: Map<number, string> }
+
+const hex4 = (n: number) => n.toString(16).padStart(4, '0').toUpperCase()
+const utf16hex = (t: string) => Buffer.from(t, 'utf16le').swap16().toString('hex').toUpperCase()
+function stream(dict: string, body: Buffer): Buffer {
+  const z = deflateSync(body)
+  return Buffer.concat([Buffer.from(`<< ${dict} /Filter /FlateDecode /Length ${z.length} >>\nstream\n`, 'latin1'), z, Buffer.from('\nendstream', 'latin1')])
+}
 
 export class PdfDoc {
   readonly pw: number
@@ -71,10 +58,22 @@ export class PdfDoc {
   private imgs: Map<string, Img> = new Map()
   private pageImgs: Set<string>[] = []
   private curImgs = new Set<string>()
-  constructor(pw = 595.28, ph = 841.89) {
+  // Fonts in use, keyed by family+weight. A footer scratch document shares its parent's registry.
+  readonly fonts: Map<string, FontUse>
+  constructor(pw = 595.28, ph = 841.89, fonts?: Map<string, FontUse>) {
     this.pw = pw
     this.ph = ph
+    this.fonts = fonts ?? new Map()
     this.newPage()
+  }
+  private fontUse(fam: Fam, bold: boolean): FontUse {
+    const key = `${fam}${bold ? 'B' : 'R'}`
+    let u = this.fonts.get(key)
+    if (!u) {
+      u = { name: `F${this.fonts.size + 1}`, fam, bold, used: new Map() }
+      this.fonts.set(key, u)
+    }
+    return u
   }
   newPage() {
     if (this.pages.length || this.cur) this.flush()
@@ -91,7 +90,64 @@ export class PdfDoc {
   // y is measured from the TOP of the page.
   text(x: number, y: number, s: string, size = 10, o: { bold?: boolean; color?: string } = {}) {
     const [r, g, b] = hex(o.color ?? '#111111')
-    this.cur += `BT /${o.bold ? 'F2' : 'F1'} ${f2(size)} Tf ${f2(r)} ${f2(g)} ${f2(b)} rg ${f2(x)} ${f2(this.ph - y - size * 0.8)} Td (${pdfStr(s)}) Tj ET\n`
+    const base = this.ph - y - size * 0.8
+    let pen = x
+    let out = `${f2(r)} ${f2(g)} ${f2(b)} rg\n`
+    for (const run of runs(s)) {
+      const sh = shapeRun(run.fam, !!o.bold, run.text)
+      const fu = this.fontUse(run.fam, !!o.bold)
+      const font = getFont(run.fam, !!o.bold)
+      const k = size / sh.upem
+      let tj = ''
+      let start = pen
+      const flush = () => {
+        if (tj) out += `BT /${fu.name} ${f2(size)} Tf ${f2(start)} ${f2(base)} Td [${tj}] TJ ET\n`
+        tj = ''
+      }
+      const clusters = [...new Set(sh.glyphs.map((g) => g.cluster))].sort((m, n) => m - n)
+      const groups: Glyph[][] = []
+      for (const gl of sh.glyphs) {
+        const last = groups[groups.length - 1]
+        if (last && last[0].cluster === gl.cluster) last.push(gl)
+        else groups.push([gl])
+      }
+      for (const grp of groups) {
+        const c0 = grp[0].cluster
+        const nx = clusters.find((c) => c > c0)
+        const txt = String.fromCodePoint(...sh.cps.slice(c0, nx ?? sh.cps.length))
+        // A reordered or split cluster (matra before its consonant, two-part vowel signs) cannot be mapped glyph by glyph:
+        // its text is attached with ActualText so copy and search return the original characters.
+        const multi = grp.length > 1
+        if (multi) {
+          flush()
+          out += `/Span << /ActualText <FEFF${utf16hex(txt)}> >> BDC\n`
+        }
+        // ToUnicode: the first glyph of a cluster carries its text (viewers that honour ActualText use that instead).
+        if (!fu.used.has(grp[0].gid) || (multi && fu.used.get(grp[0].gid) === '\u200b')) fu.used.set(grp[0].gid, txt)
+        for (const gl of grp.slice(1)) if (!fu.used.has(gl.gid)) fu.used.set(gl.gid, '\u200b')
+        for (const gl of grp) {
+          const hx = gl.gid.toString(16).padStart(4, '0')
+          if (gl.xo || gl.yo) {
+            flush()
+            out += `BT /${fu.name} ${f2(size)} Tf ${f2(pen + gl.xo * k)} ${f2(base + gl.yo * k)} Td [<${hx}>] TJ ET\n`
+            pen += gl.adv * k
+            start = pen
+            continue
+          }
+          if (!tj) start = pen
+          tj += `<${hx}>`
+          const diff = gl.adv - advanceOf(font, gl.gid)
+          if (diff) tj += ` ${f2((-diff * 1000) / sh.upem)} `
+          pen += gl.adv * k
+        }
+        if (multi) {
+          flush()
+          out += 'EMC\n'
+        }
+      }
+      flush()
+    }
+    this.cur += out
   }
   line(x1: number, y1: number, x2: number, y2: number, o: { color?: string; width?: number } = {}) {
     const [r, g, b] = hex(o.color ?? '#999999')
@@ -254,22 +310,39 @@ export class PdfDoc {
     this.cur = ''
     const imgKeys = [...this.imgs.keys()]
     // Object layout: image objects were added first (1..n). Then fonts, content streams, pages, pages-root, catalogue, info.
-    const fontReg = this.add(Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>', 'latin1'))
-    const fontBold = this.add(Buffer.from('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>', 'latin1'))
-    const contentIds: number[] = []
-    for (const c of this.pages) {
-      const body = Buffer.from(c, 'latin1')
-      contentIds.push(this.add(Buffer.concat([Buffer.from(`<< /Length ${body.length} >>\nstream\n`, 'latin1'), body, Buffer.from('\nendstream', 'latin1')])))
+    const fontRefs: string[] = []
+    let tagN = 0
+    for (const fu of this.fonts.values()) {
+      const f = getFont(fu.fam, fu.bold)
+      const gids = [0, ...fu.used.keys()].sort((a, b) => a - b)
+      const ttf = Buffer.from(subsetFont(f, gids))
+      const tag = String.fromCharCode(65 + (tagN % 26), 65 + ((tagN / 26) | 0) % 26, 70, 72, 76, 66) // ABFHLB-style prefix, unique per font in the file
+      tagN++
+      const psName = `${tag}+NotoSans${{ latin: '', deva: 'Devanagari', gujr: 'Gujarati', beng: 'Bengali', taml: 'Tamil' }[fu.fam]}-${fu.bold ? 'Bold' : 'Regular'}`
+      const file = this.add(stream(`/Length1 ${ttf.length}`, ttf))
+      const sc = 1000 / f.upem
+      const desc = this.add(Buffer.from(`<< /Type /FontDescriptor /FontName /${psName} /Flags 4 /FontBBox [${f.bbox.map((v) => Math.round(v * sc)).join(' ')}] /ItalicAngle 0 /Ascent ${Math.round(f.ascent * sc)} /Descent ${Math.round(f.descent * sc)} /CapHeight ${Math.round(f.ascent * sc * 0.7)} /StemV ${fu.bold ? 140 : 80} /FontFile2 ${file} 0 R >>`, 'latin1'))
+      const widths = gids.map((g) => `${g} [${Math.round(advanceOf(f, g) * sc)}]`).join(' ')
+      const cid = this.add(Buffer.from(`<< /Type /Font /Subtype /CIDFontType2 /BaseFont /${psName} /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${desc} 0 R /DW 1000 /W [${widths}] /CIDToGIDMap /Identity >>`, 'latin1'))
+      const entries = [...fu.used.entries()].map(([g, t]) => `<${hex4(g)}> <${utf16hex(t)}>`)
+      let bf = ''
+      for (let i = 0; i < entries.length; i += 100) bf += `${Math.min(100, entries.length - i)} beginbfchar\n${entries.slice(i, i + 100).join('\n')}\nendbfchar\n`
+      const cmap = `/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CIDSystemInfo << /Registry (Adobe) /Ordering (UCS) /Supplement 0 >> def\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <FFFF>\nendcodespacerange\n${bf}endcmap\nCMapName currentdict /CMap defineresource pop\nend\nend`
+      const tu = this.add(stream('', Buffer.from(cmap, 'latin1')))
+      const t0 = this.add(Buffer.from(`<< /Type /Font /Subtype /Type0 /BaseFont /${psName} /Encoding /Identity-H /DescendantFonts [${cid} 0 R] /ToUnicode ${tu} 0 R >>`, 'latin1'))
+      fontRefs.push(`/${fu.name} ${t0} 0 R`)
     }
+    const contentIds: number[] = []
+    for (const c of this.pages) contentIds.push(this.add(stream('', Buffer.from(c, 'latin1'))))
     const pagesRoot = this.objs.length + this.pages.length + 1
     const pageIds: number[] = []
     this.pages.forEach((_, i) => {
       const xo = [...this.pageImgs[i]].map((k) => `/Im${imgKeys.indexOf(k)} ${this.imgs.get(k)!.obj} 0 R`).join(' ')
-      pageIds.push(this.add(Buffer.from(`<< /Type /Page /Parent ${pagesRoot} 0 R /MediaBox [0 0 ${f2(this.pw)} ${f2(this.ph)}] /Resources << /Font << /F1 ${fontReg} 0 R /F2 ${fontBold} 0 R >> /XObject << ${xo} >> >> /Contents ${contentIds[i]} 0 R >>`, 'latin1')))
+      pageIds.push(this.add(Buffer.from(`<< /Type /Page /Parent ${pagesRoot} 0 R /MediaBox [0 0 ${f2(this.pw)} ${f2(this.ph)}] /Resources << /Font << ${fontRefs.join(' ')} >> /XObject << ${xo} >> >> /Contents ${contentIds[i]} 0 R >>`, 'latin1')))
     })
     this.add(Buffer.from(`<< /Type /Pages /Kids [${pageIds.map((p) => `${p} 0 R`).join(' ')}] /Count ${pageIds.length} >>`, 'latin1'))
     const cat = this.add(Buffer.from(`<< /Type /Catalog /Pages ${pagesRoot} 0 R >>`, 'latin1'))
-    const info = this.add(Buffer.from(`<< /Title (${pdfStr(title)}) /Producer (Health Care Labs) >>`, 'latin1'))
+    const info = this.add(Buffer.from(`<< /Title ${pdfStr(title)} /Producer (Health Care Labs) >>`, 'latin1'))
     const parts: Buffer[] = [Buffer.from('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n', 'latin1')]
     const offsets: number[] = []
     let len = parts[0].length
@@ -317,7 +390,8 @@ export function ageText(v: number, unit: string, format: string): string {
   return `${v} ${unit}${v === 1 ? '' : 's'}`
 }
 
-export function buildReportPdf(pl: ReportPayload, opts: { revision: number; sha256: string; generatedAt: number }): Buffer {
+export async function buildReportPdf(pl: ReportPayload, opts: { revision: number; sha256: string; generatedAt: number }): Promise<Buffer> {
+  await initFonts()
   const rd = pl.settings.reportDetails as Record<string, unknown>
   const L = pl.settings.layout
   const o = pl.order as Record<string, any>
@@ -650,7 +724,7 @@ export function buildReportPdf(pl: ReportPayload, opts: { revision: number; sha2
   }
   // Draw footer on the open page, then on earlier pages by rewriting their content streams.
   const footerOps = (n: number) => {
-    const tmp = new PdfDoc(pw, ph)
+    const tmp = new PdfDoc(pw, ph, doc.fonts)
     const { ft } = foot(n)
     if (!letterhead) tmp.line(mL, ph - mB + 14, pw - mR, ph - mB + 14, { color: '#999999' })
     if (ft) tmp.text(mL, ph - mB + 18, wrap(ft, 8, cw - 90)[0] ?? '', 8, { color: '#555555' })

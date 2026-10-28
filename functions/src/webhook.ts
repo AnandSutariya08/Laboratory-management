@@ -1,8 +1,8 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
 import { defineSecret } from 'firebase-functions/params'
 import { onRequest } from 'firebase-functions/v2/https'
-import { FIRESTORE_DB, clean } from './secrets'
+import { DELIVERY_WEBHOOK_TOKEN, FIRESTORE_DB, clean, secret as readSecret } from './secrets'
 
 // Delivery receipts from messaging providers (WhatsApp Cloud API, MSG91, or any provider that can POST
 // JSON). Provider-agnostic: every payload is normalised to {providerId, status, error?} and applied to the
@@ -10,6 +10,7 @@ import { FIRESTORE_DB, clean } from './secrets'
 //
 // Auth: HMAC-SHA256 of the raw body with DELIVERY_WEBHOOK_SECRET, hex, sent as `X-Webhook-Signature`
 // (or `X-Hub-Signature-256: sha256=<hex>` as Meta does). No secret configured => 503 (nothing is accepted).
+// Alternatively `?token=` compared in constant time with DELIVERY_WEBHOOK_TOKEN (for MSG91). Empty token => signatures only.
 // Meta also verifies the endpoint with GET ?hub.mode=subscribe&hub.verify_token=<secret>&hub.challenge=...
 const DELIVERY_WEBHOOK_SECRET = defineSecret('DELIVERY_WEBHOOK_SECRET')
 
@@ -66,6 +67,13 @@ export function signatureOk(raw: Buffer | undefined, header: string, secret: str
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
+export function tokenOk(given: unknown, token: string): boolean {
+  if (!token || typeof given !== 'string' || !given) return false
+  const a = createHash('sha256').update(given).digest()
+  const b = createHash('sha256').update(token).digest()
+  return timingSafeEqual(a, b)
+}
+
 export async function applyDeliveryEvent(e: Event): Promise<boolean> {
   const db = getFirestore(FIRESTORE_DB)
   const snap = await db.collectionGroup('deliveries').where('providerId', '==', e.providerId).limit(5).get()
@@ -90,19 +98,20 @@ export async function applyDeliveryEvent(e: Event): Promise<boolean> {
   return hit
 }
 
-export const deliveryWebhook = onRequest({ region: 'asia-south1', secrets: [DELIVERY_WEBHOOK_SECRET] }, async (req, res) => {
+export const deliveryWebhook = onRequest({ region: 'asia-south1', secrets: [DELIVERY_WEBHOOK_SECRET, DELIVERY_WEBHOOK_TOKEN] }, async (req, res) => {
   let secret = ''
   try {
     secret = clean(DELIVERY_WEBHOOK_SECRET.value())
   } catch {
     secret = ''
   }
-  if (!secret) {
+  const token = readSecret(DELIVERY_WEBHOOK_TOKEN)
+  if (!secret && !token) {
     res.status(503).send('Delivery webhook is not configured.')
     return
   }
   if (req.method === 'GET') {
-    if (req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === secret) {
+    if (secret && req.query['hub.mode'] === 'subscribe' && req.query['hub.verify_token'] === secret) {
       res.status(200).send(String(req.query['hub.challenge'] ?? ''))
     } else res.status(403).send('Forbidden')
     return
@@ -112,8 +121,9 @@ export const deliveryWebhook = onRequest({ region: 'asia-south1', secrets: [DELI
     return
   }
   const header = String(req.get('x-webhook-signature') ?? req.get('x-hub-signature-256') ?? '')
-  if (!signatureOk(req.rawBody, header, secret)) {
-    res.status(401).send('Invalid signature')
+  // Either a valid HMAC signature (WhatsApp) or a valid ?token= (MSG91, which cannot sign).
+  if (!signatureOk(req.rawBody, header, secret) && !tokenOk(req.query.token, token)) {
+    res.status(401).send('Invalid signature or token')
     return
   }
   let matched = 0

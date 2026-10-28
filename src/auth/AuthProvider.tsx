@@ -172,6 +172,9 @@ export function can(profile: UserProfile | null, permission: Permission): boolea
 
 const VIEW_ONLY_OK = /(\.view|^reports\.print|^branches\.allView)$/
 
+/** Permission check for code outside React (uses the signed-in profile, like assertCan). */
+export const canNow = (permission: Permission): boolean => can(currentProfile, permission)
+
 /** Throws unless the current user holds the permission (catalogue.delete guards every master delete, USR-12). */
 export function assertCan(permission: Permission, what = 'do this'): void {
   if (!can(currentProfile, permission)) throw new Error(`You do not have permission to ${what}.`)

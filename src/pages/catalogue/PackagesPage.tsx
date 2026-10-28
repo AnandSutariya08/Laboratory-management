@@ -287,7 +287,7 @@ export default function PackagesPage() {
             ]}
           />
           <div className="cat-toolbar" style={{ marginTop: 'var(--s-4)' }}>
-            <Form.Item name="price" label="Package price (₹)" rules={[{ required: true }]} style={{ margin: 0 }}><InputNumber min={0} precision={2} /></Form.Item>
+            <Form.Item name="price" label="Package price (₹)" rules={[{ required: true }]} style={{ margin: 0 }}><InputNumber min={0} precision={2} disabled={editing !== 'new' && !canPrice} /></Form.Item>
             <span>Total of tests: <b>{formatINR(sum)}</b></span>
             {items.length > 0 && (discount > 0 ? <StatusChip variant="success">Discount {formatINR(discount)} ({sum ? Math.round((discount / sum) * 100) : 0}%)</StatusChip> : discount < 0 ? <StatusChip variant="caution">Above sum by {formatINR(-discount)}</StatusChip> : <StatusChip>Equal to sum</StatusChip>)}
             <Form.Item name="disabled" label="Disabled" valuePropName="checked" style={{ margin: 0 }}><Switch /></Form.Item>

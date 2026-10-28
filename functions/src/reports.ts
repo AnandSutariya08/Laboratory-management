@@ -66,7 +66,7 @@ export async function createReportSnapshot(labId: string, orderId: string, trigg
   const generatedAt = Date.now()
   let pdf: Buffer | null = null
   try {
-    pdf = buildReportPdf(payload, { revision, sha256, generatedAt })
+    pdf = await buildReportPdf(payload, { revision, sha256, generatedAt })
   } catch (e) {
     console.error('pdf build failed', e)
   }

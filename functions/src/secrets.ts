@@ -13,6 +13,8 @@ export const SMTP_URL = defineSecret('SMTP_URL')
 export const MAIL_FROM = defineSecret('MAIL_FROM')
 // Encrypts recipient addresses kept for retries in delivery logs. Empty => a per-lab development key.
 export const LOG_KEY = defineSecret('LOG_KEY')
+// MSG91 cannot sign requests: its delivery-report URL carries ?token=<this secret> instead.
+export const DELIVERY_WEBHOOK_TOKEN = defineSecret('DELIVERY_WEBHOOK_TOKEN')
 export const SECRETS = [
   WHATSAPP_TOKEN,
   WHATSAPP_PHONE_NUMBER_ID,
