@@ -67,7 +67,7 @@ export interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-  name: 'Health Care Labs',
+  name: 'Healthcare Labs',
   address: '',
   phone: '',
   email: '',

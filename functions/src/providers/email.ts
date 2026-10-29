@@ -3,7 +3,7 @@ import type { OutgoingMessage, ProviderResult } from './types'
 
 export interface EmailConfig {
   smtpUrl: string // smtp(s)://user:pass@host:port
-  from: string // e.g. "Health Care Labs <reports@lab.example.com>"
+  from: string // e.g. "Healthcare Labs <reports@lab.example.com>"
   // A lab sender that passed verification: shown as the display name, and replies go to its address.
   sender?: { name: string; email: string }
 }

@@ -9,7 +9,7 @@ import { BRAND_ACCENT, dark, darkHC, light, lightHC, radii, type Palette } from 
 // the overlay components here are given transparent backgrounds.
 
 export const BRAND = {
-  name: 'Health Care Labs',
+  name: 'Healthcare Labs',
   primary: BRAND_ACCENT, // large fills and ambient wash only
   primaryDark: light.primary, // text-safe sky blue (AA on white)
   primarySoft: light.primaryContainer,

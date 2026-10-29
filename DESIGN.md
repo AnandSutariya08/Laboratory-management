@@ -1,4 +1,4 @@
-# Health Care Labs — Design System
+# Healthcare Labs — Design System
 
 Liquid Glass ideas (a floating functional layer over calm content) expressed through semantic colour
 roles, adapted to a desktop lab information system. Value tags: **(Apple)** keep, **(default)** template
@@ -8,7 +8,7 @@ starting value, **(project)** decided for this product.
 
 | Item | Value |
 |---|---|
-| Product | Health Care Labs: lab information system for registration, billing, sample tracking, results, reports, QC, inventory and analytics |
+| Product | Healthcare Labs: lab information system for registration, billing, sample tracking, results, reports, QC, inventory and analytics |
 | Profile (§1) | **Productivity / dashboard** (desktop and tablet, dense tables and forms) |
 | Platform and toolkit | Web: React 19 + Vite 8 + TypeScript, Ant Design 6 for form/table primitives, Firebase |
 | Theme source of truth | `src/design/tokens.css` (CSS custom properties) mirrored into Ant Design via `src/theme.ts` |

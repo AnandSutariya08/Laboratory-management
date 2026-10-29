@@ -1,6 +1,6 @@
-# Health Care Labs
+# Healthcare Labs
 
-Laboratory information system for Health Care Labs: registration, billing, sample accession, result entry and verification, reports, dispatch, refunds and analytics. React (Vite) + Ant Design + Firebase (Auth, Firestore with `onSnapshot` real-time updates).
+Laboratory information system for Healthcare Labs: registration, billing, sample accession, result entry and verification, reports, dispatch, refunds and analytics. React (Vite) + Ant Design + Firebase (Auth, Firestore with `onSnapshot` real-time updates).
 
 Functional spec: `../flabs-research/spec/` (start with `00-overview-and-architecture.md`).
 
@@ -55,7 +55,7 @@ Set each secret with `firebase functions:secrets:set NAME` (it prompts for the v
 | `MSG91_REPORT_TEMPLATE_ID` | MSG91 Flow template id for the report SMS |
 | `MSG91_BOOKING_TEMPLATE_ID` | MSG91 Flow template id for booking SMS |
 | `SMTP_URL` | `smtps://user:password@smtp.example.com:465` (or `smtp://user:pass@host:587`); URL-encode special characters in the password |
-| `MAIL_FROM` | Sender, e.g. `Health Care Labs <reports@lab.example.com>` |
+| `MAIL_FROM` | Sender, e.g. `Healthcare Labs <reports@lab.example.com>` |
 
 **WhatsApp templates.** Business-initiated messages need templates approved by Meta (category Utility, language English). Set the template names under Settings > Messaging (defaults `report_ready` and `booking_update`). Body variables are filled positionally in this order:
 

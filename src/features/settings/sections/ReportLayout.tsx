@@ -66,7 +66,7 @@ export function ReportLayout() {
             <Field label="Logo height"><InputNumber min={20} max={140} style={{ width: '100%' }} addonAfter="px" value={L.logoHeight} onChange={(v) => put('logoHeight', v ?? 56)} /></Field>
             <Field label="Logo position"><Select value={L.logoAlign} onChange={(v) => put('logoAlign', v)} options={[{ value: 'left', label: 'Left' }, { value: 'center', label: 'Centre' }, { value: 'right', label: 'Right' }]} /></Field>
           </div>
-          <SwitchRow title='Show "Made with Health Care Labs" under the footer' description="A small credit line at the very bottom of the report." checked={L.showMadeWith} onChange={(v) => put('showMadeWith', v)} />
+          <SwitchRow title='Show "Made with Healthcare Labs" under the footer' description="A small credit line at the very bottom of the report." checked={L.showMadeWith} onChange={(v) => put('showMadeWith', v)} />
         </Group>
         <Group title="Patient block">
           <div className="st-grid">

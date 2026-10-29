@@ -342,7 +342,7 @@ export class PdfDoc {
     })
     this.add(Buffer.from(`<< /Type /Pages /Kids [${pageIds.map((p) => `${p} 0 R`).join(' ')}] /Count ${pageIds.length} >>`, 'latin1'))
     const cat = this.add(Buffer.from(`<< /Type /Catalog /Pages ${pagesRoot} 0 R >>`, 'latin1'))
-    const info = this.add(Buffer.from(`<< /Title ${pdfStr(title)} /Producer (Health Care Labs) >>`, 'latin1'))
+    const info = this.add(Buffer.from(`<< /Title ${pdfStr(title)} /Producer (Healthcare Labs) >>`, 'latin1'))
     const parts: Buffer[] = [Buffer.from('%PDF-1.4\n%\xe2\xe3\xcf\xd3\n', 'latin1')]
     const offsets: number[] = []
     let len = parts[0].length
@@ -729,7 +729,7 @@ export async function buildReportPdf(pl: ReportPayload, opts: { revision: number
     if (!letterhead) tmp.line(mL, ph - mB + 14, pw - mR, ph - mB + 14, { color: '#999999' })
     if (ft) tmp.text(mL, ph - mB + 18, wrap(ft, 8, cw - 90)[0] ?? '', 8, { color: '#555555' })
     tmp.text(pw - mR - 60, ph - mB + 18, `Page ${n} of ${totalPages}`, 8, { color: '#555555' })
-    const extra = [`Report rev ${opts.revision}`, opts.sha256 ? `ID ${opts.sha256.slice(0, 12)}` : '', L.showMadeWith ? 'Made with Health Care Labs' : ''].filter(Boolean).join('  |  ')
+    const extra = [`Report rev ${opts.revision}`, opts.sha256 ? `ID ${opts.sha256.slice(0, 12)}` : '', L.showMadeWith ? 'Made with Healthcare Labs' : ''].filter(Boolean).join('  |  ')
     tmp.text(mL, ph - mB + 28, extra, 7, { color: '#888888' })
     return tmp.pages.length ? tmp.pages[0] : (tmp as unknown as { cur: string }).cur
   }

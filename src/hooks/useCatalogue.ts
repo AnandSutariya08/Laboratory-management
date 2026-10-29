@@ -6,7 +6,7 @@ import { setCommissionTrigger } from '../features/partners/lib/commission'
 import { useLiveDoc, useLiveQuery } from './useLive'
 
 export const DEFAULT_SETTINGS: LabSettings = {
-  name: 'Health Care Labs',
+  name: 'Healthcare Labs',
   address: '',
   phone: '',
   email: '',

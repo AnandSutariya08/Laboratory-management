@@ -112,7 +112,7 @@ export default function AppLayout() {
   // Page change: fade-through, reset scroll, announce, move focus to the content.
   const first = useRef(true)
   useEffect(() => {
-    document.title = `${title} · Health Care Labs`
+    document.title = `${title} · Healthcare Labs`
     if (first.current) {
       first.current = false
       return

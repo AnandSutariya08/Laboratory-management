@@ -435,7 +435,7 @@ export default function ReportSheet({ model, opts, prevs }: { model: ReportModel
           <div className="ftr" style={{ visibility: showFooter ? 'visible' : 'hidden', minHeight: 24 }}>
             {lhead?.footerDataUrl ? <img src={lhead.footerDataUrl} alt="" style={{ maxWidth: '100%', maxHeight: 60 }} /> : rd.footerText || `${lab.name}${lab.address ? ` - ${lab.address}` : ''}`}
           </div>
-          {L.showMadeWith && <div style={{ textAlign: 'center', fontSize: 9, color: '#888', marginTop: 2 }}>Made with Health Care Labs</div>}
+          {L.showMadeWith && <div style={{ textAlign: 'center', fontSize: 9, color: '#888', marginTop: 2 }}>Made with Healthcare Labs</div>}
         </div>
       </div>
     </>

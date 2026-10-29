@@ -1,4 +1,4 @@
-/* Health Care Labs design tokens (DESIGN.md §4, §9).
+/* Healthcare Labs design tokens (DESIGN.md §4, §9).
    Roles are CSS custom properties on :root. They are redefined for
    - dark:           prefers-color-scheme: dark, or <html data-theme="dark">
    - high contrast:  prefers-contrast: more, or <html data-contrast="more">

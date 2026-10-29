@@ -2,7 +2,7 @@
   "name": "hcl-connector",
   "version": "1.0.0",
   "private": true,
-  "description": "Health Care Labs machine connector: reads results from lab analysers (ASTM / HL7 over serial, TCP or files) and sends them to the lab app.",
+  "description": "Healthcare Labs machine connector: reads results from lab analysers (ASTM / HL7 over serial, TCP or files) and sends them to the lab app.",
   "type": "module",
   "main": "src/index.js",
   "engines": { "node": ">=20" },

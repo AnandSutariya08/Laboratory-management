@@ -118,7 +118,7 @@ async function create() {
   }
 
   const text = [
-    `Health Care Labs: test logins (${production ? 'live site' : 'local emulator'})`,
+    `Healthcare Labs: test logins (${production ? 'live site' : 'local emulator'})`,
     `Sign in at: ${appUrl}`,
     `Sign in with the email or the username. Patients check reports at ${appUrl}/my-reports`,
     '',
@@ -155,7 +155,7 @@ function writePdf(rows, pdfFile) {
     return ''
   }
   const date = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Health Care Labs test logins</title><style>
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Healthcare Labs test logins</title><style>
 @page { size: A4 landscape; margin: 10mm 12mm; }
 * { box-sizing: border-box; }
 body { margin: 0; font: 9.5pt/1.35 -apple-system, "Helvetica Neue", Arial, sans-serif; color: #10202e; }
@@ -185,7 +185,7 @@ col.c-role { width: 20%; } col.c-tests { width: 31%; }
 ol { margin: 4px 0 0; padding-left: 18px; }
 ol li { margin-bottom: 1px; }
 </style></head><body>
-<div class="head"><div><h1>Health Care Labs: test logins</h1><p>Logins for testing the lab system${production ? '' : ' (local test copy)'}.</p></div>
+<div class="head"><div><h1>Healthcare Labs: test logins</h1><p>Logins for testing the lab system${production ? '' : ' (local test copy)'}.</p></div>
 <div class="date">Prepared ${esc(date)}<br>Confidential: do not forward</div></div>
 <div class="links">
 <div class="box"><div class="k">Sign in here (staff and partners)</div><a href="${esc(appUrl)}">${esc(appUrl)}</a><div class="sub">Sign in with the username or the email, and the password below.</div></div>

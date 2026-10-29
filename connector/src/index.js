@@ -8,7 +8,7 @@ import { Machine } from './machine.js'
 import { Outbox } from './outbox.js'
 import * as log from './log.js'
 
-// Health Care Labs machine connector. Runs on the lab PC that the analysers are cabled to.
+// Healthcare Labs machine connector. Runs on the lab PC that the analysers are cabled to.
 //   node src/index.js                 run (reads config.json next to this folder)
 //   node src/index.js --check         check config.json and that every token is accepted by the app
 //   node src/index.js --list-ports    list the serial (COM) ports on this PC

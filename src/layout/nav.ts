@@ -239,7 +239,7 @@ export function titleFor(pathname: string, search: string, nodes: VisibleNode[] 
     const e = flatten(nodes).find((f) => f.key === key)
     if (e) return e.label
   }
-  return 'Health Care Labs'
+  return 'Healthcare Labs'
 }
 
 /** Group key containing the active leaf (so it starts expanded). */

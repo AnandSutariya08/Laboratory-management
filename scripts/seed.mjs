@@ -160,7 +160,7 @@ const packages = [
 
 async function main() {
   await lab.set({
-    name: 'Health Care Labs', address: '', phone: '', email: '', billPrefix: 'HCL',
+    name: 'Healthcare Labs', address: '', phone: '', email: '', billPrefix: 'HCL',
     finalRequiresPayment: true, allowEmptyApproval: false, allowSelfVerification: true,
     discountReasonRequired: true, dispatchDefaults: ['hardcopy'],
   }, { merge: true })

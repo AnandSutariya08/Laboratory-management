@@ -38,6 +38,6 @@ export const CYCLES = [
 ]
 
 export const PREVIEW_VARS: Record<string, string> = {
-  patientName: 'Asha Verma', labName: 'Health Care Labs', billNo: 'HCL1042', link: 'https://lab.example.com/r/AbC123',
+  patientName: 'Asha Verma', labName: 'Healthcare Labs', billNo: 'HCL1042', link: 'https://lab.example.com/r/AbC123',
   bookingId: 'BK1007', slot: '15 Oct 2026, 07:00-08:00', collectorName: 'Ravi', amount: '₹850',
 }
