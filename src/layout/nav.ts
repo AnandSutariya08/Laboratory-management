@@ -1,8 +1,10 @@
 import type { ComponentType } from 'react'
+import { canSeeDashboard } from '../lib/dashboard'
 import {
   ApiOutlined,
   AppstoreOutlined,
   AuditOutlined,
+  BarChartOutlined,
   BarcodeOutlined,
   CalendarOutlined,
   CarOutlined,
@@ -74,6 +76,7 @@ export interface NavNode {
   keywords?: string
   feature?: NavFeature
   children?: NavLeaf[]
+  adminOnly?: boolean // only the lab admin and admin roles (the dashboard)
 }
 
 const leaf = (key: string, label: string, path: string, permission: Permission, extra: Partial<NavLeaf> = {}): NavLeaf => ({
@@ -81,6 +84,7 @@ const leaf = (key: string, label: string, path: string, permission: Permission, 
 })
 
 export const NAV: NavNode[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: DashboardOutlined, permission: PERM.analysis, path: '/dashboard', adminOnly: true, keywords: 'overview insights summary kpi branches' },
   { key: 'bookings', label: 'Bookings', icon: CalendarOutlined, permission: PERM.bookings, feature: 'bookings', path: '/bookings', keywords: 'home collection appointments' },
   { key: 'registration', label: 'New Registration', icon: UserAddOutlined, permission: PERM.registration, path: '/registration', keywords: 'bill patient register' },
   {
@@ -93,7 +97,7 @@ export const NAV: NavNode[] = [
   },
   { key: 'accession', label: 'Accession', icon: BarcodeOutlined, permission: PERM.accession, feature: 'accession', path: '/accession', keywords: 'sample barcode receive scan' },
   { key: 'credent', label: 'Credent', icon: CarOutlined, permission: PERM.admin, path: '/credent', keywords: 'home collection partner onboarding' },
-  { key: 'analysis', label: 'Analysis', icon: DashboardOutlined, permission: PERM.analysis, path: '/analysis', keywords: 'analytics reports revenue' },
+  { key: 'analysis', label: 'Analysis', icon: BarChartOutlined, permission: PERM.analysis, path: '/analysis', keywords: 'analytics reports revenue' },
   { key: 'patients', label: 'Patient List', icon: TeamOutlined, permission: PERM.patients, path: '/patients', keywords: 'bills search reports' },
   { key: 'dispatch', label: 'Pending Dispatch', icon: SendOutlined, permission: 'reports.send', path: '/dispatch', keywords: 'send reports whatsapp sms email delivery' },
   {
@@ -164,6 +168,7 @@ export interface VisibleNode extends Omit<NavNode, 'children'> {
 export function visibleNav(profile: UserProfile | null, flags: NavFlags = {}): VisibleNode[] {
   return NAV.flatMap((n) => {
     if (n.feature && flags[n.feature] === false) return []
+    if (n.adminOnly && !canSeeDashboard(profile)) return []
     if (!n.children) return can(profile, n.permission) ? [n] : []
     const kids = n.children.filter((c) => can(profile, c.permission) && !(c.feature && flags[c.feature] === false))
     return kids.length ? [{ ...n, children: kids }] : []

@@ -16,8 +16,9 @@
 .qc-muted { color: var(--c-on-surface-variant); }
 .qc-subnav { margin-bottom: var(--s-4); }
 .qc-subnav > * + * { margin-top: var(--s-2); }
-.panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-3); margin-bottom: var(--s-3); } .panel-head .qc-card-title { margin: 0; }
-.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: var(--s-4); }
+.panel-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s-2) var(--s-3); margin-bottom: var(--s-3); }
+.panel-head > * { min-width: 0; max-width: 100%; } .panel-head .qc-card-title { margin: 0; }
+.two-col { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: var(--s-4); }
 .wizard { list-style: none; margin: 0 0 var(--s-3); padding: 0; display: grid; gap: var(--s-2); }
 .wizard li { padding: var(--s-3); border-radius: var(--r-section); background: var(--c-surface-container); }
 .wizard li[data-done='true'] { background: var(--c-success-wash); }
@@ -42,10 +43,14 @@
 }
 
 /* Shifts: name, start, to, end, remove on one tidy row each. */
-.qc-shifts { display: grid; gap: 10px; }
+.qc-shifts { display: grid; gap: 10px; container-type: inline-size; }
 .qc-shifts__row { display: grid; grid-template-columns: minmax(140px, 220px) 150px auto 150px auto; gap: 10px; align-items: center; justify-content: start; }
 .qc-shifts__to { color: var(--c-on-surface-variant); font-size: var(--fs-dense); }
-@media (max-width: 640px) { .qc-shifts__row { grid-template-columns: 1fr 1fr; } .qc-shifts__to { display: none; } }
+/* Sized by the space the list has (the sidebar may be open), not the screen: name on its own line when narrow. */
+@container (max-width: 600px) {
+  .qc-shifts__row { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; justify-content: stretch; padding-bottom: 6px; border-bottom: 1px solid var(--c-outline-variant); }
+  .qc-shifts__row > :first-child { grid-column: 1 / -1; }
+}
 
 /* Add-bar: a select + button(s) that add a row to a table below. */
 .qc-addbar { display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-3); align-items: center; margin-bottom: var(--s-3); }
@@ -61,3 +66,15 @@
 
 /* Let tables inside a FormSection scroll instead of stretching the page. */
 .fsec__body { grid-template-columns: minmax(0, 1fr); }
+
+/* Connect analyser window */
+.ca-steps { margin: 0; padding-left: 20px; display: grid; gap: var(--s-2); }
+.ca-steps code, .ca-advanced code { font-size: 0.92em; }
+.ca-config { display: grid; gap: var(--s-2); }
+.ca-config__bar { display: flex; justify-content: space-between; align-items: center; gap: var(--s-3); }
+.ca-config pre, .ca-advanced pre {
+  margin: 0; padding: var(--s-3); border-radius: var(--r-section); background: var(--c-surface-container);
+  border: var(--outline-w) solid var(--c-outline-variant); font-size: 12.5px; line-height: 1.5; overflow-x: auto; white-space: pre;
+}
+.ca-advanced { margin-top: var(--s-4); }
+.ca-advanced summary { cursor: pointer; font-weight: 600; color: var(--c-on-surface-variant); }

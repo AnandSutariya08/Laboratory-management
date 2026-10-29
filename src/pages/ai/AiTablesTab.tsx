@@ -293,7 +293,7 @@ export default function AiTablesTab() {
       {tables.length === 0 ? (
         <EmptyState title="No tables yet" description="Ask the analyst for a breakdown, for example revenue by department. Grouped answers appear here." />
       ) : (
-        <div className="tile-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+        <div className="tile-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(260px, 100%), 1fr))' }}>
           {tables.map((t) => (
             <Card key={t.key} interactive padding="var(--s-4)">
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}>

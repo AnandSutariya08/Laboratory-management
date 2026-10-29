@@ -27,11 +27,7 @@
 .sidebar__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); padding: var(--s-1) var(--s-1) 0; min-height: 44px; }
 .sidebar[data-collapsed='true'] .sidebar__head { flex-direction: column; justify-content: center; gap: var(--s-2); }
 .sidebar__brand { display: flex; align-items: center; gap: 10px; color: var(--c-on-surface); text-decoration: none; min-width: 0; border-radius: var(--r-capsule); }
-.sidebar__logo {
-  width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; flex: none;
-  background: linear-gradient(135deg, var(--c-accent), var(--c-primary)); color: #fff; font-weight: 700;
-}
-:root[data-contrast='more'] .sidebar__logo { background: var(--c-primary); color: var(--c-on-primary); }
+.sidebar__logo { width: 36px; height: 36px; flex: none; display: block; }
 .sidebar__name { font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sidebar__collapse { flex: none; }
 
@@ -112,6 +108,18 @@
 @media (max-width: 1099px) { .hide-md { display: none; } }
 @media (max-width: 899px) { .hide-sm { display: none; } .topbar__title { display: none; } }
 @media (max-width: 767px) { .topbar { gap: var(--s-2); } .topbar__search input { width: 90px; } }
+/* Phones: the search group takes the free space and shrinks first, so nothing is pushed off the left edge. */
+@media (max-width: 600px) {
+  .topbar { gap: 6px; }
+  .topbar > .topbar__searchgroup { flex: 1 1 auto; min-width: 0; }
+  .topbar .gs { flex: 1 1 auto; min-width: 0; }
+  .topbar__search { padding: 0 var(--s-2); min-width: 0; }
+  .topbar__search input { width: 100%; min-width: 0; }
+  .topbar__search { overflow: hidden; }
+  /* Tapping search opens it across the whole bar; it closes back when focus leaves. */
+  .topbar > .topbar__searchgroup:focus-within { position: absolute; inset: 0 0 auto 0; z-index: 2; }
+  .topbar > .capsule-group:not(.topbar__searchgroup) { flex-shrink: 0; }
+}
 
 /* ---- Content: never rests under glass ------------------------------------------ */
 .app-shell__main {

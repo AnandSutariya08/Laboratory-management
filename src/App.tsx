@@ -10,6 +10,7 @@ import { DesignProvider } from './design/DesignProvider'
 import { useFeatureFlags } from './features/settings/lib'
 import { SessionGuard } from './features/settings/sessions'
 import type { FeatureKey } from './types'
+import { canSeeDashboard } from './lib/dashboard'
 import './design/index.css'
 
 const AiAnalystPage = lazy(() => import('./pages/ai/AiAnalystPage'))
@@ -31,6 +32,7 @@ const ReportPage = lazy(() => import('./pages/report/ReportPage'))
 const ReportComparePage = lazy(() => import('./pages/report/ReportComparePage'))
 const PendingDispatchPage = lazy(() => import('./pages/report/PendingDispatchPage'))
 const AnalysisPage = lazy(() => import('./pages/analysis/AnalysisPage'))
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'))
 const FinancePage = lazy(() => import('./pages/analysis/FinancePage'))
 const AnalysisDrillPage = lazy(() => import('./pages/analysis/DrillPage'))
 const TestListPage = lazy(() => import('./pages/catalogue/TestListPage'))
@@ -89,7 +91,9 @@ function Guard({ permission, children }: { permission: Permission; children: Rea
 
 function Shell() {
   const { user, profile, loading } = useAuth()
-  if (/^\/(r|formf|my-reports|rad-opinion)(\/|$)/.test(window.location.pathname)) {
+  // Router location (not window.location) so in-app links to these public pages re-render the shell.
+  const { pathname } = useLocation()
+  if (/^\/(r|formf|my-reports|rad-opinion)(\/|$)/.test(pathname)) {
     return (
       <Suspense fallback={<Loading />}>
         <Routes>
@@ -132,7 +136,9 @@ function Shell() {
         <Route path="/report/:orderId" element={g('patients.view', <ReportPage />)} />
         <Route path="/report-compare/:orderId" element={g('patients.view', <ReportComparePage />)} />
         <Route element={<AppLayout />}>
-          <Route path="/" element={<Navigate to="/registration" replace />} />
+          {/* Admins land on their dashboard; everyone else on New Registration. */}
+          <Route path="/" element={<Navigate to={canSeeDashboard(profile) ? '/dashboard' : '/registration'} replace />} />
+          <Route path="/dashboard" element={canSeeDashboard(profile) ? <DashboardPage /> : <Result status="403" title="No access" subTitle="The dashboard is for the lab admin." />} />
           <Route path="/ai" element={g('ai.use', <AiAnalystPage />)} />
           <Route path="/ai/:chatId" element={g('ai.use', <AiAnalystPage />)} />
           <Route path="/connect-ai" element={g('mcp.manage', <ConnectAiPage />)} />

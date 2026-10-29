@@ -1190,6 +1190,7 @@ export { notReceivedSweep } from './cutoffs'
 
 // ---- Analysis: server range aggregation and background export jobs ---------------------
 export { aggregateRange, processExportJob } from './exports'
+export { dashboardSummary } from './dashboard'
 
 // ---- QC: server-side Westgard multi-rule evaluation of machine-fed runs ------------------------------------------
 export { evaluateMachineQcRun } from './qcEval'

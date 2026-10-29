@@ -162,6 +162,8 @@
 /* Toolbar search boxes: grow with the screen so the hint text is never cut off. */
 .search-wide { width: clamp(380px, 34vw, 560px); max-width: 100%; }
 .search-wide--long { width: clamp(460px, 38vw, 640px); }
+/* Never wider than the screen (the content area has 16px gutters each side on phones). */
+@media (max-width: 720px) { .search-wide, .search-wide--long { width: calc(100vw - 48px); } }
 
 /* Scrollbars: vertical bars are hidden app-wide (content still scrolls by wheel, trackpad,
    keyboard and touch). Horizontal bars stay, slim, so wide tables still show they scroll sideways.
@@ -189,11 +191,11 @@ html, body, .sidebar__scroll, .app-shell__main, .ant-modal-wrap, .ant-modal .ant
 
 /* ---- Form layout: sections, setting rows, field grids (src/design/FormLayout.tsx) ---- */
 .fsec + .fsec { margin-top: var(--s-6); padding-top: var(--s-6); border-top: 1px solid var(--c-outline-variant); }
-.fsec__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-4); margin-bottom: var(--s-3); }
-.fsec__titles { min-width: 0; }
+.fsec__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: var(--s-2) var(--s-4); margin-bottom: var(--s-3); }
+.fsec__titles { flex: 1 1 240px; min-width: 0; }
 .fsec__title { margin: 0; font-size: 15px; font-weight: 650; color: var(--c-on-surface); }
 .fsec__desc { margin: 4px 0 0; font-size: var(--fs-dense); color: var(--c-on-surface-variant); max-width: 72ch; line-height: 1.5; }
-.fsec__extra { flex: none; display: flex; gap: var(--s-2); }
+.fsec__extra { flex: none; display: flex; flex-wrap: wrap; gap: var(--s-2); max-width: 100%; }
 .fsec__body { display: grid; grid-template-columns: minmax(0, 1fr); } /* wide tables scroll inside, never stretch the page */
 
 .srow {
@@ -213,7 +215,7 @@ html, body, .sidebar__scroll, .app-shell__main, .ant-modal-wrap, .ant-modal .ant
   .srow { grid-template-columns: 1fr; padding: 12px 0; }
 }
 
-.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(var(--fgrid-min, 220px), 1fr)); gap: 0 var(--s-4); }
+.fgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--fgrid-min, 220px), 100%), 1fr)); gap: 0 var(--s-4); }
 
 /* Antd forms everywhere: a little more air between fields and clearer labels. */
 .ant-form-vertical .ant-form-item { margin-bottom: 18px; }

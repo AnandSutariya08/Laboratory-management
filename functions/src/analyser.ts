@@ -230,6 +230,26 @@ export const analyserIngest = onRequest({ region: 'asia-south1', cors: true, tim
     return
   }
   const { labId, machineId, machine } = m
+  // Heartbeat from the lab's connector (every minute): proves the token, records the link state for the app.
+  const hb = req.body && typeof req.body === 'object' && !Buffer.isBuffer(req.body) ? (req.body as Record<string, unknown>) : null
+  if (hb?.heartbeat === true) {
+    const link = str(hb.link)
+    await db.doc(`labs/${labId}/qcMachines/${machineId}`).update({
+      connector: {
+        lastSeenAt: Timestamp.now(),
+        version: str(hb.version).slice(0, 20),
+        host: str(hb.host).slice(0, 80),
+        connection: str(hb.connection).slice(0, 20),
+        protocol: str(hb.protocol).slice(0, 10),
+        link: link.slice(0, 20),
+        detail: str(hb.detail).slice(0, 200),
+        queue: Math.max(0, Math.min(1e6, Number(hb.queue) || 0)),
+      },
+      integrationStatus: link === 'connected' || link === 'listening' ? 'connected' : 'offline',
+    })
+    res.status(200).json({ ok: true, machine: str(machine.name) })
+    return
+  }
   const raw = req.rawBody ? req.rawBody.toString('utf8') : ''
   const parsed = parseBody(req.body, raw)
   if (!parsed || !parsed.results.length) {

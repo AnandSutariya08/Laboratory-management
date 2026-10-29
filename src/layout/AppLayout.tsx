@@ -1,3 +1,4 @@
+import { PageErrorBoundary } from './PageErrorBoundary'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { Drawer } from 'antd'
@@ -193,7 +194,9 @@ export default function AppLayout() {
       <LabSettingsHost />
       <main id="main" ref={mainRef} tabIndex={-1} className="app-shell__main">
         <div ref={bodyRef} className="app-shell__body">
-          <Outlet />
+          <PageErrorBoundary resetKey={location.pathname}>
+            <Outlet />
+          </PageErrorBoundary>
         </div>
       </main>
 

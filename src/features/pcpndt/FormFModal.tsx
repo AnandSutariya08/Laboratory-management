@@ -76,7 +76,7 @@ export default function FormFModal({ order, open, onClose }: { order: Order; ope
         {saved?.signedVia && <span style={{ opacity: 0.7, fontSize: 12 }}>Signed {saved.signedVia === 'link' ? 'on the patient phone' : 'at the desk'} by {saved.signerName}</span>}
       </div>
       {!done && <Alert type="info" showIcon style={{ marginBottom: 12 }} message="The ultrasound report cannot be printed, sent or approved until Form F is complete." />}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 12 }}>
         {field('patientName')}{field('age')}{field('guardianName')}{field('lmp', { type: 'date' })}
         {field('childrenSons')}{field('childrenDaughters')}{field('lastChildAge')}
       </div>

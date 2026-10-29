@@ -565,7 +565,7 @@ export default function BookingsPage() {
               })}
             />
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 'var(--s-4)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 'var(--s-4)' }}>
               <Card padding="var(--s-3)">
                 <Calendar
                   fullscreen={false}

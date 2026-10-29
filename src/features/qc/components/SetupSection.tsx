@@ -18,7 +18,7 @@ import { branchStamp } from '../../../lib/activeBranch'
 import { Segmented } from '../../../design/Segmented'
 import { Button as DsButton } from '../../../design/Button'
 import { Chip } from '../ui'
-import { ConnectAnalyserButton } from './ConnectAnalyser'
+import { ConnectAnalyserButton, ConnectorStatus } from './ConnectAnalyser'
 import { QcSettingsTab, SchedulesTab } from './SetupExtras'
 import { downloadCsv } from '../../../components/billing/helpers'
 import { dialogWidth } from '../../../design/dialog'
@@ -139,6 +139,7 @@ function Machines() {
             ),
           },
           { title: 'Active', width: 80, render: (_, m) => <Chip status={m.active ? 'active' : 'inactive'} /> },
+          { title: 'Connection', width: 170, render: (_, m) => <ConnectorStatus machine={m} /> },
           {
             title: '',
             width: 220,

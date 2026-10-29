@@ -6,6 +6,7 @@ import { sendPasswordResetEmail, signInWithEmailAndPassword } from 'firebase/aut
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions, LAB_ID } from '../firebase'
 import { BRAND } from '../theme'
+import { BrandMark } from '../design/BrandMark'
 import './login.css'
 
 interface Values { email: string; password: string }
@@ -81,12 +82,7 @@ export default function LoginPage() {
         <div className="login__orb login__orb--b" aria-hidden />
 
         <div className="login__brand">
-          <span className="login__mark" aria-hidden>
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3c3 4.2 6 7.6 6 11a6 6 0 0 1-12 0c0-3.4 3-6.8 6-11z" />
-              <path d="M9.5 14.5a2.5 2.5 0 0 0 2.5 2.5" />
-            </svg>
-          </span>
+          <BrandMark size={44} className="login__mark" />
           <span className="login__brandname">{BRAND.name}</span>
         </div>
 

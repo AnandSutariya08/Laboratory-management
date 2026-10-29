@@ -16,7 +16,7 @@ const db = () => getFirestore(FIRESTORE_DB)
 const IST = 330 * 60_000
 const DAY = 86_400_000
 const pad = (n: number) => String(n).padStart(2, '0')
-const dayKey = (ms: number) => {
+export const dayKey = (ms: number) => {
   const d = new Date(ms + IST)
   return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`
 }
@@ -26,11 +26,11 @@ const ddmmyyyy = (ms: number | null) => {
   const k = dayKey(ms)
   return `${k.slice(8, 10)}-${k.slice(5, 7)}-${k.slice(0, 4)}`
 }
-const ms = (t: unknown): number | null => (t instanceof Timestamp ? t.toMillis() : null)
-const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
-const str = (v: unknown) => (typeof v === 'string' ? v : '')
+export const ms = (t: unknown): number | null => (t instanceof Timestamp ? t.toMillis() : null)
+export const n = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+export const str = (v: unknown) => (typeof v === 'string' ? v : '')
 
-function dateBound(s: unknown, end: boolean): number {
+export function dateBound(s: unknown, end: boolean): number {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s ?? '').trim())
   if (!m) throw new HttpsError('invalid-argument', 'Dates must be YYYY-MM-DD.')
   const t = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])) - IST
@@ -60,9 +60,9 @@ const ORDER_FIELDS = [
   'refunded', 'reportStatus', 'dispatched', 'createdBy', 'createdByName', 'createdAt', 'branchId', 'rerunTests', 'deleted', 'referrerId',
 ]
 
-type Order = DocumentData & { id: string }
+export type Order = DocumentData & { id: string }
 
-async function scanOrders(labId: string, fromMs: number, toMs: number, branch: string | null, each: (o: Order) => void | Promise<void>): Promise<number> {
+export async function scanOrders(labId: string, fromMs: number, toMs: number, branch: string | null, each: (o: Order) => void | Promise<void>): Promise<number> {
   let last: QueryDocumentSnapshot | undefined
   let count = 0
   for (;;) {
@@ -107,7 +107,7 @@ async function ledgerOf(labId: string, orderId: string): Promise<Ledger[]> {
   })
 }
 
-const bucketOfMode = (m: string) => (['cash', 'card', 'upi', 'wallet'].includes(m.toLowerCase()) ? m.toLowerCase() : 'other')
+export const bucketOfMode = (m: string) => (['cash', 'card', 'upi', 'wallet'].includes(m.toLowerCase()) ? m.toLowerCase() : 'other')
 const moneyIn = (e: Ledger) => e.amount > 0 || e.type === 'reversal'
 const clearedOf = (es: Ledger[]) => {
   const clr = new Set(es.filter((e) => e.type === 'clearDue').map((e) => e.id))
@@ -129,8 +129,8 @@ async function catalogue(labId: string): Promise<Cat> {
 
 type Item = { kind?: string; name?: string; price?: number; discount?: number; testIds?: string[]; status?: string; autoVerified?: boolean; outsource?: { testId: string; labName: string; cost: number }[] }
 const items = (o: Order): Item[] => (Array.isArray(o.items) ? (o.items as Item[]) : [])
-const live = (o: Order) => items(o).filter((i) => i.status !== 'refunded')
-const testCount = (o: Order) => live(o).reduce((s, i) => s + (i.testIds?.length ?? 0), 0)
+export const live = (o: Order) => items(o).filter((i) => i.status !== 'refunded')
+export const testCount = (o: Order) => live(o).reduce((s, i) => s + (i.testIds?.length ?? 0), 0)
 const kindOf = (o: Order): 'b2b' | 'referral' | 'self' => {
   if (str(o.b2bCentreName) || str(o.b2bCentreId)) return 'b2b'
   const named = (v: unknown) => {

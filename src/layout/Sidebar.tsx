@@ -12,6 +12,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { Glass } from '../design/Glass'
 import { SelectionPill, usePillBox } from '../design/SelectionPill'
 import { BRAND } from '../theme'
+import { BrandMark } from '../design/BrandMark'
 import SupportTicketModal from './SupportTicketModal'
 import { PlanBadge } from '../features/settings/PlanBadge'
 import { InstallButton, useInstallPrompt } from './InstallApp'
@@ -178,7 +179,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, variant = 'rail'
     <Glass as="nav" aria-label="Main navigation" className={`sidebar sidebar--${variant}`} data-collapsed={isCollapsed} radius="var(--r-panel)">
       <div className="sidebar__head">
         <Link to="/" className="sidebar__brand" aria-label={`${BRAND.name} home`} onClick={onNavigate}>
-          <span className="sidebar__logo" aria-hidden="true">H</span>
+          <BrandMark size={36} className="sidebar__logo" />
           {!isCollapsed && <span className="sidebar__name">{BRAND.name}</span>}
         </Link>
         {variant === 'rail' && (

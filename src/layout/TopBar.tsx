@@ -263,7 +263,7 @@ export default function TopBar({ title, compact, onOpenMenu, searchRef, scanOpen
         </div>
 
         {/* Group 1: search + scan */}
-        <CapsuleGroup label="Search">
+        <CapsuleGroup label="Search" className="topbar__searchgroup">
           {compact && (
             <button type="button" className="gbtn press" aria-label="Open navigation menu" onClick={onOpenMenu}>
               <MenuOutlined />

@@ -3,7 +3,7 @@ import { App, Input, Modal, Select, Table } from 'antd'
 import { addDoc, deleteDoc, getDocs, limit, query, serverTimestamp, updateDoc, where } from 'firebase/firestore'
 import { can, useAuth } from '../../../auth/AuthProvider'
 import { useBranchScope } from '../../../lib/branchScope'
-import { ConnectAnalyserButton } from '../../qc/components/ConnectAnalyser'
+import { ConnectAnalyserButton, ConnectorStatus } from '../../qc/components/ConnectAnalyser'
 import { Button } from '../../../design/Button'
 import { StatusChip } from '../../../design/StatusChip'
 import { useDepartments, useTests } from '../../../hooks/useCatalogue'
@@ -14,7 +14,7 @@ import { QC, type QcMachine } from '../../qc/types'
 import { dialogWidth } from '../../../design/dialog'
 import { Field, Group, SectionCard, SwitchRow, useDraft } from '../ui'
 
-type Machine = QcMachine & { model?: string; machineCode?: string; interfaceType?: 'none' | 'astm' | 'hl7' | 'file' | 'manual'; integrationStatus?: 'connected' | 'pending' | 'offline' | 'none' }
+type Machine = QcMachine & { model?: string; machineCode?: string; interfaceType?: 'none' | 'astm' | 'hl7' | 'file' | 'manual'; integrationStatus?: 'connected' | 'pending' | 'offline' | 'none'; ingestTokenHash?: string }
 
 const IFACE = [
   { value: 'none', label: 'None (manual entry)' }, { value: 'astm', label: 'ASTM / serial' },
@@ -88,11 +88,15 @@ export function Machines() {
           {
             title: 'Integration',
             dataIndex: 'integrationStatus',
-            render: (v: Machine['integrationStatus']) => (
-              <StatusChip variant={v === 'connected' ? 'success' : v === 'offline' ? 'urgent' : v === 'pending' ? 'caution' : 'neutral'}>
-                {STATUS.find((o) => o.value === (v ?? 'none'))?.label}
-              </StatusChip>
-            ),
+            // Live from the connector once a token exists; otherwise the status set by hand.
+            render: (v: Machine['integrationStatus'], m) =>
+              m.ingestTokenHash ? (
+                <ConnectorStatus machine={m} />
+              ) : (
+                <StatusChip variant={v === 'connected' ? 'success' : v === 'offline' ? 'urgent' : v === 'pending' ? 'caution' : 'neutral'}>
+                  {STATUS.find((o) => o.value === (v ?? 'none'))?.label}
+                </StatusChip>
+              ),
           },
           {
             title: '',

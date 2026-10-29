@@ -1,0 +1,20 @@
+{
+  "endpoint": "https://asia-south1-laboratory-management-systems.cloudfunctions.net/analyserIngest",
+  "machines": [
+    {
+      "name": "Biochemistry analyser",
+      "token": "PASTE-THE-TOKEN-HERE",
+      "connection": "serial",
+      "protocol": "astm",
+      "serial": { "port": "COM3", "baudRate": 9600, "dataBits": 8, "parity": "none", "stopBits": 1 }
+    },
+    {
+      "name": "Haematology analyser",
+      "enabled": false,
+      "token": "PASTE-THE-TOKEN-HERE",
+      "connection": "tcp-server",
+      "protocol": "hl7",
+      "tcp": { "port": 5100 }
+    }
+  ]
+}

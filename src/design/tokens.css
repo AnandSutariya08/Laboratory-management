@@ -236,3 +236,21 @@
     --child-h: 44px;
   }
 }
+
+/* ---- Smaller screens: tighter spacing and headings so content gets the room (body text stays 14px) ---- */
+@media (max-width: 1100px) {
+  :root {
+    --s-6: 20px;
+    --s-8: 40px;
+  }
+}
+@media (max-width: 600px) {
+  :root {
+    --fs-title: 18px;
+    --s-5: 16px;
+    --s-6: 16px;
+    --s-7: 24px;
+    --s-8: 32px;
+    --inset: 8px;
+  }
+}
